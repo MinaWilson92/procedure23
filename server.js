@@ -194,7 +194,7 @@ try {
   console.error('Failed to initialize dashboard routes:', err.message);
 }
 
-// Start server
+// Start server - THIS MUST BE LAST
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
