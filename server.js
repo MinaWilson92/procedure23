@@ -166,6 +166,123 @@ app.get('/ProceduresHubEG6/api/dashboard-summary', (req, res) => {
   }
 });
 
+// Dashboard API: Get procedures by LOB
+app.get('/ProceduresHubEG6/api/dashboard/by-lob', (req, res) => {
+  try {
+    if (!fs.existsSync(proceduresPath)) {
+      return res.json({});
+    }
+    
+    const procedures = JSON.parse(fs.readFileSync(proceduresPath));
+    
+    // Group by LOB
+    const byLob = procedures.reduce((acc, proc) => {
+      const lob = proc.lob || 'Unknown';
+      if (!acc[lob]) {
+        acc[lob] = {
+          total: 0,
+          expired: 0,
+          expiringSoon: 0,
+          averageScore: 0,
+          totalScore: 0
+        };
+      }
+      
+      acc[lob].total++;
+      acc[lob].totalScore += (proc.score || 0);
+      
+      const now = new Date();
+      const expiryDate = new Date(proc.expiry);
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      
+      if (expiryDate < now) {
+        acc[lob].expired++;
+      } else if (expiryDate - now < THIRTY_DAYS) {
+        acc[lob].expiringSoon++;
+      }
+      
+      return acc;
+    }, {});
+    
+    // Calculate average scores
+    Object.keys(byLob).forEach(lob => {
+      byLob[lob].averageScore = byLob[lob].total > 0 
+        ? Math.round(byLob[lob].totalScore / byLob[lob].total) 
+        : 0;
+      delete byLob[lob].totalScore; // Remove temporary field
+    });
+    
+    res.json(byLob);
+  } catch (error) {
+    console.error('Error in dashboard by-lob:', error);
+    res.status(500).json({ error: 'Failed to get LOB summary' });
+  }
+});
+
+// Dashboard API: Get recent procedures
+app.get('/ProceduresHubEG6/api/dashboard/recent', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 5;
+    
+    if (!fs.existsSync(proceduresPath)) {
+      return res.json([]);
+    }
+    
+    const procedures = JSON.parse(fs.readFileSync(proceduresPath));
+    
+    // Sort by ID (assuming higher ID = more recent) and get last N
+    const recent = procedures
+      .sort((a, b) => b.id - a.id)
+      .slice(0, limit);
+    
+    res.json(recent);
+  } catch (error) {
+    console.error('Error in dashboard recent:', error);
+    res.status(500).json({ error: 'Failed to get recent procedures' });
+  }
+});
+
+// Dashboard API: Get expiry timeline
+app.get('/ProceduresHubEG6/api/dashboard/expiry-timeline', (req, res) => {
+  try {
+    if (!fs.existsSync(proceduresPath)) {
+      return res.json({ expired: 0, thisWeek: 0, thisMonth: 0, later: 0 });
+    }
+    
+    const procedures = JSON.parse(fs.readFileSync(proceduresPath));
+    const now = new Date();
+    const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+    const ONE_MONTH = 30 * 24 * 60 * 60 * 1000;
+    
+    const timeline = {
+      expired: 0,
+      thisWeek: 0,
+      thisMonth: 0,
+      later: 0
+    };
+    
+    procedures.forEach(proc => {
+      const expiryDate = new Date(proc.expiry);
+      const diff = expiryDate - now;
+      
+      if (diff < 0) {
+        timeline.expired++;
+      } else if (diff < ONE_WEEK) {
+        timeline.thisWeek++;
+      } else if (diff < ONE_MONTH) {
+        timeline.thisMonth++;
+      } else {
+        timeline.later++;
+      }
+    });
+    
+    res.json(timeline);
+  } catch (error) {
+    console.error('Error in expiry timeline:', error);
+    res.status(500).json({ error: 'Failed to get expiry timeline' });
+  }
+});
+
 // Serve uploaded files
 app.use('/ProceduresHubEG6/uploads', express.static(uploadsDir));
 
@@ -179,19 +296,20 @@ app.get('/', (req, res) => {
   res.redirect('/ProceduresHubEG6');
 });
 
-// Initialize additional modules BEFORE starting server
+// Initialize email scheduler
 try {
+  console.log('Initializing email scheduler...');
   const initializeScheduler = require('./hsbc_phase4_email_scheduler');
-  initializeScheduler();
+  if (typeof initializeScheduler === 'function') {
+    initializeScheduler();
+  } else if (typeof initializeScheduler.default === 'function') {
+    initializeScheduler.default();
+  } else {
+    console.log('Email scheduler module found but not a function:', typeof initializeScheduler);
+  }
 } catch (err) {
   console.error('Failed to initialize email scheduler:', err.message);
-}
-
-try {
-  const dashboardRoutes = require('./hsbc_dashboard_summary_api');
-  dashboardRoutes(app);
-} catch (err) {
-  console.error('Failed to initialize dashboard routes:', err.message);
+  console.log('Continuing without email scheduler...');
 }
 
 // Start server - THIS MUST BE LAST
@@ -199,4 +317,9 @@ app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Access the app at: http://localhost:${port}/ProceduresHubEG6`);
+  console.log('Dashboard routes: Available at /ProceduresHubEG6/api/dashboard/*');
 });
+
+// Note: We've integrated the dashboard routes directly into server.js
+// to avoid module loading issues. The hsbc_dashboard_summary_api.js file
+// is no longer needed with this approach.
