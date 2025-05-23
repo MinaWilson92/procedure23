@@ -37,7 +37,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve React static build
+// Role-check endpoint
+app.get('/ProceduresHubEG6/api/me', (req, res) => {
+  if (!req.staffId) return res.status(401).json({ message: 'Unauthorized' });
+  res.json({ staffId: req.staffId, role: req.userRole });
+});
+
 app.use('/ProceduresHubEG6/static', express.static(path.join(__dirname, 'build/static')));
 
 const upload = multer({ dest: 'uploads/' });
