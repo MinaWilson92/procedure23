@@ -25,13 +25,15 @@ const App = () => {
         {/* Home page available to all */}
         <Route path="/" element={<Home />} />
         
-        {/* Admin routes */}
-        {user?.role === 'admin' && (
-          <>
-            <Route path="/admin-panel" element={<AdminPanel />} />
-            <Route path="/submit" element={<SubmitProcedure />} />
-          </>
-        )}
+        {/* Admin routes - protect with role check */}
+        <Route 
+          path="/admin-panel" 
+          element={user?.role === 'admin' ? <AdminPanel /> : <Navigate to="/" />} 
+        />
+        <Route 
+          path="/submit" 
+          element={user?.role === 'admin' ? <SubmitProcedure /> : <Navigate to="/" />} 
+        />
         
         {/* User routes */}
         <Route path="/user-dashboard" element={<UserDashboard />} />

@@ -35,7 +35,9 @@ if (!fs.existsSync(proceduresPath)) {
 // Initialize roles config if it doesn't exist
 const rolesPath = path.join(__dirname, 'roles.config.json');
 if (!fs.existsSync(rolesPath)) {
-  fs.writeFileSync(rolesPath, JSON.stringify({ admins: ['admin'] }, null, 2));
+  fs.writeFileSync(rolesPath, JSON.stringify({ 
+    admins: ['admin', 'test_admin', 'default_user'] // Added default_user as admin for testing
+  }, null, 2));
 }
 
 const roles = require('./roles.config.json');

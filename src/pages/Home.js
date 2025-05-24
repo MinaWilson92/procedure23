@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Button, Box, Chip } from '@mui/material';
+import { UserContext } from '../UserContext';
 import DashboardCharts from '../components/DashboardCharts';
 import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { user } = useContext(UserContext);
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
@@ -18,8 +21,27 @@ const Home = () => {
   return (
     <div className="container">
       <header className="navbar">
-        <h1>HSBC</h1>
-        <button className="signin">Sign In</button>
+        <h1>HSBC Procedures Hub</h1>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {user && (
+            <Chip 
+              label={`${user.staffId} (${user.role})`} 
+              color={user.role === 'admin' ? 'error' : 'default'}
+              variant="outlined"
+              sx={{ color: 'white', borderColor: 'white' }}
+            />
+          )}
+          {user?.role === 'admin' && (
+            <Button 
+              variant="contained" 
+              color="error"
+              onClick={() => navigate('/admin-panel')}
+              sx={{ fontWeight: 'bold' }}
+            >
+              Admin Panel
+            </Button>
+          )}
+        </Box>
       </header>
 
       <motion.div
@@ -35,6 +57,33 @@ const Home = () => {
           </p>
         )}
       </motion.div>
+
+      {user?.role === 'admin' && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          style={{
+            background: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '8px',
+            padding: '1rem',
+            margin: '1rem 0',
+            textAlign: 'center'
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 'bold', color: '#856404' }}>
+            🔐 Admin Access Enabled - You can add, edit, and manage procedures
+          </p>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('/admin-panel')}
+            sx={{ mt: 1, backgroundColor: '#d40000' }}
+          >
+            ➕ Add New Procedure
+          </Button>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
