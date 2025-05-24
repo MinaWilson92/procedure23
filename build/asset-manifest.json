@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/ProceduresHubEG6/static/css/main.2c83f19e.css",
+    "main.js": "/ProceduresHubEG6/static/js/main.c1a9cc61.js",
+    "index.html": "/ProceduresHubEG6/index.html",
+    "main.2c83f19e.css.map": "/ProceduresHubEG6/static/css/main.2c83f19e.css.map",
+    "main.c1a9cc61.js.map": "/ProceduresHubEG6/static/js/main.c1a9cc61.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.2c83f19e.css",
+    "static/js/main.c1a9cc61.js"
+  ]
+}
