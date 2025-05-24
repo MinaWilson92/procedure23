@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .error {
+            color: red;
+        }
+        .success {
+            color: green;
+        }
+        button {
+            background: #d40000;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #a00000;
+        }
+    </style>
+</head>
+<body>
+    <h1>HSBC Procedures Hub - Cookie Debug</h1>
+    
+    <div class="section">
+        <h2>Client-Side Cookies</h2>
+        <pre id="clientCookies">Loading...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Server-Side Debug</h2>
+        <button onclick="testDebugEndpoint()">Test Debug Endpoint</button>
+        <button onclick="testRoleCheck()">Test Role Check</button>
+        <button onclick="testDashboard()">Test Dashboard API</button>
+        <pre id="serverResponse">Click a button to test...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Parsed Cookie Info</h2>
+        <div id="parsedInfo">Analyzing cookies...</div>
+    </div>
+
+    <script>
+        // Display client-side cookies
+        function displayClientCookies() {
+            const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+                const [key, value] = cookie.trim().split('=');
+                acc[key] = value;
+                return acc;
+            }, {});
+            
+            document.getElementById('clientCookies').textContent = JSON.stringify(cookies, null, 2);
+            
+            // Try to parse apprunnersession
+            if (cookies.apprunnersession) {
+                try {
+                    const decoded = decodeURIComponent(cookies.apprunnersession);
+                    let info = '<h3>Apprunnersession Cookie Analysis:</h3>';
+                    info += '<p><strong>Decoded Length:</strong> ' + decoded.length + '</p>';
+                    info += '<p><strong>First 200 chars:</strong></p>';
+                    info += '<pre>' + decoded.substring(0, 200) + '...</pre>';
+                    
+                    // Try to extract values
+                    const displayNameMatch = decoded.match(/displayName["%]*[:=]["%]*([^"&,}]+)/);
+                    const mailMatch = decoded.match(/mail["%]*[:=]["%]*([^"&,}]+)/);
+                    
+                    if (displayNameMatch) {
+                        info += '<p class="success"><strong>Display Name Found:</strong> ' + displayNameMatch[1] + '</p>';
+                    }
+                    if (mailMatch) {
+                        info += '<p class="success"><strong>Email Found:</strong> ' + mailMatch[1] + '</p>';
+                    }
+                    
+                    document.getElementById('parsedInfo').innerHTML = info;
+                } catch (e) {
+                    document.getElementById('parsedInfo').innerHTML = '<p class="error">Error parsing cookie: ' + e.message + '</p>';
+                }
+            } else {
+                document.getElementById('parsedInfo').innerHTML = '<p class="error">No apprunnersession cookie found!</p>';
+            }
+        }
+        
+        // Test endpoints
+        async function testDebugEndpoint() {
+            try {
+                const response = await fetch('/ProceduresHubEG6/api/debug/cookies');
+                const data = await response.json();
+                document.getElementById('serverResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('serverResponse').textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        async function testRoleCheck() {
+            try {
+                const response = await fetch('/ProceduresHubEG6/api/role-check');
+                const data = await response.json();
+                document.getElementById('serverResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('serverResponse').textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        async function testDashboard() {
+            try {
+                const response = await fetch('/ProceduresHubEG6/api/dashboard-summary');
+                const data = await response.json();
+                document.getElementById('serverResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('serverResponse').textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        // Initial load
+        displayClientCookies();
+        
+        // Auto-refresh every 5 seconds
+        setInterval(displayClientCookies, 5000);
+    </script>
+</body>
+</html>

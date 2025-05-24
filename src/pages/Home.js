@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Button, Box, Chip } from '@mui/material';
+import { Button, Box, Chip, Typography } from '@mui/material';
 import { UserContext } from '../UserContext';
 import DashboardCharts from '../components/DashboardCharts';
 import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
-  const { user } = useContext(UserContext);
+  const { user, loading } = useContext(UserContext);
   const [summary, setSummary] = useState(null);
 
   useEffect(() => {
@@ -17,6 +17,15 @@ const Home = () => {
       .then(data => setSummary(data))
       .catch(err => console.error("Dashboard summary fetch failed:", err));
   }, []);
+
+  // Show loading while user context is loading
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <Typography>Loading...</Typography>
+      </Box>
+    );
+  }
 
   return (
     <div className="container">
