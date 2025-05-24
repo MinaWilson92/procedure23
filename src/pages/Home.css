@@ -1,0 +1,42 @@
+.container {
+  padding: 2rem;
+  text-align: center;
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  background: #1a1a1a;
+  padding: 1rem 2rem;
+  color: white;
+}
+.signin {
+  background: none;
+  border: 1px solid white;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+}
+.cards {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  padding: 1rem;
+  width: 250px;
+}
+.card .icon {
+  font-size: 2rem;
+}
+.card button {
+  background: #d40000;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  margin-top: 1rem;
+}

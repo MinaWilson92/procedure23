@@ -2,15 +2,17 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const mammoth = require('mammoth');
 const pdfParse = require('pdf-parse');
 
 const app = express();
-const port = process.env.PORT || 44557; // App Runner uses PORT env variable
+const port = parseInt(process.env.APP_PORT || process.env.PORT || 8082);
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 // Create required directories and files if they don't exist
 const dataDir = path.join(__dirname, 'data');
@@ -48,10 +50,27 @@ function getUserRole(staffId) {
 
 // Middleware: extract user info (simplified for now)
 app.use((req, res, next) => {
-  // For App Runner, you might need to handle auth differently
-  // This is a simplified version
-  req.staffId = 'default_user';
-  req.userRole = 'user';
+  // Check for apprunner-staff cookie
+  const staffCookie = req.cookies ? req.cookies['apprunner-staff'] : null;
+  
+  if (staffCookie) {
+    try {
+      // Try to decode the cookie (if it's JSON)
+      const decoded = JSON.parse(decodeURIComponent(staffCookie));
+      req.staffId = decoded.staffId || 'guest';
+      req.userRole = getUserRole(req.staffId);
+    } catch (err) {
+      // If cookie parsing fails, check if it's just a staff ID
+      req.staffId = staffCookie;
+      req.userRole = getUserRole(staffCookie);
+    }
+  } else {
+    // Default user for development/testing
+    req.staffId = 'default_user';
+    req.userRole = 'user';
+  }
+  
+  console.log('User middleware:', { staffId: req.staffId, role: req.userRole });
   next();
 });
 
