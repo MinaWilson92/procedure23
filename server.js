@@ -36,7 +36,7 @@ if (!fs.existsSync(proceduresPath)) {
 const rolesPath = path.join(__dirname, 'roles.config.json');
 if (!fs.existsSync(rolesPath)) {
   fs.writeFileSync(rolesPath, JSON.stringify({ 
-    admins: ['admin', 'test_admin', 'default_user'] // Added default_user as admin for testing
+    admins: ['admin', 'test_admin', 'default_user', 'wilson.ross', 'mina.antoun'] // Added HSBC users
   }, null, 2));
 }
 
@@ -50,29 +50,79 @@ function getUserRole(staffId) {
   return 'user';
 }
 
-// Middleware: extract user info (simplified for now)
+// Middleware: extract user info from apprunner cookies
 app.use((req, res, next) => {
-  // Check for apprunner-staff cookie
-  const staffCookie = req.cookies ? req.cookies['apprunner-staff'] : null;
+  // Check for apprunnersession cookie
+  const sessionCookie = req.cookies ? req.cookies['apprunnersession'] : null;
   
-  if (staffCookie) {
+  console.log('Cookies received:', {
+    session: sessionCookie ? 'present' : 'missing',
+    allCookies: Object.keys(req.cookies || {})
+  });
+  
+  if (sessionCookie) {
     try {
-      // Try to decode the cookie (if it's JSON)
-      const decoded = JSON.parse(decodeURIComponent(staffCookie));
-      req.staffId = decoded.staffId || 'guest';
+      // The session cookie contains the user info
+      // It appears to be URL encoded, so decode it first
+      const decoded = decodeURIComponent(sessionCookie);
+      
+      // The decoded value should contain displayName and other user info
+      // Based on the screenshot, it looks like it might be a complex format
+      // Let's try to parse it
+      let userInfo = {};
+      
+      // Check if it's JSON
+      if (decoded.startsWith('{') || decoded.startsWith('%7B')) {
+        userInfo = JSON.parse(decoded);
+      } else {
+        // If not JSON, try to extract displayName and other fields
+        // The cookie seems to contain patterns like displayName, mail, etc.
+        const displayNameMatch = decoded.match(/displayName["%]*[:=]["%]*([^"&,}]+)/);
+        const mailMatch = decoded.match(/mail["%]*[:=]["%]*([^"&,}]+)/);
+        const uidMatch = decoded.match(/uid["%]*[:=]["%]*([^"&,}]+)/);
+        
+        userInfo = {
+          displayName: displayNameMatch ? displayNameMatch[1] : null,
+          mail: mailMatch ? mailMatch[1] : null,
+          uid: uidMatch ? uidMatch[1] : null
+        };
+      }
+      
+      // Extract staffId from email, uid, or displayName
+      if (userInfo.mail) {
+        req.staffId = userInfo.mail.split('@')[0];
+      } else if (userInfo.uid) {
+        req.staffId = userInfo.uid;
+      } else if (userInfo.displayName) {
+        // Convert display name to staffId format (e.g., "Wilson Ross" -> "wilson.ross")
+        req.staffId = userInfo.displayName.toLowerCase().replace(/\s+/g, '.');
+      } else {
+        req.staffId = 'default_user';
+      }
+      
       req.userRole = getUserRole(req.staffId);
+      req.userInfo = userInfo;
+      
+      console.log('User authenticated:', {
+        staffId: req.staffId,
+        role: req.userRole,
+        name: userInfo.displayName || 'Unknown',
+        rawCookie: decoded.substring(0, 100) + '...' // Log first 100 chars for debugging
+      });
     } catch (err) {
-      // If cookie parsing fails, check if it's just a staff ID
-      req.staffId = staffCookie;
-      req.userRole = getUserRole(staffCookie);
+      console.error('Failed to parse session cookie:', err);
+      console.error('Cookie value:', sessionCookie.substring(0, 100) + '...');
+      // Default user for fallback
+      req.staffId = 'default_user';
+      req.userRole = getUserRole('default_user');
     }
   } else {
     // Default user for development/testing
     req.staffId = 'default_user';
-    req.userRole = 'user';
+    req.userRole = getUserRole('default_user');
+    console.log('No session cookie, using default user');
   }
   
-  console.log('User middleware:', { staffId: req.staffId, role: req.userRole });
   next();
 });
 
@@ -81,7 +131,75 @@ app.use('/ProceduresHubEG6', express.static(path.join(__dirname, 'build')));
 
 // API endpoints
 app.get('/ProceduresHubEG6/api/role-check', (req, res) => {
-  res.json({ staffId: req.staffId, role: req.userRole });
+  console.log('Role check endpoint called:', {
+    staffId: req.staffId,
+    role: req.userRole,
+    hasUserInfo: !!req.userInfo
+  });
+  
+  if (req.staffId) {
+    res.json({ 
+      staffId: req.staffId, 
+      role: req.userRole,
+      displayName: req.userInfo?.displayName || req.staffId,
+      email: req.userInfo?.mail || `${req.staffId}@hsbc.com`
+    });
+  } else {
+    res.status(401).json({ role: 'guest' });
+  }
+});
+
+// Debug endpoint to check cookies
+app.get('/ProceduresHubEG6/api/debug/cookies', (req, res) => {
+  const sessionCookie = req.cookies?.apprunnersession;
+  let decodedSession = null;
+  let parseAttempts = [];
+  
+  if (sessionCookie) {
+    try {
+      // Try to decode
+      decodedSession = decodeURIComponent(sessionCookie);
+      parseAttempts.push({ method: 'URL decode', success: true, result: decodedSession.substring(0, 200) });
+      
+      // Try to parse as JSON
+      try {
+        const jsonParsed = JSON.parse(decodedSession);
+        parseAttempts.push({ method: 'JSON parse', success: true, result: jsonParsed });
+      } catch (e) {
+        parseAttempts.push({ method: 'JSON parse', success: false, error: e.message });
+      }
+      
+      // Try pattern matching
+      const patterns = {
+        displayName: decodedSession.match(/displayName["%]*[:=]["%]*([^"&,}]+)/),
+        mail: decodedSession.match(/mail["%]*[:=]["%]*([^"&,}]+)/),
+        uid: decodedSession.match(/uid["%]*[:=]["%]*([^"&,}]+)/),
+        employeeID: decodedSession.match(/employeeID["%]*[:=]["%]*([^"&,}]+)/)
+      };
+      parseAttempts.push({ method: 'Pattern matching', success: true, result: patterns });
+      
+    } catch (e) {
+      parseAttempts.push({ method: 'URL decode', success: false, error: e.message });
+    }
+  }
+  
+  res.json({
+    cookies: {
+      all: Object.keys(req.cookies || {}),
+      apprunnersession: sessionCookie ? {
+        exists: true,
+        length: sessionCookie.length,
+        raw: sessionCookie.substring(0, 100) + '...',
+        decoded: decodedSession ? decodedSession.substring(0, 200) + '...' : null,
+        parseAttempts
+      } : { exists: false }
+    },
+    user: {
+      staffId: req.staffId,
+      role: req.userRole,
+      userInfo: req.userInfo
+    }
+  });
 });
 
 const upload = multer({ dest: 'uploads/' });
@@ -306,6 +424,97 @@ app.get('/ProceduresHubEG6/api/dashboard/expiry-timeline', (req, res) => {
 
 // Serve uploaded files
 app.use('/ProceduresHubEG6/uploads', express.static(uploadsDir));
+
+// Test page for debugging (remove in production)
+app.get('/ProceduresHubEG6/test', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        button {
+            background: #d40000;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>HSBC Procedures Hub - Cookie Debug</h1>
+    
+    <div class="section">
+        <h2>Client-Side Cookies</h2>
+        <pre id="clientCookies">Loading...</pre>
+    </div>
+    
+    <div class="section">
+        <h2>Server Response</h2>
+        <button onclick="testDebugEndpoint()">Test Debug Endpoint</button>
+        <button onclick="testRoleCheck()">Test Role Check</button>
+        <pre id="serverResponse">Click a button to test...</pre>
+    </div>
+
+    <script>
+        function displayClientCookies() {
+            const cookies = document.cookie;
+            document.getElementById('clientCookies').textContent = cookies || 'No cookies found';
+        }
+        
+        async function testDebugEndpoint() {
+            try {
+                const response = await fetch('/ProceduresHubEG6/api/debug/cookies');
+                const data = await response.json();
+                document.getElementById('serverResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('serverResponse').textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        async function testRoleCheck() {
+            try {
+                const response = await fetch('/ProceduresHubEG6/api/role-check');
+                const data = await response.json();
+                document.getElementById('serverResponse').textContent = JSON.stringify(data, null, 2);
+            } catch (e) {
+                document.getElementById('serverResponse').textContent = 'Error: ' + e.message;
+            }
+        }
+        
+        displayClientCookies();
+    </script>
+</body>
+</html>
+  `);
+});
 
 // Catch all handler for React routes - MUST be last
 app.get('/ProceduresHubEG6/*', (req, res) => {
