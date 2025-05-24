@@ -32,8 +32,8 @@
   },
   "scripts": {
   "start": "node server.js",
-  "build": "CI=true react-scripts build",
-  "test": "CI=true react-scripts test --passWithNoTests",
+  "build": "react-scripts build",
+  "test": "react-scripts test --passWithNoTests",
   "eject": "react-scripts eject"
   },
   "eslintConfig": {
