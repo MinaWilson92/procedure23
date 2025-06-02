@@ -1,5 +1,891 @@
-// SharePoint-Compatible Professional HSBC Procedures Hub
-// Preserving all original design and functionality, just removing React Router
+{submitStatus === 'uploading' && (
+                  <Box sx={{ mt: 2 }}>
+                    <LinearProgress />
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      Uploading and processing document...
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  ℹ️ Submission Guidelines
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon><Info fontSize="small" /></ListItemIcon>
+                    <ListItemText 
+                      primary="Document Requirements"
+                      secondary="PDF or Word format, max 10MB"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon><Assignment fontSize="small" /></ListItemIcon>
+                    <ListItemText 
+                      primary="Quality Standards"
+                      secondary="Documents are analyzed for completeness"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon><Share fontSize="small" /></ListItemIcon>
+                    <ListItemText 
+                      primary="SharePoint Integration"
+                      secondary="Optional upload to SharePoint after submission"
+                    />
+                  </ListItem>
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* Loading Backdrop */}
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading && submitStatus === 'uploading'}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress color="inherit" size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Processing Procedure...
+          </Typography>
+          <Typography variant="body2">
+            Please wait while we analyze your document
+          </Typography>
+        </Box>
+      </Backdrop>
+    </Box>
+  );
+}
+
+// Submit Procedure Page (Professional Design)
+function SubmitProcedurePage(props) {
+  return <AdminPanelPage {...props} />;
+}
+
+export default App;: Review & Submit */}
+                {activeStep >= 2 && documentAnalysis && (
+                  <Box sx={{ mb: 4 }}>
+                    <Divider sx={{ my: 3 }} />
+                    <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle color="primary" />
+                      Review & Submit
+                    </Typography>
+
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                      Please review the procedure details before submitting.
+                    </Alert>
+
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => window.location.reload()}
+                        startIcon={<Refresh />}
+                        disabled={loading}
+                      >
+                        Reset Form
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading || submitStatus === 'uploading'}
+                        startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                        size="large"
+                      >
+                        {loading ? 'Submitting...' : 'Submit Procedure'}
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Right Panel - Info & Status */}
+          <Grid item xs={12} lg={4}>
+            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📋 Submission Status
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Chip 
+                    label={submitStatus.toUpperCase()}
+                    color={getStatusColor()}
+                    sx={{ mb: 1 }}
+                  />
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Current Step: {activeStep + 1} of {steps.length}
+                </Typography>
+                
+                {submitStatus === 'analyzing' && (
+                  <LinearProgress sx={{ mt: 2 }} />
+                )}
+                
+                {submitStatus === 'uploading' && (
+                  <Box sx={{ mt: // Page Router Function
+function renderCurrentPage(page, props) {
+  switch (page) {
+    case 'home':
+      return <HomePage {...props} />;
+    case 'user-dashboard':
+      return <UserDashboardPage {...props} />;
+    case 'procedures':
+      return <ProceduresPage {...props} />;
+    case 'admin-panel':
+      return <AdminPanelPage {...props} />;
+    case 'submit-procedure':
+      return <SubmitProcedurePage {...props} />;
+    default:
+      return <HomePage {...props} />;
+  }
+}
+
+// Professional Home Page (from original)
+function HomePage({ user, dashboardData, procedures, isAdmin }) {
+  const { navigate } = useNavigation();
+  const now = new Date();
+
+  const quickLinks = [
+    { 
+      title: 'All Procedures', 
+      path: 'procedures', 
+      icon: <Folder />, 
+      color: '#1976d2',
+      description: 'View all procedures'
+    },
+    { 
+      title: 'My Dashboard', 
+      path: 'user-dashboard', 
+      icon: <Person />, 
+      color: '#388e3c',
+      description: 'My procedures dashboard'
+    }
+  ];
+
+  // Add admin link for admin users
+  if (isAdmin) {
+    quickLinks.push({ 
+      title: 'Upload New', 
+      path: 'admin-panel', 
+      icon: <CloudSync />, 
+      color: '#7b1fa2',
+      description: 'Upload procedure'
+    });
+  }
+
+  return (
+    <Box>
+      {/* Enhanced Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          HSBC Procedures Hub
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Centralized procedure management with AI-powered quality analysis
+        </Typography>
+      </Box>
+
+      {user && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Welcome back, <strong>{user.displayName || user.staffId}</strong>! 
+          You are logged in as <strong>{user.role}</strong>.
+          {user.source && (
+            <Typography variant="caption" display="block" sx={{ mt: 0.5, opacity: 0.8 }}>
+              Authenticated via: {user.source}
+            </Typography>
+          )}
+        </Alert>
+      )}
+
+      {/* Quick Stats from Dashboard Data */}
+      {dashboardData?.stats && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(25,118,210,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        Total Procedures
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {dashboardData.stats.total || 0}
+                      </Typography>
+                    </Box>
+                    <Dashboard sx={{ fontSize: 50, opacity: 0.3 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(255,152,0,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        Need Attention
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {dashboardData.stats.expiringSoon || 0}
+                      </Typography>
+                    </Box>
+                    <Badge 
+                      badgeContent={dashboardData.stats.expiringSoon || 0} 
+                      color="error"
+                      invisible={(dashboardData.stats.expiringSoon || 0) === 0}
+                    >
+                      <Schedule sx={{ fontSize: 50, opacity: 0.3 }} />
+                    </Badge>
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(244,67,54,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        Expired
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {dashboardData.stats.expired || 0}
+                      </Typography>
+                    </Box>
+                    <Badge 
+                      badgeContent={dashboardData.stats.expired || 0} 
+                      color="error"
+                      invisible={(dashboardData.stats.expired || 0) === 0}
+                    >
+                      <ErrorIcon sx={{ fontSize: 50, opacity: 0.3 }} />
+                    </Badge>
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(76,175,80,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        High Quality
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {dashboardData.stats.highQuality || 0}
+                      </Typography>
+                      {dashboardData.stats.total > 0 && (
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={(dashboardData.stats.highQuality / dashboardData.stats.total) * 100} 
+                          sx={{ 
+                            mt: 1,
+                            backgroundColor: 'rgba(255,255,255,0.3)',
+                            '& .MuiLinearProgress-bar': {
+                              backgroundColor: 'rgba(255,255,255,0.8)'
+                            }
+                          }}
+                        />
+                      )}
+                    </Box>
+                    <TrendingUp sx={{ fontSize: 50, opacity: 0.3 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        </Grid>
+      )}
+
+      {/* Quick Access Links */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {quickLinks.map((link, index) => (
+          <Grid item xs={12} md={4} key={link.path}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
+            >
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    borderColor: alpha(link.color, 0.5)
+                  }
+                }}
+                onClick={() => navigate(link.path)}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Box sx={{ 
+                      p: 2, 
+                      borderRadius: 3, 
+                      bgcolor: alpha(link.color, 0.1),
+                      color: link.color,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mr: 2
+                    }}>
+                      {link.icon}
+                    </Box>
+                    <Typography variant="h5" fontWeight="bold" color={link.color}>
+                      {link.title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body1" color="text.secondary">
+                    {link.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* LOB Breakdown (Professional Feature) */}
+      {procedures && procedures.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.7 }}
+        >
+          <Paper sx={{ p: 3, mb: 4 }}>
+            <Typography variant="h6" gutterBottom fontWeight="bold">
+              📊 Procedures by Line of Business
+            </Typography>
+            <Grid container spacing={2}>
+              {['IWPB', 'CIB', 'GCOO', 'GRM', 'GF', 'GTRB'].map((lob, index) => {
+                const lobProcedures = procedures.filter(p => p.lob === lob);
+                const lobNames = {
+                  'IWPB': 'Investment Banking',
+                  'CIB': 'Corporate & Investment Banking',
+                  'GCOO': 'Group Chief Operating Office',
+                  'GRM': 'Global Risk Management',
+                  'GF': 'Global Functions',
+                  'GTRB': 'Global Trade & Receivables Finance'
+                };
+                const colors = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2', '#0288d1'];
+                
+                return (
+                  <Grid item xs={12} sm={6} md={4} lg={2} key={lob}>
+                    <Card 
+                      sx={{ 
+                        textAlign: 'center',
+                        border: `2px solid ${colors[index]}`,
+                        bgcolor: alpha(colors[index], 0.05),
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 8px 24px ${alpha(colors[index], 0.3)}`
+                        }
+                      }}
+                      onClick={() => navigate('procedures')}
+                    >
+                      <CardContent sx={{ py: 2 }}>
+                        <Typography variant="h4" fontWeight="bold" color={colors[index]}>
+                          {lobProcedures.length}
+                        </Typography>
+                        <Typography variant="body2" fontWeight="bold" gutterBottom>
+                          {lob}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {lobNames[lob]}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Paper>
+        </motion.div>
+      )}
+    </Box>
+  );
+}
+
+// Professional User Dashboard Page (from original final_user_dashboard.js)
+function UserDashboardPage({ user, procedures, dashboardData }) {
+  const { navigate } = useNavigation();
+  const [loading, setLoading] = useState(!dashboardData);
+  const [error, setError] = useState(null);
+
+  // Filter user's procedures
+  const userProcedures = procedures.filter(proc => 
+    proc.primary_owner === user?.staffId || 
+    proc.secondary_owner === user?.staffId ||
+    proc.uploaded_by === user?.staffId
+  );
+
+  const now = new Date();
+  const stats = {
+    total: userProcedures.length,
+    expiringSoon: userProcedures.filter(p => {
+      const expiry = new Date(p.expiry);
+      const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+      return daysLeft > 0 && daysLeft <= 30;
+    }).length,
+    expired: userProcedures.filter(p => new Date(p.expiry) < now).length,
+    highQuality: userProcedures.filter(p => (p.score || 0) >= 80).length
+  };
+
+  const getActivityIcon = (activity) => {
+    switch (activity.type) {
+      case 'update':
+        return <CheckCircle color="success" />;
+      case 'warning':
+        return <Warning color="warning" />;
+      case 'assignment':
+        return <Assignment color="primary" />;
+      case 'expired':
+        return <ErrorIcon color="error" />;
+      default:
+        return <Star color="primary" />;
+    }
+  };
+
+  const quickLinks = [
+    { 
+      title: 'All Procedures', 
+      path: 'procedures', 
+      icon: <Folder />, 
+      color: '#1976d2',
+      description: 'View all procedures'
+    },
+    { 
+      title: 'My Procedures', 
+      path: 'procedures', 
+      icon: <Person />, 
+      color: '#388e3c',
+      description: 'Procedures I own'
+    }
+  ];
+
+  // Add admin link for admin users
+  if (user?.role === 'admin') {
+    quickLinks.push({ 
+      title: 'Upload New', 
+      path: 'admin-panel', 
+      icon: <CloudSync />, 
+      color: '#7b1fa2',
+      description: 'Upload procedure'
+    });
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa' }}>
+      {/* Enhanced Header with SharePoint User Info */}
+      <Box sx={{ 
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
+        color: 'white',
+        py: 3,
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        mb: 4,
+        mx: -3,
+        mt: -3
+      }}>
+        <Container maxWidth="lg">
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h4" fontWeight="bold">
+                My Dashboard
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
+                <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                  Welcome back, {dashboardData?.userInfo?.displayName || user?.displayName || user?.staffId}
+                </Typography>
+                {(dashboardData?.userInfo?.department || user?.department) && (
+                  <Chip 
+                    label={dashboardData?.userInfo?.department || user?.department} 
+                    size="small"
+                    sx={{ 
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      color: 'white',
+                      fontSize: '0.7rem'
+                    }}
+                    icon={<Business sx={{ color: 'white !important' }} />}
+                  />
+                )}
+              </Box>
+              {(dashboardData?.userInfo?.email || user?.email) && (
+                <Typography variant="caption" sx={{ opacity: 0.7, display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                  <Email fontSize="small" />
+                  {dashboardData?.userInfo?.email || user?.email}
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip 
+                label={user?.role || 'User'} 
+                size="small"
+                sx={{ 
+                  backgroundColor: user?.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}
+              />
+              {(dashboardData?.userInfo?.jobTitle || user?.jobTitle) && (
+                <Chip 
+                  label={dashboardData?.userInfo?.jobTitle || user?.jobTitle} 
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    fontWeight: 'normal',
+                    fontSize: '0.7rem'
+                  }}
+                />
+              )}
+            </Box>
+          </Box>
+        </Container>
+      </Box>
+
+      <Container maxWidth="lg">
+        {/* Enhanced Stats Cards */}
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(25,118,210,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        My Procedures
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {stats.total || 0}
+                      </Typography>
+                    </Box>
+                    <Dashboard sx={{ fontSize: 50, opacity: 0.3 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(255,152,0,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        Need Attention
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {stats.expiringSoon || 0}
+                      </Typography>
+                    </Box>
+                    <Badge 
+                      badgeContent={stats.expiringSoon || 0} 
+                      color="error"
+                      invisible={(stats.expiringSoon || 0) === 0}
+                    >
+                      <Schedule sx={{ fontSize: 50, opacity: 0.3 }} />
+                    </Badge>
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(244,67,54,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        Expired
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {stats.expired || 0}
+                      </Typography>
+                    </Box>
+                    <Badge 
+                      badgeContent={stats.expired || 0} 
+                      color="error"
+                      invisible={(stats.expired || 0) === 0}
+                    >
+                      <ErrorIcon sx={{ fontSize: 50, opacity: 0.3 }} />
+                    </Badge>
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <Card sx={{ 
+                height: '100%', 
+                background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(76,175,80,0.3)'
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Box>
+                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                        High Quality
+                      </Typography>
+                      <Typography variant="h3" fontWeight="bold">
+                        {stats.highQuality || 0}
+                      </Typography>
+                      {stats.total > 0 && (
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={(stats.highQuality / stats.total) * 100} 
+                          sx={{ 
+                            mt: 1,
+                            backgroundColor: 'rgba(255,255,255,0.3)',
+                            '& .MuiLinearProgress-bar': {
+                              backgroundColor: 'rgba(255,255,255,0.8)'
+                            }
+                          }}
+                        />
+                      )}
+                    </Box>
+                    <TrendingUp sx={{ fontSize: 50, opacity: 0.3 }} />
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        </Grid>
+
+        <Grid container spacing={3}>
+          {/* Enhanced Recent Activity */}
+          <Grid item xs={12} md={8}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+            >
+              <Paper sx={{ p: 3, height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <History />
+                    <Typography variant="h6" fontWeight="bold">
+                      Recent Activity
+                    </Typography>
+                  </Box>
+                  <Button 
+                    size="small" 
+                    onClick={() => navigate('procedures')}
+                    endIcon={<OpenInNew />}
+                  >
+                    View All
+                  </Button>
+                </Box>
+                
+                <List sx={{ py: 0 }}>
+                  {dashboardData?.recentActivity && dashboardData.recentActivity.length > 0 ? dashboardData.recentActivity.map((activity, index) => (
+                    <React.Fragment key={activity.id || index}>
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                          {getActivityIcon(activity)}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {activity.action}
+                              </Typography>
+                              {activity.score && (
+                                <Chip 
+                                  label={`${activity.score}%`}
+                                  size="small"
+                                  color={activity.score >= 80 ? 'success' : 'warning'}
+                                  sx={{ fontSize: '0.7rem', height: 20 }}
+                                />
+                              )}
+                            </Box>
+                          }
+                          secondary={
+                            <Box>
+                              <Typography variant="body2" component="span" color="primary.main">
+                                {activity.procedure}
+                              </Typography>
+                              <Typography variant="caption" display="block" color="text.secondary">
+                                {activity.time}
+                              </Typography>
+                            </Box>
+                          }
+                        />
+                      </ListItem>
+                      {index < dashboardData.recentActivity.length - 1 && <Divider />}
+                    </React.Fragment>
+                  )) : (
+                    <Box sx={{ textAlign: 'center', py: 4 }}>
+                      <History sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                      <Typography color="text.secondary" variant="h6" gutterBottom>
+                        No recent activity
+                      </Typography>
+                      <Typography color="text.secondary" variant="body2">
+                        Your procedure activities will appear here
+                      </Typography>
+                    </Box>
+                  )}
+                </List>
+              </Paper>
+            </motion.div>
+          </Grid>
+
+          {/* Enhanced Quick Access */}
+          <Grid item xs={12} md={4}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.5 }}
+            >
+              <Paper sx={{ p: 3, height: '100%', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                  <Dashboard />
+                  <Typography variant="h6" fontWeight="bold">
+                    Quick Access
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {quickLinks.map((link, index) => (
+                    <motion.div
+                      key={link.path}
+                      whileHover={{ x: 4 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <Card 
+                        sx={{ 
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            boxShadow: '0 6px 16px rgba(0,0,0,0.15)',
+                            borderColor: alpha(link.color, 0.5),
+                            transform: 'translateY(-2px)'
+                          }
+                        }}
+                        onClick={() => navigate(link.path)}
+                      >
+                        <CardContent sx={{ py: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ 
+                              p: 1.5, 
+                              borderRadius: 2, 
+                              bgcolor: alpha(link.color, 0.1),
+                              color: link.color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {link.icon}
+                            </Box>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body1" fontWeight="medium" gutterBottom>
+                                {link.title}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {link.description}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </Box>
+              // SharePoint-Compatible Professional HSBC Procedures Hub
+// Using SharePointContext.js for authentication
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import {
@@ -24,6 +910,9 @@ import {
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { motion } from 'framer-motion';
+
+// Import your working SharePoint Context
+import { SharePointProvider, useSharePoint } from './SharePointContext';
 
 // HSBC Professional Theme
 const theme = createTheme({
@@ -67,293 +956,6 @@ const theme = createTheme({
   },
 });
 
-// User Context (Professional IT Integration)
-const UserContext = createContext();
-
-// SHAREPOINT AUTHENTICATION HELPER
-const extractUserFromSharePoint = () => {
-  console.log('=== SHAREPOINT AUTH EXTRACTION ===');
-  
-  let userId = '';
-  let displayName = '';
-  let email = '';
-  let department = '';
-  let jobTitle = '';
-  
-  try {
-    // SharePoint provides user context through _spPageContextInfo (only available in SharePoint)
-    if (typeof window !== 'undefined' && 
-        typeof window._spPageContextInfo !== 'undefined' && 
-        window._spPageContextInfo.userDisplayName) {
-      console.log('SharePoint user context found');
-      
-      displayName = window._spPageContextInfo.userDisplayName || '';
-      email = window._spPageContextInfo.userEmail || '';
-      userId = window._spPageContextInfo.userId || window._spPageContextInfo.userLoginName || '';
-      
-      // Extract user ID from login name if needed (domain\userid format)
-      if (userId.includes('\\')) {
-        userId = userId.split('\\')[1];
-      }
-      
-      console.log('✅ SharePoint extraction successful:', {
-        displayName,
-        userId,
-        email
-      });
-      
-      return { 
-        displayName, 
-        userId, 
-        email,
-        department,
-        jobTitle,
-        userData: { 
-          displayName, 
-          userId, 
-          email,
-          department,
-          jobTitle
-        } 
-      };
-    }
-    
-    // Fallback for development/testing or when not in SharePoint
-    if (typeof window !== 'undefined' && (
-      window.location.host.indexOf("localhost") !== -1 || 
-      window.location.host.indexOf("127.0.0.1") !== -1 ||
-      typeof window._spPageContextInfo === 'undefined'
-    )) {
-      console.log('Development environment or no SharePoint context - using fallback values');
-      userId = '43898931';
-      displayName = 'Mina Antoun Wilson Ross';
-      email = 'mina.wilson.ross@hsbc.com';
-      department = 'Global Technology';
-      jobTitle = 'Senior Analyst';
-      
-      return { 
-        displayName, 
-        userId, 
-        email,
-        department,
-        jobTitle,
-        userData: { 
-          displayName, 
-          userId, 
-          email,
-          department,
-          jobTitle
-        } 
-      };
-    }
-    
-    // No SharePoint context available
-    console.log('No SharePoint context available');
-    return { displayName: '', userId: '', email: '', userData: null };
-    
-  } catch (error) {
-    console.error('SharePoint auth extraction failed:', error);
-    return { displayName: '', userId: '', email: '', userData: null };
-  }
-};
-
-const UserProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // SharePoint user info fetcher using REST API
-  const fetchSharePointUserInfo = async () => {
-    try {
-      console.log('Fetching additional SharePoint user info...');
-      
-      // Only try SharePoint REST API if we're in a SharePoint environment
-      if (typeof window === 'undefined' || typeof window._spPageContextInfo === 'undefined') {
-        console.log('Not in SharePoint environment, skipping REST API call');
-        return { department: '', jobTitle: '', office: '' };
-      }
-      
-      // Try to get more user details from SharePoint REST API
-      const response = await fetch("/_api/SP.UserProfiles.PeopleManager/GetMyProperties", {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json;odata=verbose',
-          'Content-Type': 'application/json;odata=verbose'
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        const userProps = data.d;
-        
-        // Extract additional user properties
-        const additionalInfo = {
-          department: '',
-          jobTitle: '',
-          office: ''
-        };
-        
-        // Parse UserProfileProperties for additional details
-        if (userProps.UserProfileProperties && userProps.UserProfileProperties.results) {
-          userProps.UserProfileProperties.results.forEach(prop => {
-            switch (prop.Key) {
-              case 'Department':
-                additionalInfo.department = prop.Value;
-                break;
-              case 'Title':
-                additionalInfo.jobTitle = prop.Value;
-                break;
-              case 'Office':
-                additionalInfo.office = prop.Value;
-                break;
-            }
-          });
-        }
-        
-        console.log('✅ SharePoint REST API user info:', additionalInfo);
-        return additionalInfo;
-      }
-    } catch (err) {
-      console.log('SharePoint REST API unavailable, using basic info');
-    }
-    
-    return { department: '', jobTitle: '', office: '' };
-  };
-
-  // Check user authentication status
-  const checkUserRole = async (attemptClientExtraction = true) => {
-    try {
-      setError(null);
-      
-      console.log('=== CHECKING SHAREPOINT AUTHENTICATION ===');
-      
-      // First, try SharePoint client-side extraction
-      if (attemptClientExtraction) {
-        const sharePointAuth = extractUserFromSharePoint();
-        if (sharePointAuth.userId) {
-          console.log('✅ SharePoint client-side authentication successful');
-          
-          // Get additional user info from SharePoint
-          const additionalInfo = await fetchSharePointUserInfo();
-          
-          // Update UI immediately with SharePoint data
-          setUser({
-            staffId: sharePointAuth.userId,
-            displayName: sharePointAuth.displayName || sharePointAuth.userId,
-            email: sharePointAuth.email || `${sharePointAuth.userId}@hsbc.com`,
-            adUserId: sharePointAuth.userId,
-            department: additionalInfo.department || sharePointAuth.department,
-            jobTitle: additionalInfo.jobTitle || sharePointAuth.jobTitle,
-            office: additionalInfo.office,
-            role: 'user', // Will be updated by server check
-            authenticated: true,
-            source: 'sharepoint'
-          });
-        }
-      }
-      
-      // Then verify role with server
-      console.log('Verifying role with server...');
-      try {
-        const response = await fetch('/ProceduresHubEG6/api/role-check');
-        
-        if (response.ok) {
-          const userData = await response.json();
-          
-          if (userData.staffId && userData.role) {
-            console.log('✅ Server role verification successful:', userData);
-            
-            // Update user with server role data
-            setUser(prevUser => ({
-              ...prevUser,
-              role: userData.role,
-              authenticated: userData.authenticated,
-              source: 'sharepoint+server'
-            }));
-            return true;
-          }
-        } else if (response.status === 401) {
-          console.log('❌ Server role check failed - using SharePoint auth only');
-          // Continue with SharePoint auth, assume user role
-          if (user && user.staffId) {
-            setUser(prevUser => ({
-              ...prevUser,
-              role: 'user',
-              authenticated: true
-            }));
-            return true;
-          }
-        }
-      } catch (serverErr) {
-        console.log('Server unavailable - using SharePoint auth only');
-        // If server is unavailable, continue with SharePoint authentication
-        if (user && user.staffId) {
-          setUser(prevUser => ({
-            ...prevUser,
-            role: 'user', // Default to user role when server unavailable
-            authenticated: true
-          }));
-          return true;
-        }
-      }
-      
-      // If no SharePoint user found
-      if (!user || !user.staffId) {
-        console.log('❌ No SharePoint user found');
-        setError('Unable to authenticate with SharePoint. Please ensure you are logged into SharePoint.');
-        setUser(null);
-        return false;
-      }
-      
-      return true;
-      
-    } catch (err) {
-      console.error('❌ Error checking authentication:', err);
-      setError('Authentication error: ' + err.message);
-      setUser(null);
-      return false;
-    }
-  };
-
-  // Manual refresh handler
-  const handleRefresh = () => {
-    console.log('Manual refresh requested');
-    window.location.reload();
-  };
-
-  // Initialize authentication
-  useEffect(() => {
-    const initAuth = async () => {
-      console.log('🚀 Initializing SharePoint authentication...');
-      setLoading(true);
-      
-      // Small delay to let SharePoint context settle
-      setTimeout(async () => {
-        await checkUserRole(true);
-        setLoading(false);
-      }, 500);
-    };
-    
-    initAuth();
-  }, []);
-
-  const value = {
-    user,
-    loading,
-    error,
-    refreshAuth: () => checkUserRole(true),
-    manualRefresh: handleRefresh,
-    isAdmin: user?.role === 'admin',
-    isAuthenticated: !!user && !!user.staffId
-  };
-
-  return (
-    <UserContext.Provider value={value}>
-      {children}
-    </UserContext.Provider>
-  );
-};
-
 // Navigation Context (replaces React Router)
 const NavigationContext = createContext();
 
@@ -375,7 +977,6 @@ const NavigationProvider = ({ children }) => {
 };
 
 // Custom hooks
-const useUser = () => useContext(UserContext);
 const useNavigation = () => useContext(NavigationContext);
 
 // Main App Component
@@ -383,138 +984,18 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <UserProvider>
+      <SharePointProvider>
         <NavigationProvider>
-          <AuthenticationWrapper>
-            <HSBCProceduresHub />
-          </AuthenticationWrapper>
+          <HSBCProceduresHub />
         </NavigationProvider>
-      </UserProvider>
+      </SharePointProvider>
     </ThemeProvider>
   );
 }
 
-// Authentication wrapper component (SharePoint Version)
-const AuthenticationWrapper = ({ children }) => {
-  const { user, loading, error, refreshAuth, manualRefresh } = useUser();
-
-  if (loading) {
-    return (
-      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f6fa" gap={2}>
-        <CircularProgress size={60} />
-        <Typography variant="h6" color="text.secondary">
-          Connecting to SharePoint...
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 400 }}>
-          Verifying your SharePoint credentials...
-        </Typography>
-      </Box>
-    );
-  }
-
-  if (!user || !user.staffId) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f6fa" p={2}>
-        <Card sx={{ maxWidth: 600, width: '100%' }}>
-          <CardContent sx={{ p: 4, textAlign: 'center' }}>
-            <Box sx={{ 
-              width: 80, 
-              height: 40, 
-              bgcolor: '#d40000', 
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 'bold',
-              fontSize: '16px',
-              borderRadius: 1,
-              mx: 'auto',
-              mb: 3
-            }}>
-              HSBC
-            </Box>
-            
-            <Typography variant="h5" gutterBottom fontWeight="bold">
-              SharePoint Authentication Required
-            </Typography>
-            
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Please ensure you are logged into SharePoint to access the Procedures Hub.
-            </Typography>
-            
-            {error && (
-              <Alert 
-                severity="error" 
-                sx={{ mb: 3, textAlign: 'left' }}
-              >
-                <Typography variant="body2">
-                  {error}
-                </Typography>
-              </Alert>
-            )}
-            
-            <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
-              <Typography variant="body2" gutterBottom fontWeight="bold">
-                SharePoint Authentication Process:
-              </Typography>
-              <Typography variant="body2" component="div">
-                • You must be logged into SharePoint to access this application<br/>
-                • The app automatically detects your SharePoint user context<br/>
-                • Your session will be maintained while in SharePoint<br/>
-                • No additional login is required
-              </Typography>
-            </Alert>
-            
-            <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
-              <Typography variant="body2" gutterBottom fontWeight="bold">
-                Troubleshooting:
-              </Typography>
-              <Typography variant="body2" component="div">
-                • Ensure you are accessing this app through SharePoint<br/>
-                • Check that you have proper permissions to the site<br/>
-                • Try refreshing the page to re-detect your context<br/>
-                • Contact your SharePoint administrator if issues persist
-              </Typography>
-            </Alert>
-            
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={manualRefresh}
-                sx={{ 
-                  bgcolor: '#d40000',
-                  '&:hover': { bgcolor: '#b30000' },
-                  minWidth: 200
-                }}
-              >
-                Refresh Page
-              </Button>
-              
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={refreshAuth}
-              >
-                Retry Detection
-              </Button>
-            </Box>
-            
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
-              HSBC Procedures Hub - SharePoint Integration v2.0
-            </Typography>
-          </CardContent>
-        </Card>
-      </Box>
-    );
-  }
-
-  return children;
-};
-
 // Main Hub Component (Professional Design Preserved)
 function HSBCProceduresHub() {
-  const { user } = useUser();
+  const { user, isAuthenticated, isAdmin } = useSharePoint(); // Using your SharePoint context
   const { currentPage } = useNavigation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [procedures, setProcedures] = useState([]);
@@ -523,10 +1004,10 @@ function HSBCProceduresHub() {
   const theme = useTheme();
 
   useEffect(() => {
-    if (user) {
+    if (user && isAuthenticated) {
       loadInitialData();
     }
-  }, [user]);
+  }, [user, isAuthenticated]);
 
   const loadInitialData = async () => {
     try {
@@ -553,6 +1034,11 @@ function HSBCProceduresHub() {
       setLoading(false);
     }
   };
+
+  // Show loading while SharePoint context initializes
+  if (!isAuthenticated) {
+    return null; // SharePointProvider handles loading/error states
+  }
 
   if (loading) {
     return (
@@ -585,6 +1071,155 @@ function HSBCProceduresHub() {
             sx={{ mr: 2 }}
           >
             <MenuIcon />
+          </IconButton>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+            <Box sx={{
+              width: 60, height: 30,
+              background: 'linear-gradient(135deg, #d40000, #b30000)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              fontSize: '12px',
+              borderRadius: 1
+            }}>
+              HSBC
+            </Box>
+            <Typography variant="h6" component="div">
+              Procedures Hub
+            </Typography>
+          </Box>
+
+          {user && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Badge badgeContent={dashboardData?.stats?.expiringSoon || 0} color="error">
+                <Notifications />
+              </Badge>
+              <Chip 
+                avatar={<Avatar sx={{ bgcolor: '#d40000' }}>{user.displayName?.[0] || 'U'}</Avatar>}
+                label={user.displayName || user.staffId}
+                variant="outlined"
+                sx={{ color: 'white', borderColor: 'white' }}
+              />
+              <Chip 
+                label={user.role || 'User'}
+                size="small"
+                sx={{ 
+                  bgcolor: user.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
+                  color: 'white'
+                }}
+              />
+            </Box>
+          )}
+        </Toolbar>
+      </AppBar>
+
+      {/* Professional Navigation Drawer */}
+      <NavigationDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)}
+        user={user}
+        isAdmin={isAdmin}
+      />
+
+      {/* Main Content */}
+      <Box component="main" sx={{ 
+        flexGrow: 1, 
+        pt: 8, 
+        minHeight: '100vh'
+      }}>
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+          {renderCurrentPage(currentPage, { 
+            procedures, 
+            dashboardData, 
+            user, 
+            isAdmin,
+            onDataRefresh: loadInitialData 
+          })}
+        </Container>
+      </Box>
+    </Box>
+  );
+}
+
+// Professional Navigation Drawer (from original)
+function NavigationDrawer({ open, onClose, user, isAdmin }) {
+  const { navigate } = useNavigation();
+
+  const menuItems = [
+    { id: 'home', label: 'Home', icon: <Home />, color: '#2196f3' },
+    { id: 'user-dashboard', label: 'My Dashboard', icon: <Dashboard />, color: '#4caf50' },
+    { id: 'procedures', label: 'All Procedures', icon: <Description />, color: '#ff9800' },
+  ];
+
+  // Only show admin items for admin users
+  if (isAdmin) {
+    menuItems.push(
+      { id: 'admin-panel', label: 'Admin Panel', icon: <AdminPanelSettings />, color: '#f44336' },
+      { id: 'submit-procedure', label: 'Upload Procedure', icon: <CloudUpload />, color: '#607d8b' }
+    );
+  }
+
+  const handleNavigation = (pageId) => {
+    navigate(pageId);
+    onClose();
+  };
+
+  return (
+    <Drawer
+      variant="temporary"
+      open={open}
+      onClose={onClose}
+      sx={{
+        '& .MuiDrawer-paper': {
+          width: 280,
+          boxSizing: 'border-box',
+          mt: 8
+        },
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Navigation
+        </Typography>
+        <Divider />
+      </Box>
+
+      <List>
+        {menuItems.map((item) => (
+          <ListItem 
+            button 
+            key={item.id}
+            onClick={() => handleNavigation(item.id)}
+            sx={{
+              '&:hover': {
+                bgcolor: alpha(item.color, 0.1),
+                '& .MuiListItemIcon-root': {
+                  color: item.color
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: item.color }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItem>
+        ))}
+      </List>
+
+      <Divider />
+      
+      <Box sx={{ p: 2, mt: 'auto' }}>
+        <Typography variant="caption" color="text.secondary">
+          HSBC Procedures Hub v4.1.0 (SharePoint Compatible)
+        </Typography>
+      </Box>
+    </Drawer>
+  );
+}Icon />
           </IconButton>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
@@ -2253,6 +2888,136 @@ function AdminPanelPage({ onDataRefresh, user }) {
                 )}
 
                 {/* Step 3: Review & Submit */}
+                {activeStep >= 2 && documentAnalysis && (
+                  <Box sx={{ mb: 4 }}>
+                    <Divider sx={{ my: 3 }} />
+                    <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CheckCircle color="primary" />
+                      Review & Submit
+                    </Typography>
+
+                    <Alert severity="info" sx={{ mb: 3 }}>
+                      Please review the procedure details before submitting.
+                    </Alert>
+
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                      <Button
+                        variant="outlined"
+                        onClick={() => window.location.reload()}
+                        startIcon={<Refresh />}
+                        disabled={loading}
+                      >
+                        Reset Form
+                      </Button>
+                      <Button
+                        variant="contained"
+                        onClick={handleSubmit}
+                        disabled={loading || submitStatus === 'uploading'}
+                        startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                        size="large"
+                      >
+                        {loading ? 'Submitting...' : 'Submit Procedure'}
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Right Panel - Info & Status */}
+          <Grid item xs={12} lg={4}>
+            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📋 Submission Status
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Chip 
+                    label={submitStatus.toUpperCase()}
+                    color={getStatusColor()}
+                    sx={{ mb: 1 }}
+                  />
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Current Step: {activeStep + 1} of {steps.length}
+                </Typography>
+                
+                {submitStatus === 'analyzing' && (
+                  <LinearProgress sx={{ mt: 2 }} />
+                )}
+                
+                {submitStatus === 'uploading' && (
+                  <Box sx={{ mt: 2 }}>
+                    <LinearProgress />
+                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                      Uploading and processing document...
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  ℹ️ Submission Guidelines
+                </Typography>
+                <List dense>
+                  <ListItem>
+                    <ListItemIcon><Info fontSize="small" /></ListItemIcon>
+                    <ListItemText 
+                      primary="Document Requirements"
+                      secondary="PDF or Word format, max 10MB"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon><Assignment fontSize="small" /></ListItemIcon>
+                    <ListItemText 
+                      primary="Quality Standards"
+                      secondary="Documents are analyzed for completeness"
+                    />
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon><Share fontSize="small" /></ListItemIcon>
+                    <ListItemText 
+                      primary="SharePoint Integration"
+                      secondary="Seamless integration with SharePoint"
+                    />
+                  </ListItem>
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* Loading Backdrop */}
+      <Backdrop
+        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+        open={loading && submitStatus === 'uploading'}
+      >
+        <Box sx={{ textAlign: 'center' }}>
+          <CircularProgress color="inherit" size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Processing Procedure...
+          </Typography>
+          <Typography variant="body2">
+            Please wait while we analyze your document
+          </Typography>
+        </Box>
+      </Backdrop>
+    </Box>
+  );
+}
+
+// Submit Procedure Page (Professional Design)
+function SubmitProcedurePage(props) {
+  return <AdminPanelPage {...props} />;
+}
+
+export default App;: Review & Submit */}
                 {activeStep >= 2 && documentAnalysis && (
                   <Box sx={{ mb: 4 }}>
                     <Divider sx={{ my: 3 }} />
