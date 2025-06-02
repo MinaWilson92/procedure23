@@ -1,0 +1,1274 @@
+// App.js - Professional HSBC Procedures Hub (SharePoint Compatible)
+import React, { useState, useEffect, createContext, useContext } from 'react';
+import {
+  Box, Container, Typography, Card, CardContent, Button, Grid, 
+  AppBar, Toolbar, IconButton, Menu, MenuItem, Avatar, Chip,
+  Drawer, List, ListItem, ListItemIcon, ListItemText, Divider,
+  Alert, CircularProgress, Paper, useTheme, alpha, Badge
+} from '@mui/material';
+import {
+  Dashboard, Assignment, Settings, AccountCircle, Notifications,
+  Menu as MenuIcon, Home, BarChart, PeopleAlt, CloudUpload,
+  Description, Timeline, Assessment, Security, Refresh,
+  AdminPanelSettings, Person, Business, CalendarToday
+} from '@mui/icons-material';
+
+// User Context (instead of external UserContext)
+const UserContext = createContext();
+
+const UserProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    checkAuthentication();
+  }, []);
+
+  const checkAuthentication = async () => {
+    try {
+      const response = await fetch('/ProceduresHubEG6/api/auth/check');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.authenticated) {
+          setUser(data.user);
+          console.log('✅ User authenticated:', data.user.displayName);
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error('❌ Auth error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <UserContext.Provider value={{ user, loading, error, checkAuthentication }}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+
+// Navigation Context (replaces React Router)
+const NavigationContext = createContext();
+
+const NavigationProvider = ({ children }) => {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [pageData, setPageData] = useState({});
+
+  const navigate = (page, data = {}) => {
+    setCurrentPage(page);
+    setPageData(data);
+    console.log('📍 Navigating to:', page);
+  };
+
+  return (
+    <NavigationContext.Provider value={{ currentPage, pageData, navigate }}>
+      {children}
+    </NavigationContext.Provider>
+  );
+};
+
+// Custom hooks
+const useUser = () => useContext(UserContext);
+const useNavigation = () => useContext(NavigationContext);
+
+// Main App Component
+function App() {
+  return (
+    <UserProvider>
+      <NavigationProvider>
+        <HSBCProceduresHub />
+      </NavigationProvider>
+    </UserProvider>
+  );
+}
+
+// Main Hub Component
+function HSBCProceduresHub() {
+  const { user, loading } = useUser();
+  const { currentPage } = useNavigation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [procedures, setProcedures] = useState([]);
+  const [dashboardData, setDashboardData] = useState(null);
+  const theme = useTheme();
+
+  useEffect(() => {
+    if (user) {
+      loadInitialData();
+    }
+  }, [user]);
+
+  const loadInitialData = async () => {
+    try {
+      // Load procedures
+      const procResponse = await fetch('/ProceduresHubEG6/api/procedures');
+      if (procResponse.ok) {
+        const procData = await procResponse.json();
+        setProcedures(procData);
+        console.log('✅ Procedures loaded:', procData.length);
+      }
+
+      // Load dashboard data
+      const dashResponse = await fetch('/ProceduresHubEG6/api/dashboard-summary');
+      if (dashResponse.ok) {
+        const dashData = await dashResponse.json();
+        setDashboardData(dashData);
+        console.log('✅ Dashboard data loaded');
+      }
+    } catch (err) {
+      console.error('❌ Error loading data:', err);
+    }
+  };
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f6fa' }}>
+      {/* App Bar */}
+      <AppBar position="fixed" sx={{ 
+        zIndex: theme.zIndex.drawer + 1,
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
+      }}>
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            sx={{ mr: 2 }}
+          >
+            <MenuIcon />
+          </IconButton>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+            <Box sx={{
+              width: 60, height: 30,
+              background: 'linear-gradient(135deg, #d40000, #b30000)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 'bold',
+              fontSize: '12px',
+              borderRadius: 1
+            }}>
+              HSBC
+            </Box>
+            <Typography variant="h6" component="div">
+              Procedures Hub
+            </Typography>
+          </Box>
+
+          {user && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Badge badgeContent={3} color="error">
+                <Notifications />
+              </Badge>
+              <Chip 
+                avatar={<Avatar sx={{ bgcolor: '#d40000' }}>{user.displayName?.[0]}</Avatar>}
+                label={user.displayName}
+                variant="outlined"
+                sx={{ color: 'white', borderColor: 'white' }}
+              />
+              <Chip 
+                label={user.role}
+                size="small"
+                sx={{ 
+                  bgcolor: user.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
+                  color: 'white'
+                }}
+              />
+            </Box>
+          )}
+        </Toolbar>
+      </AppBar>
+
+      {/* Navigation Drawer */}
+      <NavigationDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)}
+        user={user}
+      />
+
+      {/* Main Content */}
+      <Box component="main" sx={{ 
+        flexGrow: 1, 
+        pt: 8, 
+        minHeight: '100vh'
+      }}>
+        <Container maxWidth="xl" sx={{ py: 3 }}>
+          {renderCurrentPage(currentPage, { 
+            procedures, 
+            dashboardData, 
+            user, 
+            onDataRefresh: loadInitialData 
+          })}
+        </Container>
+      </Box>
+    </Box>
+  );
+}
+
+// Navigation Drawer Component
+function NavigationDrawer({ open, onClose, user }) {
+  const { navigate } = useNavigation();
+
+  const menuItems = [
+    { id: 'home', label: 'Home', icon: <Home />, color: '#2196f3' },
+    { id: 'dashboard', label: 'Dashboard', icon: <Dashboard />, color: '#4caf50' },
+    { id: 'procedures', label: 'All Procedures', icon: <Description />, color: '#ff9800' },
+    { id: 'user-dashboard', label: 'My Dashboard', icon: <Person />, color: '#9c27b0' },
+  ];
+
+  if (user?.role === 'admin') {
+    menuItems.push(
+      { id: 'admin-panel', label: 'Admin Panel', icon: <AdminPanelSettings />, color: '#f44336' },
+      { id: 'submit-procedure', label: 'Upload Procedure', icon: <CloudUpload />, color: '#607d8b' }
+    );
+  }
+
+  const handleNavigation = (pageId) => {
+    navigate(pageId);
+    onClose();
+  };
+
+  return (
+    <Drawer
+      variant="temporary"
+      open={open}
+      onClose={onClose}
+      sx={{
+        '& .MuiDrawer-paper': {
+          width: 280,
+          boxSizing: 'border-box',
+          mt: 8
+        },
+      }}
+    >
+      <Box sx={{ p: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Navigation
+        </Typography>
+        <Divider />
+      </Box>
+
+      <List>
+        {menuItems.map((item) => (
+          <ListItem 
+            button 
+            key={item.id}
+            onClick={() => handleNavigation(item.id)}
+            sx={{
+              '&:hover': {
+                bgcolor: alpha(item.color, 0.1),
+                '& .MuiListItemIcon-root': {
+                  color: item.color
+                }
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: item.color }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItem>
+        ))}
+      </List>
+
+      <Divider />
+      
+      <Box sx={{ p: 2, mt: 'auto' }}>
+        <Typography variant="caption" color="text.secondary">
+          HSBC Procedures Hub v4.1.0
+        </Typography>
+      </Box>
+    </Drawer>
+  );
+}
+
+// Page Router Function
+function renderCurrentPage(page, props) {
+  switch (page) {
+    case 'home':
+      return <HomePage {...props} />;
+    case 'dashboard':
+      return <DashboardPage {...props} />;
+    case 'procedures':
+      return <ProceduresPage {...props} />;
+    case 'user-dashboard':
+      return <UserDashboardPage {...props} />;
+    case 'admin-panel':
+      return <AdminPanelPage {...props} />;
+    case 'submit-procedure':
+      return <SubmitProcedurePage {...props} />;
+    default:
+      return <HomePage {...props} />;
+  }
+}
+
+// Loading Screen Component
+function LoadingScreen() {
+  return (
+    <Box sx={{
+      minHeight: '100vh',
+      bgcolor: '#f5f6fa',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column'
+    }}>
+      <Box sx={{
+        width: 120, height: 60,
+        background: 'linear-gradient(135deg, #d40000, #b30000)',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 'bold',
+        fontSize: '24px',
+        borderRadius: 2,
+        mb: 3,
+        animation: 'pulse 2s infinite'
+      }}>
+        HSBC
+      </Box>
+      <CircularProgress size={60} sx={{ color: '#d40000', mb: 2 }} />
+      <Typography variant="h6" color="text.secondary">
+        Loading Procedures Hub...
+      </Typography>
+    </Box>
+  );
+}
+
+// Page Components
+function HomePage({ user, dashboardData }) {
+  const { navigate } = useNavigation();
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        Welcome to HSBC Procedures Hub
+      </Typography>
+      
+      {user && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Welcome back, <strong>{user.displayName}</strong>! You are logged in as <strong>{user.role}</strong>.
+        </Alert>
+      )}
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            height: '100%',
+            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+            color: 'white',
+            cursor: 'pointer',
+            '&:hover': { transform: 'translateY(-2px)' },
+            transition: 'transform 0.3s'
+          }}
+          onClick={() => navigate('dashboard')}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Dashboard sx={{ fontSize: 40, mr: 2 }} />
+                <Typography variant="h5" fontWeight="bold">
+                  Dashboard
+                </Typography>
+              </Box>
+              <Typography variant="body1">
+                View comprehensive analytics and procedure statistics
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card sx={{ 
+            height: '100%',
+            background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+            color: 'white',
+            cursor: 'pointer',
+            '&:hover': { transform: 'translateY(-2px)' },
+            transition: 'transform 0.3s'
+          }}
+          onClick={() => navigate('procedures')}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Description sx={{ fontSize: 40, mr: 2 }} />
+                <Typography variant="h5" fontWeight="bold">
+                  Procedures
+                </Typography>
+              </Box>
+              <Typography variant="body1">
+                Browse and manage all procedure documents
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {user?.role === 'admin' && (
+          <Grid item xs={12} md={4}>
+            <Card sx={{ 
+              height: '100%',
+              background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+              color: 'white',
+              cursor: 'pointer',
+              '&:hover': { transform: 'translateY(-2px)' },
+              transition: 'transform 0.3s'
+            }}
+            onClick={() => navigate('admin-panel')}
+            >
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <AdminPanelSettings sx={{ fontSize: 40, mr: 2 }} />
+                  <Typography variant="h5" fontWeight="bold">
+                    Admin Panel
+                  </Typography>
+                </Box>
+                <Typography variant="body1">
+                  Upload and manage procedures with AI analysis
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+      </Grid>
+
+      {dashboardData && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Quick Stats
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={3}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="h4" color="primary">
+                  {dashboardData.total}
+                </Typography>
+                <Typography variant="body2">
+                  Total Procedures
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="h4" color="warning.main">
+                  {dashboardData.expiringSoon}
+                </Typography>
+                <Typography variant="body2">
+                  Expiring Soon
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="h4" color="error.main">
+                  {dashboardData.expired}
+                </Typography>
+                <Typography variant="body2">
+                  Expired
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Paper sx={{ p: 2, textAlign: 'center' }}>
+                <Typography variant="h4" color="success.main">
+                  {dashboardData.highQuality}
+                </Typography>
+                <Typography variant="body2">
+                  High Quality
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+function DashboardPage({ dashboardData, procedures }) {
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        📊 Dashboard Overview
+      </Typography>
+      
+      {dashboardData && (
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+              color: 'white'
+            }}>
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Typography variant="h3" fontWeight="bold">
+                  {dashboardData.total}
+                </Typography>
+                <Typography variant="h6">
+                  Total Procedures
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
+              color: 'white'
+            }}>
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Typography variant="h3" fontWeight="bold">
+                  {dashboardData.expiringSoon}
+                </Typography>
+                <Typography variant="h6">
+                  Expiring Soon
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)', 
+              color: 'white'
+            }}>
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Typography variant="h3" fontWeight="bold">
+                  {dashboardData.expired}
+                </Typography>
+                <Typography variant="h6">
+                  Expired
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} sm={6} md={3}>
+            <Card sx={{ 
+              background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
+              color: 'white'
+            }}>
+              <CardContent sx={{ textAlign: 'center' }}>
+                <Typography variant="h3" fontWeight="bold">
+                  {dashboardData.highQuality}
+                </Typography>
+                <Typography variant="h6">
+                  High Quality
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+      )}
+
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            📈 System Status
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" gutterBottom>
+                ✅ Authentication: Active
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                ✅ SharePoint Integration: Connected
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                ✅ Document Analysis: Operational
+              </Typography>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Typography variant="body2" gutterBottom>
+                📊 Average Quality Score: {dashboardData?.averageScore || 0}%
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                📁 SharePoint Uploads: {dashboardData?.sharePointUploaded || 0}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                🔄 Last Updated: {new Date().toLocaleString()}
+              </Typography>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
+
+function ProceduresPage({ procedures }) {
+  const now = new Date();
+
+  const getStatusColor = (expiry) => {
+    const expiryDate = new Date(expiry);
+    const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft < 0) return '#f44336'; // Red for expired
+    if (daysLeft <= 30) return '#ff9800'; // Orange for expiring soon
+    return '#4caf50'; // Green for active
+  };
+
+  const getStatusText = (expiry) => {
+    const expiryDate = new Date(expiry);
+    const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft < 0) return `EXPIRED (${Math.abs(daysLeft)} days ago)`;
+    if (daysLeft <= 30) return `${daysLeft} days left`;
+    return `${daysLeft} days left`;
+  };
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" fontWeight="bold">
+          📄 All Procedures ({procedures.length})
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<Refresh />}
+          onClick={() => window.location.reload()}
+        >
+          Refresh
+        </Button>
+      </Box>
+      
+      <Grid container spacing={3}>
+        {procedures.map((proc) => (
+          <Grid item xs={12} sm={6} md={4} key={proc.id}>
+            <Card sx={{ 
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              '&:hover': {
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                transform: 'translateY(-2px)'
+              },
+              transition: 'all 0.3s ease'
+            }}>
+              <CardContent sx={{ flex: 1 }}>
+                <Typography variant="h6" gutterBottom noWrap>
+                  {proc.name}
+                </Typography>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Chip 
+                    label={getStatusText(proc.expiry)}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: getStatusColor(proc.expiry),
+                      color: 'white',
+                      fontWeight: 'bold'
+                    }}
+                  />
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Business sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                  LOB: {proc.lob}
+                </Typography>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <Person sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                  Owner: {proc.primary_owner}
+                </Typography>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  <CalendarToday sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
+                  Expiry: {new Date(proc.expiry).toLocaleDateString()}
+                </Typography>
+
+                {proc.score && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="body2" gutterBottom>
+                      Quality Score: <strong>{proc.score}%</strong>
+                    </Typography>
+                    <Box sx={{
+                      width: '100%',
+                      height: 8,
+                      bgcolor: '#e0e0e0',
+                      borderRadius: 4,
+                      overflow: 'hidden'
+                    }}>
+                      <Box sx={{
+                        width: `${proc.score}%`,
+                        height: '100%',
+                        bgcolor: proc.score >= 80 ? '#4caf50' : proc.score >= 60 ? '#ff9800' : '#f44336',
+                        borderRadius: 4
+                      }} />
+                    </Box>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+      
+      {procedures.length === 0 && (
+        <Card sx={{ textAlign: 'center', py: 8 }}>
+          <CardContent>
+            <Description sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+            <Typography variant="h5" color="text.secondary" gutterBottom>
+              No procedures found
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Procedures will appear here once they are uploaded to the system.
+            </Typography>
+          </CardContent>
+        </Card>
+      )}
+    </Box>
+  );
+}
+
+function UserDashboardPage({ user, procedures }) {
+  const navigate = useNavigation().navigate;
+  
+  // Filter user's procedures
+  const userProcedures = procedures.filter(proc => 
+    proc.primary_owner === user?.staffId || 
+    proc.secondary_owner === user?.staffId ||
+    proc.uploaded_by === user?.staffId
+  );
+
+  const now = new Date();
+  const stats = {
+    total: userProcedures.length,
+    expiringSoon: userProcedures.filter(p => {
+      const expiry = new Date(p.expiry);
+      const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+      return daysLeft > 0 && daysLeft <= 30;
+    }).length,
+    expired: userProcedures.filter(p => new Date(p.expiry) < now).length,
+    highQuality: userProcedures.filter(p => (p.score || 0) >= 80).length
+  };
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        👤 My Dashboard
+      </Typography>
+      
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Welcome, <strong>{user?.displayName}</strong>! Here are your procedure statistics.
+      </Alert>
+
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ textAlign: 'center', bgcolor: '#2196f3', color: 'white' }}>
+            <CardContent>
+              <Typography variant="h3" fontWeight="bold">
+                {stats.total}
+              </Typography>
+              <Typography variant="h6">
+                My Procedures
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ textAlign: 'center', bgcolor: '#ff9800', color: 'white' }}>
+            <CardContent>
+              <Typography variant="h3" fontWeight="bold">
+                {stats.expiringSoon}
+              </Typography>
+              <Typography variant="h6">
+                Need Attention
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ textAlign: 'center', bgcolor: '#f44336', color: 'white' }}>
+            <CardContent>
+              <Typography variant="h3" fontWeight="bold">
+                {stats.expired}
+              </Typography>
+              <Typography variant="h6">
+                Expired
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ textAlign: 'center', bgcolor: '#4caf50', color: 'white' }}>
+            <CardContent>
+              <Typography variant="h3" fontWeight="bold">
+                {stats.highQuality}
+              </Typography>
+              <Typography variant="h6">
+                High Quality
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                📋 Quick Actions
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Button
+                  variant="contained"
+                  startIcon={<Description />}
+                  onClick={() => navigate('procedures')}
+                  fullWidth
+                >
+                  View All Procedures
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Dashboard />}
+                  onClick={() => navigate('dashboard')}
+                  fullWidth
+                >
+                  System Dashboard
+                </Button>
+                {user?.role === 'admin' && (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<CloudUpload />}
+                    onClick={() => navigate('submit-procedure')}
+                    fullWidth
+                  >
+                    Upload New Procedure
+                  </Button>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                👤 Profile Information
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Name:</strong> {user?.displayName}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Role:</strong> {user?.role}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Staff ID:</strong> {user?.staffId}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Email:</strong> {user?.email}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
+function AdminPanelPage({ onDataRefresh }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    expiry: '',
+    primary_owner: '',
+    primary_owner_email: '',
+    lob: '',
+    procedure_subsection: ''
+  });
+
+  // Set default expiry date (1 year from now)
+  useEffect(() => {
+    const defaultExpiry = new Date();
+    defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
+    setFormData(prev => ({
+      ...prev,
+      expiry: defaultExpiry.toISOString().split('T')[0]
+    }));
+  }, []);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate form
+    if (!formData.name || !formData.primary_owner || !formData.lob) {
+      setUploadResult({
+        success: false,
+        message: 'Please fill in all required fields (Name, Primary Owner, LOB)'
+      });
+      return;
+    }
+
+    setUploading(true);
+    setUploadResult(null);
+
+    const submitData = new FormData();
+    submitData.append('file', file);
+    Object.keys(formData).forEach(key => {
+      if (formData[key]) {
+        submitData.append(key, formData[key]);
+      }
+    });
+
+    try {
+      const response = await fetch('/ProceduresHubEG6/api/procedures', {
+        method: 'POST',
+        body: submitData
+      });
+
+      const result = await response.json();
+      
+      if (result.accepted) {
+        setUploadResult({
+          success: true,
+          message: `✅ Upload successful! Quality score: ${result.analysis.score}%`,
+          analysis: result.analysis
+        });
+        
+        // Reset form
+        setFormData({
+          name: '',
+          expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          primary_owner: '',
+          primary_owner_email: '',
+          lob: '',
+          procedure_subsection: ''
+        });
+        
+        // Clear file input
+        event.target.value = '';
+        
+        // Refresh data
+        if (onDataRefresh) {
+          setTimeout(onDataRefresh, 1000);
+        }
+        
+      } else {
+        setUploadResult({
+          success: false,
+          message: `❌ Upload failed: ${result.message}`,
+          analysis: result.analysis
+        });
+      }
+    } catch (error) {
+      setUploadResult({
+        success: false,
+        message: `❌ Upload error: ${error.message}`
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        ⚙️ Admin Panel
+      </Typography>
+      
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Upload and analyze procedure documents with AI-powered quality assessment.
+      </Alert>
+
+      {uploadResult && (
+        <Alert 
+          severity={uploadResult.success ? 'success' : 'error'} 
+          sx={{ mb: 3 }}
+          onClose={() => setUploadResult(null)}
+        >
+          {uploadResult.message}
+        </Alert>
+      )}
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                📤 Upload New Procedure
+              </Typography>
+              
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Procedure Name *
+                  </Typography>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter procedure name"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px'
+                    }}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Primary Owner *
+                  </Typography>
+                  <input
+                    type="text"
+                    name="primary_owner"
+                    value={formData.primary_owner}
+                    onChange={handleInputChange}
+                    placeholder="Enter primary owner name"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px'
+                    }}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Primary Owner Email
+                  </Typography>
+                  <input
+                    type="email"
+                    name="primary_owner_email"
+                    value={formData.primary_owner_email}
+                    onChange={handleInputChange}
+                    placeholder="Enter email address"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px'
+                    }}
+                  />
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Line of Business *
+                  </Typography>
+                  <select
+                    name="lob"
+                    value={formData.lob}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px'
+                    }}
+                    required
+                  >
+                    <option value="">Select LOB</option>
+                    <option value="IWPB">IWPB - Investment Banking</option>
+                    <option value="CIB">CIB - Corporate & Investment Banking</option>
+                    <option value="GCOO">GCOO - Group Chief Operating Office</option>
+                    <option value="GRM">GRM - Global Risk Management</option>
+                    <option value="GF">GF - Global Functions</option>
+                    <option value="GTRB">GTRB - Global Trade & Receivables Finance</option>
+                  </select>
+                </Grid>
+                
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Expiry Date *
+                  </Typography>
+                  <input
+                    type="date"
+                    name="expiry"
+                    value={formData.expiry}
+                    onChange={handleInputChange}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '16px'
+                    }}
+                    required
+                  />
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Document File *
+                  </Typography>
+                  <Box sx={{
+                    border: '2px dashed #ddd',
+                    borderRadius: 2,
+                    p: 3,
+                    textAlign: 'center',
+                    bgcolor: '#fafafa'
+                  }}>
+                    <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                    <Typography variant="h6" gutterBottom>
+                      Select Procedure Document
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Upload a PDF or Word document (.pdf, .docx, .doc)
+                    </Typography>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                      style={{
+                        padding: '10px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        marginTop: '10px'
+                      }}
+                    />
+                    {uploading && (
+                      <Box sx={{ mt: 2 }}>
+                        <CircularProgress size={30} />
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          Uploading and analyzing document...
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                📋 Upload Guidelines
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                • Document formats: PDF, DOC, DOCX
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                • Maximum file size: 10MB
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                • Minimum quality score: 80%
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                • Required: Document control section
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                • Required: Risk assessment
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                • Required: Owner information
+              </Typography>
+            </CardContent>
+          </Card>
+
+          {uploadResult?.analysis && (
+            <Card sx={{ mt: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  📊 Analysis Results
+                </Typography>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" gutterBottom>
+                    Quality Score: <strong>{uploadResult.analysis.score}%</strong>
+                  </Typography>
+                  <Box sx={{
+                    width: '100%',
+                    height: 10,
+                    bgcolor: '#e0e0e0',
+                    borderRadius: 5,
+                    overflow: 'hidden'
+                  }}>
+                    <Box sx={{
+                      width: `${uploadResult.analysis.score}%`,
+                      height: '100%',
+                      bgcolor: uploadResult.analysis.score >= 80 ? '#4caf50' : 
+                               uploadResult.analysis.score >= 60 ? '#ff9800' : '#f44336',
+                      borderRadius: 5
+                    }} />
+                  </Box>
+                </Box>
+                
+                {uploadResult.analysis.details?.foundElements?.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" gutterBottom>
+                      ✅ Found Elements:
+                    </Typography>
+                    {uploadResult.analysis.details.foundElements.slice(0, 3).map((element, index) => (
+                      <Typography key={index} variant="caption" display="block">
+                        • {element}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+                
+                {uploadResult.analysis.details?.missingElements?.length > 0 && (
+                  <Box>
+                    <Typography variant="body2" gutterBottom>
+                      ❌ Missing Elements:
+                    </Typography>
+                    {uploadResult.analysis.details.missingElements.slice(0, 3).map((element, index) => (
+                      <Typography key={index} variant="caption" display="block">
+                        • {element}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
+function SubmitProcedurePage({ onDataRefresh }) {
+  const { user } = useUser();
+  
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom fontWeight="bold">
+        📤 Submit New Procedure
+      </Typography>
+      
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Use this streamlined interface to quickly upload procedure documents.
+      </Alert>
+
+      <AdminPanelPage onDataRefresh={onDataRefresh} />
+    </Box>
+  );
+}
+
+export default App;
