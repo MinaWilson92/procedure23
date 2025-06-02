@@ -1,21 +1,22 @@
-// services/SharePointService.js - Build-Safe SharePoint Service
+// services/SharePointService.js - Fixed for Your List URLs
 class SharePointService {
   constructor() {
     // Safe SharePoint context checking for build time
     this.siteUrl = this.getSafeSharePointUrl();
     this.requestDigest = this.getSafeRequestDigest();
     
-    // LOB folder mapping
-    this.lobFolders = {
-      'IWPB': 'IWPB',
-      'CIB': 'CIB', 
-      'GCOO': 'GCOO'
+    // Your actual list URLs (relative to site)
+    this.listUrls = {
+      procedures: '/sites/EmployeeEng/lists/Procedures',
+      userRoles: '/sites/EmployeeEng/lists/UserRoles',
+      auditLog: '/sites/EmployeeEng/lists/AuditLog'
     };
 
     console.log('🔧 SharePointService initialized:', {
       siteUrl: this.siteUrl,
       hasDigest: !!this.requestDigest,
-      isSharePointEnv: this.isSharePointAvailable()
+      isSharePointEnv: this.isSharePointAvailable(),
+      listUrls: this.listUrls
     });
   }
 
@@ -47,6 +48,15 @@ class SharePointService {
     }
   }
 
+  // Build correct API URL for your lists
+  buildListApiUrl(listType, operation = 'items') {
+    const baseUrl = this.siteUrl || window.location.origin;
+    const listPath = this.listUrls[listType];
+    
+    // Use the correct SharePoint API format for your list structure
+    return `${baseUrl}/_api/web/GetList('${listPath}')/${operation}`;
+  }
+
   // ===================================================================
   // PROCEDURES LIST OPERATIONS
   // ===================================================================
@@ -61,16 +71,16 @@ class SharePointService {
 
       console.log('📋 Fetching procedures from SharePoint list...');
       
-      const response = await fetch(
-        `${this.siteUrl}/_api/web/lists/getbytitle('Procedures')/items?$select=*&$orderby=Id desc&$top=1000`,
-        {
-          method: 'GET',
-          headers: { 
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose'
-          }
+      const apiUrl = this.buildListApiUrl('procedures') + '?$select=*&$orderby=Id desc&$top=1000';
+      console.log('🔗 API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: { 
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
         }
-      );
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch procedures: ${response.status} ${response.statusText}`);
@@ -126,18 +136,18 @@ class SharePointService {
         listItemData.SharePointUploaded = true;
       }
 
-      const response = await fetch(
-        `${this.siteUrl}/_api/web/lists/getbytitle('Procedures')/items`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose',
-            'X-RequestDigest': this.requestDigest
-          },
-          body: JSON.stringify(listItemData)
-        }
-      );
+      const apiUrl = this.buildListApiUrl('procedures');
+      console.log('🔗 Create API URL:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': this.requestDigest
+        },
+        body: JSON.stringify(listItemData)
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -243,12 +253,12 @@ class SharePointService {
 
       const userId = staffId || this.getCurrentUser().staffId;
       
-      const response = await fetch(
-        `${this.siteUrl}/_api/web/lists/getbytitle('UserRoles')/items?$filter=Title eq '${userId}'`,
-        {
-          headers: { 'Accept': 'application/json; odata=verbose' }
-        }
-      );
+      const apiUrl = this.buildListApiUrl('userRoles') + `?$filter=Title eq '${userId}'`;
+      console.log('🔗 UserRole API URL:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
+        headers: { 'Accept': 'application/json; odata=verbose' }
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -274,12 +284,12 @@ class SharePointService {
         return this.getMockAuditLog();
       }
 
-      const response = await fetch(
-        `${this.siteUrl}/_api/web/lists/getbytitle('AuditLog')/items?$select=*&$orderby=LogTimestamp desc&$top=${limit}`,
-        {
-          headers: { 'Accept': 'application/json; odata=verbose' }
-        }
-      );
+      const apiUrl = this.buildListApiUrl('auditLog') + `?$select=*&$orderby=LogTimestamp desc&$top=${limit}`;
+      console.log('🔗 AuditLog API URL:', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        headers: { 'Accept': 'application/json; odata=verbose' }
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to fetch audit log: ${response.status}`);
@@ -371,6 +381,36 @@ class SharePointService {
              window._spPageContextInfo.webAbsoluteUrl;
     } catch (error) {
       return false;
+    }
+  }
+
+  // Test connection to your lists
+  async testListConnections() {
+    console.log('🧪 Testing connections to SharePoint lists...');
+    
+    const tests = [
+      { name: 'Procedures', type: 'procedures' },
+      { name: 'UserRoles', type: 'userRoles' },
+      { name: 'AuditLog', type: 'auditLog' }
+    ];
+
+    for (const test of tests) {
+      try {
+        const apiUrl = this.buildListApiUrl(test.type) + '?$select=Id&$top=1';
+        console.log(`🔗 Testing ${test.name}: ${apiUrl}`);
+        
+        const response = await fetch(apiUrl, {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        });
+
+        if (response.ok) {
+          console.log(`✅ ${test.name}: Connection successful`);
+        } else {
+          console.log(`❌ ${test.name}: Connection failed (${response.status})`);
+        }
+      } catch (error) {
+        console.log(`❌ ${test.name}: Error - ${error.message}`);
+      }
     }
   }
 
