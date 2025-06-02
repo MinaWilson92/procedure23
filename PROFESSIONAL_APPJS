@@ -70,80 +70,84 @@ const theme = createTheme({
 // User Context (Professional IT Integration)
 const UserContext = createContext();
 
-// IT-PROVIDED CLIENT-SIDE AUTHENTICATION HELPER
-const extractUserFromCookie = () => {
-  console.log('=== CLIENT-SIDE AUTH EXTRACTION ===');
+// SHAREPOINT AUTHENTICATION HELPER
+const extractUserFromSharePoint = () => {
+  console.log('=== SHAREPOINT AUTH EXTRACTION ===');
   
   let userId = '';
   let displayName = '';
+  let email = '';
+  let department = '';
+  let jobTitle = '';
   
   try {
-    // Use IT-provided logic for localhost development
-    if (window.location.host.indexOf("localhost") !== -1) {
-      console.log('Localhost detected - checking for test cookie');
+    // SharePoint provides user context through _spPageContextInfo
+    if (typeof _spPageContextInfo !== 'undefined' && _spPageContextInfo.userDisplayName) {
+      console.log('SharePoint user context found');
       
-      // Check for test cookie pattern from IT code
-      const testCookieMatch = document.cookie.match(/(.+)?.*apprunnersession.*=.*(.+)?/);
+      displayName = _spPageContextInfo.userDisplayName || '';
+      email = _spPageContextInfo.userEmail || '';
+      userId = _spPageContextInfo.userId || _spPageContextInfo.userLoginName || '';
       
-      if (testCookieMatch) {
-        console.log('Test cookie pattern found');
-        
-        const value = "; " + document.cookie;
-        const parts = value.split("; apprunnersession=");
-        
-        if (parts.length === 2) {
-          const decoded = decodeURIComponent(parts.pop().split(";").shift());
-          console.log('Cookie decoded on client side');
-          
-          try {
-            const userData = JSON.parse(decoded);
-            displayName = userData.displayName || '';
-            userId = userData.adUserId || userData.userId || '';
-            
-            console.log('✅ Client-side extraction successful:', {
-              displayName,
-              userId: userId
-            });
-            
-            return { displayName, userId, userData };
-          } catch (e) {
-            console.log('JSON parse failed, using fallback values');
-          }
-        }
-      } else {
-        console.log('No test cookie found, using IT fallback values');
-        // Use IT-provided fallback values for development
-        userId = '43898931';
-        displayName = 'Mina Antoun Wilson Ross';
+      // Extract user ID from login name if needed (domain\userid format)
+      if (userId.includes('\\')) {
+        userId = userId.split('\\')[1];
       }
-    } else {
-      console.log('Production environment - extracting from real AppRunner cookie');
       
-      // Production: Extract from real AppRunner session
-      const value = "; " + document.cookie;
-      const parts = value.split("; apprunnersession=");
+      console.log('✅ SharePoint extraction successful:', {
+        displayName,
+        userId,
+        email
+      });
       
-      if (parts.length === 2) {
-        const decoded = decodeURIComponent(parts.pop().split(";").shift());
-        
-        try {
-          const userData = JSON.parse(decoded);
-          displayName = userData.displayName || '';
-          userId = userData.adUserId || userData.userId || '';
-          
-          return { displayName, userId, userData };
-        } catch (e) {
-          console.error('Failed to parse AppRunner cookie:', e);
-        }
-      }
+      return { 
+        displayName, 
+        userId, 
+        email,
+        department,
+        jobTitle,
+        userData: { 
+          displayName, 
+          userId, 
+          email,
+          department,
+          jobTitle
+        } 
+      };
     }
     
-    console.log('Final client-side result:', { displayName, userId });
-    return { displayName, userId, userData: { displayName, adUserId: userId } };
+    // Fallback for development/testing
+    if (window.location.host.indexOf("localhost") !== -1 || window.location.host.indexOf("127.0.0.1") !== -1) {
+      console.log('Development environment - using fallback values');
+      userId = '43898931';
+      displayName = 'Mina Antoun Wilson Ross';
+      email = 'mina.wilson.ross@hsbc.com';
+      department = 'Global Technology';
+      jobTitle = 'Senior Analyst';
+      
+      return { 
+        displayName, 
+        userId, 
+        email,
+        department,
+        jobTitle,
+        userData: { 
+          displayName, 
+          userId, 
+          email,
+          department,
+          jobTitle
+        } 
+      };
+    }
+    
+    // Try to get user info from SharePoint REST API
+    console.log('Attempting SharePoint REST API call...');
+    return { displayName: '', userId: '', email: '', userData: null };
     
   } catch (error) {
-    console.error('Client-side auth extraction failed:', error);
-    return { displayName: '', userId: '', userData: null };
+    console.error('SharePoint auth extraction failed:', error);
+    return { displayName: '', userId: '', email: '', userData: null };
   }
 };
 
@@ -151,30 +155,57 @@ const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [authAttempts, setAuthAttempts] = useState(0);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // IT-provided login function
-  const performITLogin = () => {
-    console.log('=== PERFORMING IT LOGIN ===');
-    
+  // SharePoint user info fetcher using REST API
+  const fetchSharePointUserInfo = async () => {
     try {
-      setIsAuthenticating(true);
+      console.log('Fetching additional SharePoint user info...');
       
-      // Use IT-provided login URL
-      const currentUrl = window.location.href;
-      const loginUrl = `https://apprunner.hk.hsbc/login/api/sessions/sso?nextUrl=${encodeURIComponent(currentUrl)}`;
+      // Try to get more user details from SharePoint REST API
+      const response = await fetch("/_api/SP.UserProfiles.PeopleManager/GetMyProperties", {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json;odata=verbose',
+          'Content-Type': 'application/json;odata=verbose'
+        }
+      });
       
-      console.log('Redirecting to IT login URL:', loginUrl);
-      
-      // Direct redirect to IT login endpoint
-      window.location.href = loginUrl;
-      
-    } catch (error) {
-      console.error('IT login failed:', error);
-      setError('Failed to initiate login: ' + error.message);
-      setIsAuthenticating(false);
+      if (response.ok) {
+        const data = await response.json();
+        const userProps = data.d;
+        
+        // Extract additional user properties
+        const additionalInfo = {
+          department: '',
+          jobTitle: '',
+          office: ''
+        };
+        
+        // Parse UserProfileProperties for additional details
+        if (userProps.UserProfileProperties && userProps.UserProfileProperties.results) {
+          userProps.UserProfileProperties.results.forEach(prop => {
+            switch (prop.Key) {
+              case 'Department':
+                additionalInfo.department = prop.Value;
+                break;
+              case 'Title':
+                additionalInfo.jobTitle = prop.Value;
+                break;
+              case 'Office':
+                additionalInfo.office = prop.Value;
+                break;
+            }
+          });
+        }
+        
+        console.log('✅ SharePoint REST API user info:', additionalInfo);
+        return additionalInfo;
+      }
+    } catch (err) {
+      console.log('SharePoint REST API unavailable, using basic info');
     }
+    
+    return { department: '', jobTitle: '', office: '' };
   };
 
   // Check user authentication status
@@ -182,125 +213,126 @@ const UserProvider = ({ children }) => {
     try {
       setError(null);
       
-      console.log('=== CHECKING USER AUTHENTICATION ===');
+      console.log('=== CHECKING SHAREPOINT AUTHENTICATION ===');
       
-      // First, try client-side extraction for immediate feedback
+      // First, try SharePoint client-side extraction
       if (attemptClientExtraction) {
-        const clientAuth = extractUserFromCookie();
-        if (clientAuth.userId) {
-          console.log('✅ Client-side authentication successful');
+        const sharePointAuth = extractUserFromSharePoint();
+        if (sharePointAuth.userId) {
+          console.log('✅ SharePoint client-side authentication successful');
           
-          // Update UI immediately with client-side data
+          // Get additional user info from SharePoint
+          const additionalInfo = await fetchSharePointUserInfo();
+          
+          // Update UI immediately with SharePoint data
           setUser({
-            staffId: clientAuth.userId,
-            displayName: clientAuth.displayName || clientAuth.userId,
-            adUserId: clientAuth.userId,
+            staffId: sharePointAuth.userId,
+            displayName: sharePointAuth.displayName || sharePointAuth.userId,
+            email: sharePointAuth.email || `${sharePointAuth.userId}@hsbc.com`,
+            adUserId: sharePointAuth.userId,
+            department: additionalInfo.department || sharePointAuth.department,
+            jobTitle: additionalInfo.jobTitle || sharePointAuth.jobTitle,
+            office: additionalInfo.office,
             role: 'user', // Will be updated by server check
-            source: 'client'
+            authenticated: true,
+            source: 'sharepoint'
           });
         }
       }
       
-      // Then verify with server
-      console.log('Verifying with server...');
-      const response = await fetch('/ProceduresHubEG6/api/role-check');
-      
-      if (response.ok) {
-        const userData = await response.json();
+      // Then verify role with server
+      console.log('Verifying role with server...');
+      try {
+        const response = await fetch('/ProceduresHubEG6/api/role-check');
         
-        if (userData.staffId && userData.role) {
-          console.log('✅ Server authentication successful:', userData);
+        if (response.ok) {
+          const userData = await response.json();
           
-          setUser({
-            staffId: userData.staffId,
-            role: userData.role,
-            displayName: userData.displayName || userData.staffId,
-            email: userData.email || `${userData.staffId}@hsbc.com`,
-            adUserId: userData.adUserId || userData.staffId,
-            authenticated: userData.authenticated,
-            source: 'server'
-          });
-          setAuthAttempts(0);
+          if (userData.staffId && userData.role) {
+            console.log('✅ Server role verification successful:', userData);
+            
+            // Update user with server role data
+            setUser(prevUser => ({
+              ...prevUser,
+              role: userData.role,
+              authenticated: userData.authenticated,
+              source: 'sharepoint+server'
+            }));
+            return true;
+          }
+        } else if (response.status === 401) {
+          console.log('❌ Server role check failed - using SharePoint auth only');
+          // Continue with SharePoint auth, assume user role
+          if (user && user.staffId) {
+            setUser(prevUser => ({
+              ...prevUser,
+              role: 'user',
+              authenticated: true
+            }));
+            return true;
+          }
+        }
+      } catch (serverErr) {
+        console.log('Server unavailable - using SharePoint auth only');
+        // If server is unavailable, continue with SharePoint authentication
+        if (user && user.staffId) {
+          setUser(prevUser => ({
+            ...prevUser,
+            role: 'user', // Default to user role when server unavailable
+            authenticated: true
+          }));
           return true;
-        } else {
-          console.log('❌ Server returned invalid user data');
-          setUser(null);
-          return false;
         }
-      } else if (response.status === 401) {
-        console.log('❌ Server authentication failed: 401');
-        setUser(null);
-        
-        // If not authenticated and we haven't tried too many times
-        if (authAttempts < 1) {
-          console.log('Attempting IT login redirect...');
-          setAuthAttempts(prev => prev + 1);
-          setError('Authentication required - redirecting to HSBC AppRunner...');
-          
-          // Give user a moment to see the message, then redirect
-          setTimeout(() => {
-            performITLogin();
-          }, 2000);
-          
-          return false;
-        } else {
-          setError('Authentication failed - please ensure you are logged into HSBC AppRunner');
-          return false;
-        }
-      } else {
-        throw new Error(`Authentication failed: ${response.status} ${response.statusText}`);
       }
+      
+      // If no SharePoint user found
+      if (!user || !user.staffId) {
+        console.log('❌ No SharePoint user found');
+        setError('Unable to authenticate with SharePoint. Please ensure you are logged into SharePoint.');
+        setUser(null);
+        return false;
+      }
+      
+      return true;
+      
     } catch (err) {
-      console.error('❌ Error checking user role:', err);
-      setError(err.message);
+      console.error('❌ Error checking authentication:', err);
+      setError('Authentication error: ' + err.message);
       setUser(null);
       return false;
     }
   };
 
-  // Manual login handler
-  const handleManualLogin = () => {
-    console.log('Manual login requested');
-    setAuthAttempts(0); // Reset attempts
-    performITLogin();
+  // Manual refresh handler
+  const handleRefresh = () => {
+    console.log('Manual refresh requested');
+    window.location.reload();
   };
 
   // Initialize authentication
   useEffect(() => {
     const initAuth = async () => {
-      console.log('🚀 Initializing authentication...');
+      console.log('🚀 Initializing SharePoint authentication...');
       setLoading(true);
       
-      // Small delay to let cookies settle
+      // Small delay to let SharePoint context settle
       setTimeout(async () => {
         await checkUserRole(true);
         setLoading(false);
-        setIsAuthenticating(false);
       }, 500);
     };
     
     initAuth();
-    
-    // Check authentication every 5 minutes
-    const interval = setInterval(() => {
-      if (!isAuthenticating) {
-        console.log('🔄 Periodic authentication check...');
-        checkUserRole(false); // Skip client extraction on periodic checks
-      }
-    }, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   const value = {
     user,
     loading,
     error,
-    isAuthenticating,
     refreshAuth: () => checkUserRole(true),
-    manualLogin: handleManualLogin,
+    manualRefresh: handleRefresh,
     isAdmin: user?.role === 'admin',
-    isAuthenticated: !!user
+    isAuthenticated: !!user && !!user.staffId
   };
 
   return (
@@ -350,25 +382,25 @@ function App() {
   );
 }
 
-// Authentication wrapper component (from original)
+// Authentication wrapper component (SharePoint Version)
 const AuthenticationWrapper = ({ children }) => {
-  const { user, loading, error, isAuthenticating, refreshAuth, manualLogin } = useUser();
+  const { user, loading, error, refreshAuth, manualRefresh } = useUser();
 
   if (loading) {
     return (
       <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f6fa" gap={2}>
         <CircularProgress size={60} />
         <Typography variant="h6" color="text.secondary">
-          {isAuthenticating ? 'Connecting to HSBC AppRunner...' : 'Checking authentication...'}
+          Connecting to SharePoint...
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 400 }}>
-          {isAuthenticating ? 'Please wait while we redirect you to login...' : 'Verifying your credentials...'}
+          Verifying your SharePoint credentials...
         </Typography>
       </Box>
     );
   }
 
-  if (!user) {
+  if (!user || !user.staffId) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh" bgcolor="#f5f6fa" p={2}>
         <Card sx={{ maxWidth: 600, width: '100%' }}>
@@ -391,16 +423,16 @@ const AuthenticationWrapper = ({ children }) => {
             </Box>
             
             <Typography variant="h5" gutterBottom fontWeight="bold">
-              HSBC AppRunner Authentication Required
+              SharePoint Authentication Required
             </Typography>
             
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Please authenticate with HSBC AppRunner to access the Procedures Hub.
+              Please ensure you are logged into SharePoint to access the Procedures Hub.
             </Typography>
             
             {error && (
               <Alert 
-                severity={error.includes('redirecting') ? 'info' : 'error'} 
+                severity="error" 
                 sx={{ mb: 3, textAlign: 'left' }}
               >
                 <Typography variant="body2">
@@ -409,30 +441,56 @@ const AuthenticationWrapper = ({ children }) => {
               </Alert>
             )}
             
+            <Alert severity="info" sx={{ mb: 3, textAlign: 'left' }}>
+              <Typography variant="body2" gutterBottom fontWeight="bold">
+                SharePoint Authentication Process:
+              </Typography>
+              <Typography variant="body2" component="div">
+                • You must be logged into SharePoint to access this application<br/>
+                • The app automatically detects your SharePoint user context<br/>
+                • Your session will be maintained while in SharePoint<br/>
+                • No additional login is required
+              </Typography>
+            </Alert>
+            
+            <Alert severity="warning" sx={{ mb: 3, textAlign: 'left' }}>
+              <Typography variant="body2" gutterBottom fontWeight="bold">
+                Troubleshooting:
+              </Typography>
+              <Typography variant="body2" component="div">
+                • Ensure you are accessing this app through SharePoint<br/>
+                • Check that you have proper permissions to the site<br/>
+                • Try refreshing the page to re-detect your context<br/>
+                • Contact your SharePoint administrator if issues persist
+              </Typography>
+            </Alert>
+            
             <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
                 size="large"
-                onClick={manualLogin}
-                disabled={isAuthenticating}
+                onClick={manualRefresh}
                 sx={{ 
                   bgcolor: '#d40000',
                   '&:hover': { bgcolor: '#b30000' },
                   minWidth: 200
                 }}
               >
-                {isAuthenticating ? 'Redirecting...' : 'Login with AppRunner'}
+                Refresh Page
               </Button>
               
               <Button
                 variant="outlined"
                 size="large"
                 onClick={refreshAuth}
-                disabled={isAuthenticating}
               >
-                Retry Check
+                Retry Detection
               </Button>
             </Box>
+            
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 3, display: 'block' }}>
+              HSBC Procedures Hub - SharePoint Integration v2.0
+            </Typography>
           </CardContent>
         </Card>
       </Box>
@@ -536,7 +594,7 @@ function HSBCProceduresHub() {
             </Typography>
           </Box>
 
-          {user && (
+                        {user && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Badge badgeContent={dashboardData?.stats?.expiringSoon || 0} color="error">
                 <Notifications />
@@ -548,13 +606,24 @@ function HSBCProceduresHub() {
                 sx={{ color: 'white', borderColor: 'white' }}
               />
               <Chip 
-                label={user.role}
+                label={user.role || 'User'}
                 size="small"
                 sx={{ 
                   bgcolor: user.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
                   color: 'white'
                 }}
               />
+              {user.department && (
+                <Chip 
+                  label={user.department}
+                  size="small"
+                  sx={{ 
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                    color: 'white',
+                    fontSize: '0.7rem'
+                  }}
+                />
+              )}
             </Box>
           )}
         </Toolbar>
