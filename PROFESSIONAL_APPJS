@@ -70,6 +70,20 @@ const theme = createTheme({
 // User Context (Professional IT Integration)
 const UserContext = createContext();
 
+// SharePoint TypeScript Declarations
+declare global {
+  interface Window {
+    _spPageContextInfo?: {
+      userDisplayName?: string;
+      userEmail?: string;
+      userId?: string;
+      userLoginName?: string;
+      webServerRelativeUrl?: string;
+      siteServerRelativeUrl?: string;
+    };
+  }
+}
+
 // SHAREPOINT AUTHENTICATION HELPER
 const extractUserFromSharePoint = () => {
   console.log('=== SHAREPOINT AUTH EXTRACTION ===');
@@ -81,13 +95,13 @@ const extractUserFromSharePoint = () => {
   let jobTitle = '';
   
   try {
-    // SharePoint provides user context through _spPageContextInfo
-    if (typeof _spPageContextInfo !== 'undefined' && _spPageContextInfo.userDisplayName) {
+    // SharePoint provides user context through _spPageContextInfo (only available in SharePoint)
+    if (typeof window !== 'undefined' && window._spPageContextInfo && window._spPageContextInfo.userDisplayName) {
       console.log('SharePoint user context found');
       
-      displayName = _spPageContextInfo.userDisplayName || '';
-      email = _spPageContextInfo.userEmail || '';
-      userId = _spPageContextInfo.userId || _spPageContextInfo.userLoginName || '';
+      displayName = window._spPageContextInfo.userDisplayName || '';
+      email = window._spPageContextInfo.userEmail || '';
+      userId = window._spPageContextInfo.userId || window._spPageContextInfo.userLoginName || '';
       
       // Extract user ID from login name if needed (domain\userid format)
       if (userId.includes('\\')) {
@@ -116,9 +130,13 @@ const extractUserFromSharePoint = () => {
       };
     }
     
-    // Fallback for development/testing
-    if (window.location.host.indexOf("localhost") !== -1 || window.location.host.indexOf("127.0.0.1") !== -1) {
-      console.log('Development environment - using fallback values');
+    // Fallback for development/testing or when not in SharePoint
+    if (typeof window !== 'undefined' && (
+      window.location.host.indexOf("localhost") !== -1 || 
+      window.location.host.indexOf("127.0.0.1") !== -1 ||
+      !window._spPageContextInfo
+    )) {
+      console.log('Development environment or no SharePoint context - using fallback values');
       userId = '43898931';
       displayName = 'Mina Antoun Wilson Ross';
       email = 'mina.wilson.ross@hsbc.com';
@@ -141,8 +159,8 @@ const extractUserFromSharePoint = () => {
       };
     }
     
-    // Try to get user info from SharePoint REST API
-    console.log('Attempting SharePoint REST API call...');
+    // No SharePoint context available
+    console.log('No SharePoint context available');
     return { displayName: '', userId: '', email: '', userData: null };
     
   } catch (error) {
@@ -160,6 +178,12 @@ const UserProvider = ({ children }) => {
   const fetchSharePointUserInfo = async () => {
     try {
       console.log('Fetching additional SharePoint user info...');
+      
+      // Only try SharePoint REST API if we're in a SharePoint environment
+      if (typeof window === 'undefined' || !window._spPageContextInfo) {
+        console.log('Not in SharePoint environment, skipping REST API call');
+        return { department: '', jobTitle: '', office: '' };
+      }
       
       // Try to get more user details from SharePoint REST API
       const response = await fetch("/_api/SP.UserProfiles.PeopleManager/GetMyProperties", {
