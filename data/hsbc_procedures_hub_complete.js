@@ -1,17 +1,17 @@
-// components/HSBCProceduresHub.js - Main Hub Component with Enhanced Data Loading
+// components/HSBCProceduresHub.js - Using Your Existing SharePoint Service
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, AppBar, Toolbar, IconButton, Typography,
   Avatar, Chip, Badge, useTheme, Skeleton, Grid, Alert
 } from '@mui/material';
 import {
-  Menu as MenuIcon, Notifications
+  Menu as MenuIcon, Notifications, CloudDone, CloudOff
 } from '@mui/icons-material';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import NavigationDrawer from './NavigationDrawer';
 import PageRouter from './PageRouter';
-import { dataService } from '../services/dataService';
+import SharePointService from '../services/SharePointService'; // Your existing service
 
 const HSBCProceduresHub = () => {
   const { user, isAuthenticated, isAdmin } = useSharePoint();
@@ -20,9 +20,12 @@ const HSBCProceduresHub = () => {
   const [procedures, setProcedures] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [apiHealth, setApiHealth] = useState(null);
+  const [sharePointAvailable, setSharePointAvailable] = useState(false);
   const [error, setError] = useState(null);
   const theme = useTheme();
+
+  // Initialize SharePoint service
+  const [spService] = useState(() => new SharePointService());
 
   useEffect(() => {
     if (user && isAuthenticated) {
@@ -35,49 +38,172 @@ const HSBCProceduresHub = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🚀 Loading initial data...');
+      console.log('🚀 Loading data from SharePoint Lists...');
       
-      // Check API health first
-      const health = await dataService.checkAPIHealth();
-      setApiHealth(health);
+      // Check if SharePoint is available
+      const spAvailable = spService.isSharePointAvailable();
+      setSharePointAvailable(spAvailable);
       
-      // Load procedures (with fallback to mock data)
-      const procData = await dataService.fetchProcedures();
-      setProcedures(procData);
-      
-      // Load dashboard data (with fallback to mock data)
-      let dashData = await dataService.fetchDashboardData();
-      
-      // If we got procedures but no dashboard stats, calculate them
-      if (procData && (!dashData.stats || !health.dashboard)) {
-        const calculatedStats = dataService.calculateStats(procData);
-        dashData = {
-          ...dashData,
-          stats: calculatedStats
+      if (spAvailable) {
+        console.log('✅ SharePoint environment detected');
+        
+        // Load procedures from SharePoint List
+        const proceduresData = await spService.getProcedures();
+        setProcedures(proceduresData);
+        
+        // Load dashboard summary from SharePoint
+        const dashboardSummary = await spService.getDashboardSummary();
+        
+        // Get current user info
+        const currentUser = spService.getCurrentUser();
+        
+        // Structure dashboard data
+        const dashData = {
+          stats: {
+            total: dashboardSummary.total,
+            expired: dashboardSummary.expired,
+            expiringSoon: dashboardSummary.expiringSoon,
+            highQuality: dashboardSummary.highQuality,
+            averageScore: dashboardSummary.averageScore,
+            sharePointUploaded: dashboardSummary.sharePointUploaded
+          },
+          byLOB: dashboardSummary.byLOB,
+          userInfo: {
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            staffId: currentUser.staffId,
+            department: 'SharePoint User',
+            jobTitle: 'Loaded from SharePoint'
+          },
+          recentActivity: await generateRecentActivity(proceduresData)
         };
+        
+        setDashboardData(dashData);
+        
+        console.log('✅ SharePoint data loaded successfully');
+        console.log('📊 Procedures from SharePoint List:', proceduresData.length);
+        console.log('📈 Dashboard stats:', dashData.stats);
+        
+      } else {
+        console.log('⚠️ SharePoint not available, using mock data');
+        await loadMockData();
       }
       
-      setDashboardData(dashData);
-      
-      console.log('✅ Initial data loaded successfully');
-      console.log('📊 Procedures:', procData.length);
-      console.log('📈 Dashboard stats:', dashData.stats);
-      
     } catch (err) {
-      console.error('❌ Error loading initial data:', err);
-      setError('Failed to load data: ' + err.message);
+      console.error('❌ Error loading SharePoint data:', err);
+      setError('Failed to load data from SharePoint: ' + err.message);
       
-      // Load mock data as fallback
+      // Fallback to mock data
       try {
         console.log('🔄 Loading fallback mock data...');
-        setProcedures(dataService.mockProcedures);
-        setDashboardData(dataService.mockDashboardData);
+        await loadMockData();
       } catch (mockError) {
         console.error('❌ Failed to load mock data:', mockError);
       }
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadMockData = async () => {
+    // Mock data for development/demo
+    const mockProcedures = [
+      {
+        id: 1,
+        name: "Risk Assessment Framework",
+        lob: "GRM",
+        primary_owner: "John Smith",
+        expiry: "2024-12-15",
+        score: 92,
+        status: "Active"
+      },
+      {
+        id: 2,
+        name: "Trading Compliance Guidelines",
+        lob: "CIB", 
+        primary_owner: "Sarah Johnson",
+        expiry: "2024-07-20",
+        score: 78,
+        status: "Active"
+      },
+      {
+        id: 3,
+        name: "Client Onboarding Process",
+        lob: "IWPB",
+        primary_owner: "Mike Chen", 
+        expiry: "2024-06-01",
+        score: 85,
+        status: "Active"
+      }
+    ];
+
+    const mockStats = {
+      total: 247,
+      expired: 8,
+      expiringSoon: 23,
+      highQuality: 186,
+      averageScore: 84
+    };
+
+    setProcedures(mockProcedures);
+    setDashboardData({
+      stats: mockStats,
+      userInfo: {
+        displayName: "Demo User",
+        email: "demo@hsbc.com",
+        department: "Development Environment"
+      },
+      recentActivity: await generateRecentActivity(mockProcedures)
+    });
+  };
+
+  const generateRecentActivity = async (proceduresData) => {
+    try {
+      // Get recent audit log from SharePoint if available
+      if (sharePointAvailable) {
+        const auditLog = await spService.getAuditLog(5);
+        return auditLog.map(log => ({
+          id: log.id,
+          action: log.action,
+          procedure: log.details.procedureName || 'Unknown Procedure',
+          time: getTimeAgo(log.timestamp),
+          type: log.actionType.toLowerCase(),
+          score: log.details.score || null
+        }));
+      }
+    } catch (error) {
+      console.warn('⚠️ Could not load audit log, generating mock activity');
+    }
+
+    // Generate mock activity from procedures
+    return proceduresData.slice(0, 3).map((proc, index) => ({
+      id: proc.id,
+      action: getActivityAction(proc.status),
+      procedure: proc.name,
+      time: `${index + 1} hour${index !== 0 ? 's' : ''} ago`,
+      type: 'update',
+      score: proc.score
+    }));
+  };
+
+  const getActivityAction = (status) => {
+    switch (status) {
+      case 'Expired': return 'Procedure expired';
+      case 'Expiring': return 'Procedure expiring soon';
+      default: return 'Procedure updated';
+    }
+  };
+
+  const getTimeAgo = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Less than an hour ago';
+    if (diffInHours < 24) return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
   };
 
   // Show loading while SharePoint context initializes
@@ -110,6 +236,12 @@ const HSBCProceduresHub = () => {
               <Typography variant="h6" component="div" color="white">
                 Procedures Hub
               </Typography>
+              <Chip 
+                label="Loading SharePoint..."
+                size="small"
+                color="info"
+                sx={{ ml: 2, fontSize: '0.7rem', height: 24 }}
+              />
             </Box>
           </Toolbar>
         </AppBar>
@@ -166,19 +298,18 @@ const HSBCProceduresHub = () => {
               Procedures Hub
             </Typography>
             
-            {/* API Status Indicator */}
-            {apiHealth && (
-              <Chip 
-                label={apiHealth.overall ? 'API Connected' : 'Demo Mode'}
-                size="small"
-                color={apiHealth.overall ? 'success' : 'warning'}
-                sx={{ 
-                  ml: 2,
-                  fontSize: '0.7rem',
-                  height: 24
-                }}
-              />
-            )}
+            {/* SharePoint Status Indicator */}
+            <Chip 
+              icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
+              label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
+              size="small"
+              color={sharePointAvailable ? 'success' : 'warning'}
+              sx={{ 
+                ml: 2,
+                fontSize: '0.7rem',
+                height: 24
+              }}
+            />
           </Box>
 
           {user && (
@@ -220,18 +351,16 @@ const HSBCProceduresHub = () => {
         minHeight: '100vh'
       }}>
         <Container maxWidth="xl" sx={{ py: 3 }}>
-          {/* API Status Alert */}
-          {apiHealth && !apiHealth.overall && (
+          {/* SharePoint Status Alert */}
+          {!sharePointAvailable && (
             <Alert 
               severity="info" 
               sx={{ mb: 3 }}
-              onClose={() => setApiHealth(null)}
+              onClose={() => {}}
             >
               <Typography variant="body2">
-                <strong>Demo Mode:</strong> Backend APIs are not available. 
+                <strong>Demo Mode:</strong> SharePoint Lists are not available in this environment. 
                 Displaying sample data for demonstration purposes.
-                {!apiHealth.procedures && ' • Procedures API: Offline'}
-                {!apiHealth.dashboard && ' • Dashboard API: Offline'}
               </Typography>
             </Alert>
           )}
@@ -249,6 +378,19 @@ const HSBCProceduresHub = () => {
             </Alert>
           )}
 
+          {/* SharePoint Success Alert */}
+          {sharePointAvailable && procedures.length > 0 && (
+            <Alert 
+              severity="success" 
+              sx={{ mb: 3 }}
+              onClose={() => {}}
+            >
+              <Typography variant="body2">
+                <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures from SharePoint Lists.
+              </Typography>
+            </Alert>
+          )}
+
           <PageRouter
             currentPage={currentPage}
             procedures={procedures}
@@ -256,7 +398,8 @@ const HSBCProceduresHub = () => {
             user={user}
             isAdmin={isAdmin}
             onDataRefresh={loadInitialData}
-            apiHealth={apiHealth}
+            sharePointService={spService}
+            sharePointAvailable={sharePointAvailable}
           />
         </Container>
       </Box>
