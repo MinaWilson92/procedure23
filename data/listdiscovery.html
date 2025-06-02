@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SharePoint Lists Discovery</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f6fa;
+        }
+        
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #d40000;
+            border-bottom: 3px solid #d40000;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        
+        .method {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .code {
+            background: #f1f1f1;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+        
+        button {
+            background: #d40000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        
+        button:hover {
+            background: #b30000;
+        }
+        
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .list-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #4caf50;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .list-title {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        
+        .list-url {
+            color: #7f8c8d;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 5px 0;
+        }
+        
+        .field-list {
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .field-item {
+            display: inline-block;
+            background: #e3f2fd;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 SharePoint Lists Discovery Tool</h1>
+        
+        <div class="warning">
+            <strong>⚠️ Important:</strong> Run this from your SharePoint site's browser console while logged in.
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Method 1: Discover All Lists</h2>
+            <p>This will show you all lists in your SharePoint site:</p>
+            <button onclick="discoverAllLists()">🔍 Discover All Lists</button>
+            
+            <div class="method">
+                <strong>Manual Method:</strong> Open browser console (F12) and paste:
+                <div class="code">
+fetch(_spPageContextInfo.webAbsoluteUrl + "/_api/web/lists?$select=Title,Id,BaseType,Hidden&$filter=Hidden eq false")
+.then(r => r.json())
+.then(data => {
+    console.log("📋 Available Lists:");
+    data.d.results.forEach(list => {
+        if (list.BaseType === 0) { // 0 = Custom Lists, 1 = Document Libraries
+            console.log(`✅ List: "${list.Title}" | ID: ${list.Id}`);
+        }
+    });
+});
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Method 2: Check Specific Lists</h2>
+            <p>Check if the lists our app needs exist:</p>
+            <button onclick="checkRequiredLists()">🔍 Check Required Lists</button>
+            
+            <div class="success">
+                <strong>Looking for these lists:</strong>
+                <ul>
+                    <li><strong>Procedures</strong> - Main procedures storage</li>
+                    <li><strong>UserRoles</strong> - User permissions</li>
+                    <li><strong>AuditLog</strong> - Activity tracking</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Method 3: Get List Fields</h2>
+            <p>If you know your list name, get its field structure:</p>
+            <input type="text" id="listName" placeholder="Enter List Name" style="padding: 8px; margin: 10px; width: 200px;">
+            <button onclick="getListFields()">🔍 Get Fields</button>
+        </div>
+        
+        <div id="results"></div>
+        
+        <div class="section">
+            <h2>📋 Common SharePoint List Patterns</h2>
+            <div class="method">
+                <strong>Your lists might be named:</strong>
+                <ul>
+                    <li><code>ProceduresHubProcedures</code></li>
+                    <li><code>HSBC_Procedures</code></li>
+                    <li><code>ProceduresList</code></li>
+                    <li><code>Documents</code> (if using document library)</li>
+                    <li><code>UserPermissions</code></li>
+                    <li><code>ActivityLog</code></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🔧 Once You Find Your Lists</h2>
+            <p>Update the SharePoint Service with your actual list names:</p>
+            <div class="code">
+// In SharePointService.js, update these lines:
+const response = await fetch(
+  `${this.siteUrl}/_api/web/lists/getbytitle('YourActualListName')/items...`
+);
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showResults(content) {
+            document.getElementById('results').innerHTML = content;
+        }
+        
+        function discoverAllLists() {
+            if (typeof _spPageContextInfo === 'undefined') {
+                showResults(`
+                    <div class="warning">
+                        <strong>❌ SharePoint context not available</strong><br>
+                        Please run this from your SharePoint site while logged in.
+                    </div>
+                `);
+                return;
+            }
+            
+            fetch(_spPageContextInfo.webAbsoluteUrl + "/_api/web/lists?$select=Title,Id,BaseType,Hidden&$filter=Hidden eq false")
+            .then(r => r.json())
+            .then(data => {
+                let html = '<h3>📋 Discovered Lists:</h3>';
+                
+                data.d.results.forEach(list => {
+                    if (list.BaseType === 0) { // Custom Lists only
+                        html += `
+                            <div class="list-item">
+                                <div class="list-title">📋 ${list.Title}</div>
+                                <div class="list-url">ID: ${list.Id}</div>
+                                <div class="list-url">Type: Custom List</div>
+                            </div>
+                        `;
+                    }
+                });
+                
+                if (data.d.results.filter(l => l.BaseType === 0).length === 0) {
+                    html += '<div class="warning">No custom lists found. You may need to create them first.</div>';
+                }
+                
+                showResults(html);
+            })
+            .catch(err => {
+                showResults(`
+                    <div class="warning">
+                        <strong>❌ Error discovering lists:</strong><br>
+                        ${err.message}
+                    </div>
+                `);
+            });
+        }
+        
+        function checkRequiredLists() {
+            if (typeof _spPageContextInfo === 'undefined') {
+                showResults(`
+                    <div class="warning">
+                        <strong>❌ SharePoint context not available</strong><br>
+                        Please run this from your SharePoint site while logged in.
+                    </div>
+                `);
+                return;
+            }
+            
+            const requiredLists = ['Procedures', 'UserRoles', 'AuditLog'];
+            let html = '<h3>🔍 Checking Required Lists:</h3>';
+            
+            Promise.all(requiredLists.map(listName => 
+                fetch(_spPageContextInfo.webAbsoluteUrl + `/_api/web/lists/getbytitle('${listName}')`)
+                .then(r => ({ name: listName, exists: r.ok, response: r }))
+                .catch(() => ({ name: listName, exists: false }))
+            )).then(results => {
+                results.forEach(result => {
+                    if (result.exists) {
+                        html += `
+                            <div class="list-item">
+                                <div class="list-title">✅ ${result.name}</div>
+                                <div class="list-url">Status: Found and accessible</div>
+                            </div>
+                        `;
+                    } else {
+                        html += `
+                            <div class="warning">
+                                <strong>❌ ${result.name}</strong><br>
+                                List not found or not accessible
+                            </div>
+                        `;
+                    }
+                });
+                
+                showResults(html);
+            });
+        }
+        
+        function getListFields() {
+            const listName = document.getElementById('listName').value.trim();
+            if (!listName) {
+                showResults('<div class="warning">Please enter a list name</div>');
+                return;
+            }
+            
+            if (typeof _spPageContextInfo === 'undefined') {
+                showResults(`
+                    <div class="warning">
+                        <strong>❌ SharePoint context not available</strong><br>
+                        Please run this from your SharePoint site while logged in.
+                    </div>
+                `);
+                return;
+            }
+            
+            fetch(_spPageContextInfo.webAbsoluteUrl + `/_api/web/lists/getbytitle('${listName}')/fields?$select=Title,TypeAsString,Required`)
+            .then(r => r.json())
+            .then(data => {
+                let html = `<h3>📋 Fields in "${listName}" list:</h3>`;
+                
+                data.d.results.forEach(field => {
+                    if (!field.Title.startsWith('_') && field.Title !== 'ContentType') {
+                        html += `<span class="field-item">${field.Title} (${field.TypeAsString})</span>`;
+                    }
+                });
+                
+                showResults(html);
+            })
+            .catch(err => {
+                showResults(`
+                    <div class="warning">
+                        <strong>❌ Error getting fields for "${listName}":</strong><br>
+                        List may not exist or you may not have access
+                    </div>
+                `);
+            });
+        }
+    </script>
+</body>
+</html>
