@@ -589,6 +589,156 @@
                     this.log('❌ Authentication failed', 'error');
                     return false;
                 } catch (error) {
+                displayArea.innerHTML = `
+                    <div style="color: #f44336; padding: 20px; text-align: center;">
+                        <strong>❌ Error loading ${type} data</strong><br>
+                        <small>${error.message}</small>
+                    </div>
+                `;
+            }
+        };
+        
+        // Initialize SharePoint Manager
+        let initManager = () => {
+            if (window.hsbcManager) return;
+            
+            window.hsbcManager = new HSBCSharePointManager();
+            
+            // Setup global error handling
+            window.addEventListener('error', (e) => {
+                console.error('[HSBC] Global Error:', e.message);
+                if (window.hsbcManager) {
+                    window.hsbcManager.log(`❌ Global Error: ${e.message}`, 'error');
+                }
+            });
+            
+            console.log('[HSBC] SharePoint Manager initialized');
+        };
+        
+        // Initialize immediately if DOM is ready
+        if (document.readyState !== 'loading') {
+            initManager();
+        } else {
+            document.addEventListener('DOMContentLoaded', initManager);
+        }
+        
+        // Also initialize after a short delay (fallback)
+        setTimeout(initManager, 100);
+        
+        console.log('🔧 HSBC SharePoint Error Override System loaded');
+    </script>
+    
+    <!-- Load React Application -->
+    <script src="./static/js/main.js"></script>
+    
+    <!-- Emergency React CDN Fallback -->
+    <script>
+        setTimeout(() => {
+            if (typeof React === 'undefined') {
+                console.log('[HSBC] Loading React from CDN as emergency fallback...');
+                
+                const reactScript = document.createElement('script');
+                reactScript.src = 'https://unpkg.com/react@18/umd/react.production.min.js';
+                reactScript.crossOrigin = 'anonymous';
+                reactScript.onload = () => {
+                    const reactDOMScript = document.createElement('script');
+                    reactDOMScript.src = 'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js';
+                    reactDOMScript.crossOrigin = 'anonymous';
+                    reactDOMScript.onload = () => {
+                        if (window.hsbcManager) {
+                            window.hsbcManager.log('📦 Emergency React CDN loaded', 'warning');
+                        }
+                    };
+                    document.head.appendChild(reactDOMScript);
+                };
+                document.head.appendChild(reactScript);
+            }
+        }, 5000);
+    </script>
+    
+    <!-- Manual Override Script (runs last) -->
+    <script>
+        // Final override - runs 2 seconds after page load
+        setTimeout(() => {
+            console.log('[HSBC] Final manual override executing...');
+            
+            // Force hide any remaining SharePoint error elements
+            const allElements = document.querySelectorAll('*');
+            let finalHiddenCount = 0;
+            
+            allElements.forEach(el => {
+                if (el.closest('#root')) return; // Don't touch React app content
+                
+                const text = el.textContent || '';
+                const classes = el.className || '';
+                
+                if (text.includes('Application Error') || 
+                    text.includes('Something went wrong') ||
+                    classes.includes('ms-error') ||
+                    classes.includes('s4-error')) {
+                    
+                    el.style.display = 'none';
+                    el.style.visibility = 'hidden';
+                    el.style.opacity = '0';
+                    el.style.position = 'absolute';
+                    el.style.left = '-20000px';
+                    el.style.zIndex = '-9999';
+                    finalHiddenCount++;
+                }
+            });
+            
+            // Force show React app
+            const root = document.getElementById('root');
+            if (root) {
+                root.style.display = 'block';
+                root.style.visibility = 'visible';
+                root.style.opacity = '1';
+                root.style.position = 'relative';
+                root.style.zIndex = '9999';
+                root.style.minHeight = '100vh';
+                root.style.background = '#f5f6fa';
+            }
+            
+            // Update body
+            document.body.style.background = '#f5f6fa';
+            document.body.style.margin = '0';
+            document.body.style.padding = '0';
+            
+            if (finalHiddenCount > 0) {
+                console.log(`[HSBC] Final override: hidden ${finalHiddenCount} error elements`);
+            }
+            
+            console.log('[HSBC] Final override complete');
+            
+            // If loading screen is still showing after 5 seconds, force hide it
+            setTimeout(() => {
+                const loading = document.getElementById('hsbc-loading');
+                if (loading && loading.style.display !== 'none') {
+                    loading.style.display = 'none';
+                    document.body.classList.add('app-loaded');
+                    console.log('[HSBC] Loading screen force-hidden after timeout');
+                }
+            }, 3000);
+            
+        }, 2000);
+        
+        // Ultra fallback - if nothing works after 8 seconds, show emergency interface
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            const loading = document.getElementById('hsbc-loading');
+            
+            if ((!root || root.children.length === 0) && 
+                loading && loading.style.display !== 'none') {
+                
+                console.log('[HSBC] Ultra fallback: showing emergency interface');
+                if (window.showEmergencyInterface) {
+                    window.showEmergencyInterface();
+                }
+            }
+        }, 8000);
+    </script>
+</body>
+</html>) {
                     this.log(`❌ Auth error: ${error.message}`, 'error');
                     return false;
                 }
