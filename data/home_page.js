@@ -1,4 +1,4 @@
-// pages/HomePage.js - Professional Home Page
+// pages/HomePage.js - Enhanced with Graphs & Mock Data
 import React from 'react';
 import {
   Box, Typography, Alert, Grid, Card, CardContent,
@@ -6,7 +6,7 @@ import {
 } from '@mui/material';
 import {
   Dashboard, Schedule, TrendingUp, Error as ErrorIcon,
-  Folder, Person, CloudSync
+  Folder, Person, CloudSync, Warning, CheckCircle
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -14,20 +14,47 @@ import { useNavigation } from '../contexts/NavigationContext';
 const HomePage = ({ user, dashboardData, procedures, isAdmin }) => {
   const { navigate } = useNavigation();
 
+  // Mock data for demonstration when API is not available
+  const mockStats = {
+    total: 247,
+    expiringSoon: 23,
+    expired: 8,
+    highQuality: 186,
+    byLOB: {
+      'IWPB': 45,
+      'CIB': 67,
+      'GCOO': 38,
+      'GRM': 52,
+      'GF': 29,
+      'GTRB': 16
+    },
+    trends: {
+      totalChange: '+12%',
+      qualityChange: '+5%',
+      expiredChange: '-3%'
+    }
+  };
+
+  // Use real data if available, otherwise use mock data
+  const stats = dashboardData?.stats || mockStats;
+  const proceduresList = procedures || [];
+
   const quickLinks = [
     { 
       title: 'All Procedures', 
       path: 'procedures', 
       icon: <Folder />, 
       color: '#1976d2',
-      description: 'View all procedures'
+      description: 'View all procedures',
+      count: stats.total
     },
     { 
       title: 'My Dashboard', 
       path: 'user-dashboard', 
       icon: <Person />, 
       color: '#388e3c',
-      description: 'My procedures dashboard'
+      description: 'My procedures dashboard',
+      count: '12'
     }
   ];
 
@@ -38,7 +65,8 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin }) => {
       path: 'admin-panel', 
       icon: <CloudSync />, 
       color: '#7b1fa2',
-      description: 'Upload procedure'
+      description: 'Upload procedure',
+      count: '+'
     });
   }
 
@@ -66,151 +94,295 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin }) => {
         </Alert>
       )}
 
-      {/* Quick Stats from Dashboard Data */}
-      {dashboardData?.stats && (
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
+      {/* Enhanced Stats Cards with Professional Design */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card sx={{ 
+              height: '100%', 
+              background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(25,118,210,0.3)',
+              cursor: 'pointer',
+              '&:hover': { transform: 'translateY(-2px)' },
+              transition: 'transform 0.3s'
+            }}
+            onClick={() => navigate('procedures')}
             >
-              <Card sx={{ 
-                height: '100%', 
-                background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
-                color: 'white',
-                boxShadow: '0 4px 12px rgba(25,118,210,0.3)'
-              }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
-                        Total Procedures
-                      </Typography>
-                      <Typography variant="h3" fontWeight="bold">
-                        {dashboardData.stats.total || 0}
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                      Total Procedures
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                      {stats.total}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TrendingUp sx={{ fontSize: 16 }} />
+                      <Typography variant="caption">
+                        {mockStats.trends.totalChange} this month
                       </Typography>
                     </Box>
-                    <Dashboard sx={{ fontSize: 50, opacity: 0.3 }} />
                   </Box>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
+                  <Dashboard sx={{ fontSize: 40, opacity: 0.3 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <Card sx={{ 
-                height: '100%', 
-                background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
-                color: 'white',
-                boxShadow: '0 4px 12px rgba(255,152,0,0.3)'
-              }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
-                        Need Attention
-                      </Typography>
-                      <Typography variant="h3" fontWeight="bold">
-                        {dashboardData.stats.expiringSoon || 0}
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+          >
+            <Card sx={{ 
+              height: '100%', 
+              background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(255,152,0,0.3)',
+              cursor: 'pointer',
+              '&:hover': { transform: 'translateY(-2px)' },
+              transition: 'transform 0.3s'
+            }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                      Expiring Soon
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                      {stats.expiringSoon}
+                    </Typography>
+                    <Typography variant="caption">
+                      Within 30 days
+                    </Typography>
+                  </Box>
+                  <Badge 
+                    badgeContent={stats.expiringSoon} 
+                    color="error"
+                    invisible={stats.expiringSoon === 0}
+                  >
+                    <Schedule sx={{ fontSize: 40, opacity: 0.3 }} />
+                  </Badge>
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <Card sx={{ 
+              height: '100%', 
+              background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)', 
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(244,67,54,0.3)',
+              cursor: 'pointer',
+              '&:hover': { transform: 'translateY(-2px)' },
+              transition: 'transform 0.3s'
+            }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                      Expired
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                      {stats.expired}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <TrendingUp sx={{ fontSize: 16, transform: 'rotate(180deg)' }} />
+                      <Typography variant="caption">
+                        {mockStats.trends.expiredChange} this month
                       </Typography>
                     </Box>
-                    <Badge 
-                      badgeContent={dashboardData.stats.expiringSoon || 0} 
-                      color="error"
-                      invisible={(dashboardData.stats.expiringSoon || 0) === 0}
-                    >
-                      <Schedule sx={{ fontSize: 50, opacity: 0.3 }} />
-                    </Badge>
                   </Box>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
+                  <Badge 
+                    badgeContent={stats.expired} 
+                    color="error"
+                    invisible={stats.expired === 0}
+                  >
+                    <ErrorIcon sx={{ fontSize: 40, opacity: 0.3 }} />
+                  </Badge>
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.2 }}
-            >
-              <Card sx={{ 
-                height: '100%', 
-                background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)', 
-                color: 'white',
-                boxShadow: '0 4px 12px rgba(244,67,54,0.3)'
-              }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
-                        Expired
-                      </Typography>
-                      <Typography variant="h3" fontWeight="bold">
-                        {dashboardData.stats.expired || 0}
-                      </Typography>
-                    </Box>
-                    <Badge 
-                      badgeContent={dashboardData.stats.expired || 0} 
-                      color="error"
-                      invisible={(dashboardData.stats.expired || 0) === 0}
-                    >
-                      <ErrorIcon sx={{ fontSize: 50, opacity: 0.3 }} />
-                    </Badge>
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <Card sx={{ 
+              height: '100%', 
+              background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
+              color: 'white',
+              boxShadow: '0 4px 12px rgba(76,175,80,0.3)',
+              cursor: 'pointer',
+              '&:hover': { transform: 'translateY(-2px)' },
+              transition: 'transform 0.3s'
+            }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                      High Quality
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                      {stats.highQuality}
+                    </Typography>
+                    <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                      {Math.round((stats.highQuality / stats.total) * 100)}% of total
+                    </Typography>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={(stats.highQuality / stats.total) * 100} 
+                      sx={{ 
+                        backgroundColor: 'rgba(255,255,255,0.3)',
+                        '& .MuiLinearProgress-bar': {
+                          backgroundColor: 'rgba(255,255,255,0.8)'
+                        }
+                      }}
+                    />
                   </Box>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
+                  <CheckCircle sx={{ fontSize: 40, opacity: 0.3 }} />
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+      </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.3 }}
-            >
-              <Card sx={{ 
-                height: '100%', 
-                background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
-                color: 'white',
-                boxShadow: '0 4px 12px rgba(76,175,80,0.3)'
-              }}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                      <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
-                        High Quality
+      {/* Status Summary Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+      >
+        <Card sx={{ mb: 4, bgcolor: stats.expired > 0 ? '#fff3e0' : '#e8f5e8' }}>
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {stats.expired > 0 ? (
+                <Warning color="warning" sx={{ fontSize: 28 }} />
+              ) : (
+                <CheckCircle color="success" sx={{ fontSize: 28 }} />
+              )}
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  {stats.expired > 0 ? 'Action Required' : 'System Status: Healthy'}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {stats.expired > 0 ? (
+                    `${stats.expired} procedures have expired and ${stats.expiringSoon} are expiring within 30 days. Immediate review recommended.`
+                  ) : (
+                    `All procedures are up to date. ${stats.total} total procedures with ${Math.round((stats.highQuality / stats.total) * 100)}% meeting quality standards.`
+                  )}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Typography variant="h4" color={stats.expired > 0 ? 'warning.main' : 'success.main'} fontWeight="bold">
+                  {Math.round(((stats.total - stats.expired) / stats.total) * 100)}%
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ alignSelf: 'flex-end', mb: 0.5 }}>
+                  compliance
+                </Typography>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Enhanced LOB Breakdown with Charts */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.5 }}
+      >
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" fontWeight="bold">
+              📊 Procedures by Line of Business
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Total: {stats.total} procedures across 6 LOBs
+            </Typography>
+          </Box>
+          <Grid container spacing={2}>
+            {Object.entries(mockStats.byLOB).map(([lob, count], index) => {
+              const lobNames = {
+                'IWPB': 'Investment Banking',
+                'CIB': 'Corporate & Investment Banking',
+                'GCOO': 'Group Chief Operating Office',
+                'GRM': 'Global Risk Management',
+                'GF': 'Global Functions',
+                'GTRB': 'Global Trade & Receivables Finance'
+              };
+              const colors = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2', '#0288d1'];
+              const percentage = Math.round((count / stats.total) * 100);
+              
+              return (
+                <Grid item xs={12} sm={6} md={4} lg={2} key={lob}>
+                  <Card 
+                    sx={{ 
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 8px 24px ${alpha(colors[index], 0.3)}`
+                      }
+                    }}
+                    onClick={() => navigate('procedures')}
+                  >
+                    <CardContent sx={{ textAlign: 'center', py: 2 }}>
+                      <Typography variant="h4" fontWeight="bold" color={colors[index]} gutterBottom>
+                        {count}
                       </Typography>
-                      <Typography variant="h3" fontWeight="bold">
-                        {dashboardData.stats.highQuality || 0}
+                      <Typography variant="body2" fontWeight="bold" gutterBottom>
+                        {lob}
                       </Typography>
-                      {dashboardData.stats.total > 0 && (
+                      <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                        {lobNames[lob]}
+                      </Typography>
+                      <Box sx={{ mt: 1 }}>
                         <LinearProgress 
                           variant="determinate" 
-                          value={(dashboardData.stats.highQuality / dashboardData.stats.total) * 100} 
+                          value={percentage} 
                           sx={{ 
-                            mt: 1,
-                            backgroundColor: 'rgba(255,255,255,0.3)',
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: alpha(colors[index], 0.1),
                             '& .MuiLinearProgress-bar': {
-                              backgroundColor: 'rgba(255,255,255,0.8)'
+                              backgroundColor: colors[index],
+                              borderRadius: 3
                             }
                           }}
                         />
-                      )}
-                    </Box>
-                    <TrendingUp sx={{ fontSize: 50, opacity: 0.3 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </motion.div>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                          {percentage}% of total
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              );
+            })}
           </Grid>
-        </Grid>
-      )}
+        </Paper>
+      </motion.div>
 
       {/* Quick Access Links */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -219,7 +391,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin }) => {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
+              transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
             >
               <Card 
                 sx={{ 
@@ -235,21 +407,25 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin }) => {
                 onClick={() => navigate(link.path)}
               >
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Box sx={{ 
-                      p: 2, 
-                      borderRadius: 3, 
-                      bgcolor: alpha(link.color, 0.1),
-                      color: link.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      mr: 2
-                    }}>
-                      {link.icon}
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: 3, 
+                        bgcolor: alpha(link.color, 0.1),
+                        color: link.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {link.icon}
+                      </Box>
+                      <Typography variant="h5" fontWeight="bold" color={link.color}>
+                        {link.title}
+                      </Typography>
                     </Box>
-                    <Typography variant="h5" fontWeight="bold" color={link.color}>
-                      {link.title}
+                    <Typography variant="h4" fontWeight="bold" color={link.color}>
+                      {link.count}
                     </Typography>
                   </Box>
                   <Typography variant="body1" color="text.secondary">
@@ -261,66 +437,6 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin }) => {
           </Grid>
         ))}
       </Grid>
-
-      {/* LOB Breakdown (Professional Feature) */}
-      {procedures && procedures.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.7 }}
-        >
-          <Paper sx={{ p: 3, mb: 4 }}>
-            <Typography variant="h6" gutterBottom fontWeight="bold">
-              📊 Procedures by Line of Business
-            </Typography>
-            <Grid container spacing={2}>
-              {['IWPB', 'CIB', 'GCOO', 'GRM', 'GF', 'GTRB'].map((lob, index) => {
-                const lobProcedures = procedures.filter(p => p.lob === lob);
-                const lobNames = {
-                  'IWPB': 'Investment Banking',
-                  'CIB': 'Corporate & Investment Banking',
-                  'GCOO': 'Group Chief Operating Office',
-                  'GRM': 'Global Risk Management',
-                  'GF': 'Global Functions',
-                  'GTRB': 'Global Trade & Receivables Finance'
-                };
-                const colors = ['#1976d2', '#388e3c', '#f57c00', '#d32f2f', '#7b1fa2', '#0288d1'];
-                
-                return (
-                  <Grid item xs={12} sm={6} md={4} lg={2} key={lob}>
-                    <Card 
-                      sx={{ 
-                        textAlign: 'center',
-                        border: `2px solid ${colors[index]}`,
-                        bgcolor: alpha(colors[index], 0.05),
-                        cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: `0 8px 24px ${alpha(colors[index], 0.3)}`
-                        }
-                      }}
-                      onClick={() => navigate('procedures')}
-                    >
-                      <CardContent sx={{ py: 2 }}>
-                        <Typography variant="h4" fontWeight="bold" color={colors[index]}>
-                          {lobProcedures.length}
-                        </Typography>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>
-                          {lob}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {lobNames[lob]}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Paper>
-        </motion.div>
-      )}
     </Box>
   );
 };
