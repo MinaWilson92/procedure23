@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#d40000" />
+    <title>HSBC Procedures Hub</title>
+    
+    <!-- SharePoint Compatibility -->
+    <meta name="webpart-previewimage" content="/_layouts/15/images/docpreview.png" />
+    <meta name="ms.sp.webpart.title" content="HSBC Procedures Hub" />
+    
+    <!-- Material-UI and Roboto Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+    
+    <style>
+        /* CRITICAL: Force hide SharePoint error overlay */
+        .ms-error,
+        .ms-error-page,
+        .s4-error,
+        .ms-webpart-chrome,
+        div[class*="error"],
+        div[class*="Error"],
+        .ms-webpartzone-cell,
+        #s4-workspace > div:has(*:contains("Application Error")),
+        *:contains("Application Error"),
+        *:contains("Something went wrong") {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            z-index: -1 !important;
+        }
+        
+        /* Force body and html to show content */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+            background-color: #f5f6fa !important;
+            overflow-x: hidden !important;
+            height: 100vh !important;
+            width: 100vw !important;
+        }
+        
+        /* Override SharePoint workspace */
+        #s4-workspace {
+            background-color: #f5f6fa !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            min-height: 100vh !important;
+        }
+        
+        /* Force show React app root */
+        #root {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            min-height: 100vh !important;
+            background-color: #f5f6fa !important;
+            position: relative !important;
+            z-index: 9999 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Loading screen */
+        .hsbc-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f6fa 0%, #e8eaf6 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Roboto', sans-serif;
+        }
+        
+        .hsbc-loading .logo {
+            width: 120px;
+            height: 60px;
+            background: linear-gradient(135deg, #d40000 0%, #b30000 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 12px rgba(212, 0, 0, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        .hsbc-loading .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e3f2fd;
+            border-top: 4px solid #d40000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        .hsbc-loading .message {
+            color: #333;
+            font-size: 18px;
+            font-weight: 400;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .hsbc-loading .status {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            margin: 5px 0;
+        }
+        
+        .emergency-button {
+            background: #d40000;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: background 0.3s ease;
+        }
+        
+        .emergency-button:hover {
+            background: #b30000;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .hsbc-loading.fade-out {
+            opacity: 0;
+            transition: opacity 0.8s ease-out;
+        }
+        
+        .app-loaded .hsbc-loading {
+            display: none !important;
+        }
+        
+        /* Emergency fallback interface */
+        .emergency-interface {
+            display: none;
+            min-height: 100vh;
+            background: #f5f6fa;
+            padding: 50px 20px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 10001;
+        }
+        
+        .emergency-interface.show {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .emergency-interface .hsbc-logo {
+            width: 120px;
+            height: 60px;
+            background: linear-gradient(135deg, #d40000 0%, #b30000 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 24px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+            max-width: 800px;
+        }
+        
+        .action-button {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-decoration: none;
+            display: block;
+        }
+        
+        .action-button:hover {
+            background: #1976d2;
+        }
+        
+        .action-button.green { background: #4caf50; }
+        .action-button.green:hover { background: #388e3c; }
+        
+        .action-button.orange { background: #ff9800; }
+        .action-button.orange:hover { background: #f57c00; }
+        
+        .action-button.red { background: #d40000; }
+        .action-button.red:hover { background: #b30000; }
+        
+        /* Console debug */
+        .debug-console {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.9);
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-width: 350px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 10002;
+            border: 2px solid #d40000;
+        }
+        
+        .debug-console-header {
+            color: #d40000;
+            font-weight: bold;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+        
+        .debug-console.minimized .debug-content {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Debug Console -->
+    <div id="debug-console" class="debug-console">
+        <div class="debug-console-header" onclick="toggleConsole()">🔧 HSBC Debug Console</div>
+        <div id="debug-content" class="debug-content">Initializing...</div>
+    </div>
+    
+    <!-- Loading Screen -->
+    <div id="hsbc-loading" class="hsbc-loading">
+        <div class="logo">HSBC</div>
+        <div class="spinner"></div>
+        <div class="message">Loading Procedures Hub</div>
+        <div class="status" id="loading-status">Checking SharePoint environment...</div>
+        
+        <div style="margin-top: 30px;">
+            <button class="emergency-button" onclick="forceShowApp()" id="force-btn" style="display: none;">
+                🚀 Force Show Application
+            </button>
+            <button class="emergency-button" onclick="showEmergencyInterface()" id="emergency-btn" style="display: none;">
+                🆘 Emergency Interface
+            </button>
+            <button class="emergency-button" onclick="window.location.reload()">
+                🔄 Reload Page
+            </button>
+        </div>
+    </div>
+    
+    <!-- Emergency Interface -->
+    <div id="emergency-interface" class="emergency-interface">
+        <div class="hsbc-logo">HSBC</div>
+        <h2>🏗️ Procedures Hub - Emergency Mode</h2>
+        <p>The React application encountered an issue. Using emergency interface.</p>
+        
+        <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 800px; margin: 20px;">
+            <h3>📋 Available Functions</h3>
+            <div class="action-grid">
+                <button class="action-button" onclick="loadAndDisplay('/ProceduresHubEG6/api/procedures', 'procedures')">
+                    📄 View All Procedures
+                </button>
+                <button class="action-button green" onclick="loadAndDisplay('/ProceduresHubEG6/api/dashboard-summary', 'dashboard')">
+                    📊 Dashboard Summary
+                </button>
+                <button class="action-button orange" onclick="loadAndDisplay('/ProceduresHubEG6/api/audit-log', 'audit')">
+                    📋 Audit Log
+                </button>
+                <button class="action-button red" onclick="retryReactApp()">
+                    🔄 Retry React App
+                </button>
+            </div>
+            
+            <div id="data-display" style="background: #f5f5f5; border-radius: 8px; padding: 20px; margin-top: 20px; text-align: left; display: none; max-height: 500px; overflow-y: auto;"></div>
+        </div>
+        
+        <div style="margin-top: 30px; font-size: 12px; color: #666;">
+            User: <span id="emergency-user">Loading...</span> | 
+            Environment: SharePoint | 
+            Time: <span id="emergency-time"></span>
+        </div>
+    </div>
+    
+    <!-- React Application Root -->
+    <div id="root"></div>
+    
+    <!-- COMPREHENSIVE SHAREPOINT ERROR OVERRIDE SCRIPT -->
+    <script>
+        // =====================================================
+        // HSBC SHAREPOINT ERROR OVERRIDE & RECOVERY SYSTEM
+        // =====================================================
+        
+        class HSBCSharePointManager {
+            constructor() {
+                this.logs = [];
+                this.isSharePoint = typeof _spPageContextInfo !== 'undefined';
+                this.userInfo = null;
+                this.startTime = Date.now();
+                this.errorOverrideActive = false;
+                this.reactCheckInterval = null;
+                
+                this.log('🚀 HSBC SharePoint Manager starting...', 'info');
+                this.init();
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] ${message}`;
+                
+                this.logs.push({ message: logEntry, type, timestamp: Date.now() });
+                console.log(`[HSBC-SP] ${logEntry}`);
+                
+                this.updateDebugConsole();
+                this.updateStatus(message);
+            }
+            
+            updateDebugConsole() {
+                const debugContent = document.getElementById('debug-content');
+                if (debugContent) {
+                    const recentLogs = this.logs.slice(-10);
+                    debugContent.innerHTML = recentLogs.map(log => 
+                        `<div style="color: ${this.getLogColor(log.type)}; margin: 2px 0; font-size: 10px;">
+                            ${log.message}
+                        </div>`
+                    ).join('');
+                    debugContent.scrollTop = debugContent.scrollHeight;
+                }
+            }
+            
+            updateStatus(message) {
+                const statusEl = document.getElementById('loading-status');
+                if (statusEl) {
+                    statusEl.textContent = message;
+                }
+            }
+            
+            getLogColor(type) {
+                switch(type) {
+                    case 'success': return '#4caf50';
+                    case 'error': return '#f44336';
+                    case 'warning': return '#ff9800';
+                    case 'override': return '#e91e63';
+                    default: return '#00bcd4';
+                }
+            }
+            
+            async init() {
+                // Step 1: Immediate error override
+                this.executeErrorOverride();
+                
+                // Step 2: Environment detection
+                this.detectEnvironment();
+                
+                // Step 3: Authentication check
+                await this.checkAuth();
+                
+                // Step 4: React monitoring
+                this.startReactMonitoring();
+                
+                // Step 5: Fallback timers
+                this.setupFallbacks();
+            }
+            
+            executeErrorOverride() {
+                this.log('🛡️ Executing SharePoint error override...', 'override');
+                
+                // Method 1: CSS-based hiding
+                const overrideStyle = document.createElement('style');
+                overrideStyle.id = 'hsbc-override-styles';
+                overrideStyle.textContent = `
+                    /* Nuclear option: Hide ALL SharePoint error elements */
+                    .ms-error,
+                    .ms-error-page,
+                    .s4-error,
+                    .ms-webpart-chrome,
+                    div[class*="error"]:not(#root *),
+                    div[class*="Error"]:not(#root *),
+                    *[data-automation-id*="error"]:not(#root *),
+                    *:contains("Application Error"):not(#root *),
+                    *:contains("Something went wrong"):not(#root *) {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        position: absolute !important;
+                        left: -10000px !important;
+                        top: -10000px !important;
+                        z-index: -9999 !important;
+                        width: 0 !important;
+                        height: 0 !important;
+                    }
+                    
+                    /* Force show our app */
+                    #root {
+                        display: block !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        position: relative !important;
+                        z-index: 9999 !important;
+                        min-height: 100vh !important;
+                        background: #f5f6fa !important;
+                    }
+                    
+                    /* Override body */
+                    body {
+                        background: #f5f6fa !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                `;
+                document.head.appendChild(overrideStyle);
+                
+                // Method 2: DOM manipulation
+                this.hideErrorElements();
+                
+                // Method 3: Mutation observer for dynamic content
+                this.setupErrorWatcher();
+                
+                this.errorOverrideActive = true;
+                this.log('✅ Error override executed', 'override');
+            }
+            
+            hideErrorElements() {
+                const errorSelectors = [
+                    '.ms-error',
+                    '.ms-error-page', 
+                    '.s4-error',
+                    '.ms-webpart-chrome',
+                    'div[class*="error"]',
+                    'div[class*="Error"]',
+                    '*[data-automation-id*="error"]'
+                ];
+                
+                let hiddenCount = 0;
+                
+                errorSelectors.forEach(selector => {
+                    try {
+                        const elements = document.querySelectorAll(selector);
+                        elements.forEach(el => {
+                            // Don't hide elements inside our React app
+                            if (!el.closest('#root')) {
+                                const text = el.textContent || '';
+                                if (text.includes('Application Error') || 
+                                    text.includes('Something went wrong') ||
+                                    el.classList.contains('ms-error')) {
+                                    
+                                    el.style.display = 'none';
+                                    el.style.visibility = 'hidden';
+                                    el.style.opacity = '0';
+                                    el.style.position = 'absolute';
+                                    el.style.left = '-10000px';
+                                    el.style.zIndex = '-9999';
+                                    hiddenCount++;
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        // Ignore selector errors
+                    }
+                });
+                
+                // Hide by text content
+                const walker = document.createTreeWalker(
+                    document.body,
+                    NodeFilter.SHOW_ELEMENT,
+                    {
+                        acceptNode: function(node) {
+                            if (node.closest('#root')) return NodeFilter.FILTER_SKIP;
+                            
+                            const text = node.textContent || '';
+                            if (text.includes('Application Error') || 
+                                text.includes('Something went wrong')) {
+                                return NodeFilter.FILTER_ACCEPT;
+                            }
+                            return NodeFilter.FILTER_SKIP;
+                        }
+                    }
+                );
+                
+                while (walker.nextNode()) {
+                    const node = walker.currentNode;
+                    node.style.display = 'none';
+                    hiddenCount++;
+                }
+                
+                if (hiddenCount > 0) {
+                    this.log(`🚫 Hidden ${hiddenCount} error elements`, 'override');
+                }
+            }
+            
+            setupErrorWatcher() {
+                const observer = new MutationObserver((mutations) => {
+                    let foundNewErrors = false;
+                    
+                    mutations.forEach((mutation) => {
+                        mutation.addedNodes.forEach((node) => {
+                            if (node.nodeType === Node.ELEMENT_NODE && !node.closest('#root')) {
+                                const text = node.textContent || '';
+                                if (text.includes('Application Error') || 
+                                    text.includes('Something went wrong') ||
+                                    node.classList.contains('ms-error')) {
+                                    
+                                    node.style.display = 'none';
+                                    foundNewErrors = true;
+                                }
+                            }
+                        });
+                    });
+                    
+                    if (foundNewErrors) {
+                        this.log('🚫 New error elements detected and hidden', 'override');
+                    }
+                });
+                
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+                
+                this.log('👀 Error watcher active', 'override');
+            }
+            
+            detectEnvironment() {
+                if (this.isSharePoint) {
+                    this.log(`📍 SharePoint environment detected`, 'info');
+                    this.log(`📊 Site: ${_spPageContextInfo.webAbsoluteUrl}`, 'info');
+                    this.log(`👤 User: ${_spPageContextInfo.userDisplayName}`, 'info');
+                } else {
+                    this.log('📍 Standalone environment', 'info');
+                }
+            }
+            
+            async checkAuth() {
+                this.log('🔐 Checking authentication...', 'info');
+                
+                try {
+                    const response = await fetch('/ProceduresHubEG6/api/auth/check');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.authenticated) {
+                            this.userInfo = data.user;
+                            this.log(`✅ Authenticated as: ${data.user.displayName}`, 'success');
+                            this.log(`🎭 Role: ${data.user.role}`, 'success');
+                            return true;
+                        }
+                    }
+                    this.log('❌ Authentication failed', 'error');
+                    return false;
+                } catch (error) {
+                    this.log(`❌ Auth error: ${error.message}`, 'error');
+                    return false;
+                }
+            }
+            
+            startReactMonitoring() {
+                this.log('⚛️ Starting React monitoring...', 'info');
+                
+                let attempts = 0;
+                const maxAttempts = 40; // 20 seconds
+                
+                this.reactCheckInterval = setInterval(() => {
+                    attempts++;
+                    
+                    // Check for React
+                    if (typeof React !== 'undefined') {
+                        this.log(`✅ React v${React.version} detected`, 'success');
+                        this.checkReactApp();
+                        clearInterval(this.reactCheckInterval);
+                        return;
+                    }
+                    
+                    // Check if app mounted without React global
+                    const root = document.getElementById('root');
+                    if (root && root.children.length > 0) {
+                        this.log('✅ React app appears to be mounted', 'success');
+                        this.hideLoading();
+                        clearInterval(this.reactCheckInterval);
+                        return;
+                    }
+                    
+                    if (attempts >= maxAttempts) {
+                        this.log('⏰ React monitoring timeout', 'warning');
+                        this.showEmergencyButtons();
+                        clearInterval(this.reactCheckInterval);
+                    }
+                }, 500);
+            }
+            
+            checkReactApp() {
+                this.log('🔍 Checking React app mount...', 'info');
+                
+                let mountAttempts = 0;
+                const maxMountAttempts = 20;
+                
+                const checkMount = () => {
+                    mountAttempts++;
+                    
+                    const root = document.getElementById('root');
+                    if (root && root.children.length > 0) {
+                        this.log('🎉 React app successfully mounted!', 'success');
+                        this.hideLoading();
+                        return;
+                    }
+                    
+                    if (mountAttempts >= maxMountAttempts) {
+                        this.log('⏰ React app mount timeout', 'warning');
+                        this.showEmergencyButtons();
+                        return;
+                    }
+                    
+                    setTimeout(checkMount, 1000);
+                };
+                
+                setTimeout(checkMount, 1000);
+            }
+            
+            setupFallbacks() {
+                // Show emergency buttons after 10 seconds
+                setTimeout(() => {
+                    if (!document.body.classList.contains('app-loaded')) {
+                        this.log('⏰ Fallback timer: showing emergency buttons', 'warning');
+                        this.showEmergencyButtons();
+                    }
+                }, 10000);
+                
+                // Show emergency interface after 20 seconds
+                setTimeout(() => {
+                    if (!document.body.classList.contains('app-loaded')) {
+                        this.log('🆘 Fallback timer: showing emergency interface', 'warning');
+                        this.showEmergencyInterface();
+                    }
+                }, 20000);
+            }
+            
+            showEmergencyButtons() {
+                const forceBtn = document.getElementById('force-btn');
+                const emergencyBtn = document.getElementById('emergency-btn');
+                
+                if (forceBtn) forceBtn.style.display = 'inline-block';
+                if (emergencyBtn) emergencyBtn.style.display = 'inline-block';
+                
+                this.log('🔘 Emergency buttons shown', 'warning');
+            }
+            
+            hideLoading() {
+                const loadingEl = document.getElementById('hsbc-loading');
+                const debugEl = document.getElementById('debug-console');
+                
+                if (loadingEl) {
+                    loadingEl.classList.add('fade-out');
+                    setTimeout(() => {
+                        loadingEl.style.display = 'none';
+                        document.body.classList.add('app-loaded');
+                    }, 800);
+                }
+                
+                // Hide debug console after 3 seconds
+                if (debugEl) {
+                    setTimeout(() => {
+                        debugEl.classList.add('minimized');
+                    }, 3000);
+                }
+                
+                this.log('✅ Loading complete - app ready!', 'success');
+            }
+            
+            showEmergencyInterface() {
+                const emergencyEl = document.getElementById('emergency-interface');
+                const loadingEl = document.getElementById('hsbc-loading');
+                
+                if (emergencyEl) {
+                    emergencyEl.classList.add('show');
+                    
+                    // Update emergency interface
+                    document.getElementById('emergency-time').textContent = new Date().toLocaleString();
+                    document.getElementById('emergency-user').textContent = 
+                        this.userInfo?.displayName || 'Unknown User';
+                }
+                
+                if (loadingEl) {
+                    loadingEl.style.display = 'none';
+                }
+                
+                this.log('🆘 Emergency interface activated', 'warning');
+            }
+        }
+        
+        // Global functions
+        window.forceShowApp = () => {
+            console.log('[HSBC] Force showing app...');
+            
+            const root = document.getElementById('root');
+            const loading = document.getElementById('hsbc-loading');
+            
+            if (root) {
+                root.style.display = 'block';
+                root.style.visibility = 'visible';
+                root.style.opacity = '1';
+                root.style.zIndex = '9999';
+            }
+            
+            if (loading) {
+                loading.style.display = 'none';
+            }
+            
+            document.body.classList.add('app-loaded');
+            
+            if (window.hsbcManager) {
+                window.hsbcManager.log('🚀 App force-shown by user', 'override');
+            }
+        };
+        
+        window.showEmergencyInterface = () => {
+            if (window.hsbcManager) {
+                window.hsbcManager.showEmergencyInterface();
+            }
+        };
+        
+        window.retryReactApp = () => {
+            console.log('[HSBC] Retrying React app...');
+            window.location.reload();
+        };
+        
+        window.toggleConsole = () => {
+            const console = document.getElementById('debug-console');
+            if (console) {
+                console.classList.toggle('minimized');
+            }
+        };
+        
+        window.loadAndDisplay = async (url, type) => {
+            const displayArea = document.getElementById('data-display');
+            if (!displayArea) return;
+            
+            displayArea.style.display = 'block';
+            displayArea.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                let html = `<h3>📊 ${type.charAt(0).toUpperCase() + type.slice(1)} Data</h3>`;
+                
+                if (Array.isArray(data)) {
+                    html += `<p><strong>Total Items:</strong> ${data.length}</p>`;
+                    if (data.length > 0) {
+                        html += '<div style="max-height: 400px; overflow-y: auto;">';
+                        data.slice(0, 10).forEach((item, index) => {
+                            html += `
+                                <div style="background: white; border: 1px solid #ddd; border-radius: 6px; padding: 15px; margin: 10px 0;">
+                                    <strong>${item.name || item.action || item.id || `Item ${index + 1}`}</strong><br>
+                                    ${item.expiry ? `<small>📅 Expiry: ${item.expiry}</small><br>` : ''}
+                                    ${item.lob ? `<small>🏢 LOB: ${item.lob}</small><br>` : ''}
+                                    ${item.score ? `<small>📊 Score: ${item.score}%</small><br>` : ''}
+                                    ${item.timestamp ? `<small>⏰ Time: ${item.timestamp}</small>` : ''}
+                                </div>
+                            `;
+                        });
+                        html += '</div>';
+                        if (data.length > 10) {
+                            html += `<p><em>Showing first 10 of ${data.length} items</em></p>`;
+                        }
+                    }
+                } else {
+                    html += `<pre style="background: #f0f0f0; padding: 15px; border-radius: 6px; overflow-x: auto; text-align: left;">${JSON.stringify(data, null, 2)}</pre>`;
+                }
+                
+                displayArea.innerHTML = html;
+                
+            } catch (error)
