@@ -1,20 +1,21 @@
-// components/HSBCProceduresHub.js - Using Your Existing SharePoint Service
+// components/HSBCProceduresHub.js - Fixed with Correct SharePoint API Endpoints
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, AppBar, Toolbar, IconButton, Typography,
-  Avatar, Chip, Badge, useTheme, Skeleton, Grid, Alert
+  Avatar, Chip, Badge, useTheme, Skeleton, Grid, Alert,
+  Menu, MenuItem, ListItemIcon, ListItemText, Divider
 } from '@mui/material';
 import {
-  Menu as MenuIcon, Notifications, CloudDone, CloudOff
+  Menu as MenuIcon, Notifications, ArrowBack, AccountCircle,
+  Warning, Schedule, CheckCircle, Assignment, Error as ErrorIcon
 } from '@mui/icons-material';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import NavigationDrawer from './NavigationDrawer';
 import PageRouter from './PageRouter';
-import SharePointService from '../services/SharePointService'; // Your existing service
 
 const HSBCProceduresHub = () => {
-  const { user, isAuthenticated, isAdmin } = useSharePoint();
+  const { user, isAuthenticated, isAdmin, isUploader } = useSharePoint();
   const { currentPage } = useNavigation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [procedures, setProcedures] = useState([]);
@@ -22,10 +23,30 @@ const HSBCProceduresHub = () => {
   const [loading, setLoading] = useState(true);
   const [sharePointAvailable, setSharePointAvailable] = useState(false);
   const [error, setError] = useState(null);
+  
+  // 🔔 **Notifications State**
+  const [notifications, setNotifications] = useState([]);
+  const [notificationAnchor, setNotificationAnchor] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  
   const theme = useTheme();
 
-  // Initialize SharePoint service
-  const [spService] = useState(() => new SharePointService());
+  // 🎯 **FIXED: Correct SharePoint API Configuration**
+  const getSharePointConfig = () => {
+    return {
+      // Use the exact endpoints from your console log
+      proceduresUrl: 'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'Procedures\')/items?$select=*&$orderby=Modified%20desc&$top=1000',
+      dashboardUrl: 'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'DashboardSummary\')/items?$select=*&$top=1',
+      baseUrl: 'https://teams.global.hsbc/sites/EmployeeEng'
+    };
+  };
+
+  const getHeaders = () => {
+    return {
+      'Accept': 'application/json; odata=verbose',
+      'Content-Type': 'application/json; odata=verbose'
+    };
+  };
 
   useEffect(() => {
     if (user && isAuthenticated) {
@@ -33,177 +54,362 @@ const HSBCProceduresHub = () => {
     }
   }, [user, isAuthenticated]);
 
+  // 🎯 **FIXED: Load Data Using Correct SharePoint Endpoints**
   const loadInitialData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🚀 Loading data from SharePoint Lists...');
+      console.log('🚀 Loading initial data from SharePoint...');
+      const config = getSharePointConfig();
       
-      // Check if SharePoint is available
-      const spAvailable = spService.isSharePointAvailable();
-      setSharePointAvailable(spAvailable);
-      
-      if (spAvailable) {
-        console.log('✅ SharePoint environment detected');
+      // 📋 **Load Procedures from SharePoint List**
+      try {
+        console.log('📋 Fetching procedures from SharePoint...');
+        console.log('API URL:', config.proceduresUrl);
         
-        // Load procedures from SharePoint List
-        const proceduresData = await spService.getProcedures();
-        setProcedures(proceduresData);
+        const procResponse = await fetch(config.proceduresUrl, {
+          method: 'GET',
+          headers: getHeaders(),
+          credentials: 'include'
+        });
+
+        console.log('📋 Response status:', procResponse.status);
+
+        if (procResponse.ok) {
+          const procData = await procResponse.json();
+          console.log('📋 Raw SharePoint data:', procData);
+          
+          // Map SharePoint data to your app format
+          const mappedProcedures = procData.d.results.map(item => ({
+            id: item.Id,
+            name: item.Title,
+            lob: item.LOB || 'Unknown',
+            primary_owner: item.PrimaryOwner || 'Unknown',
+            primary_owner_email: item.PrimaryOwnerEmail || '',
+            secondary_owner: item.SecondaryOwner || '',
+            secondary_owner_email: item.SecondaryOwnerEmail || '',
+            expiry: item.ExpiryDate || new Date().toISOString(),
+            score: item.QualityScore || 0,
+            procedure_subsection: item.ProcedureSubsection || '',
+            risk_rating: item.RiskRating || 'Medium',
+            periodic_review: item.PeriodicReview || 'Annual',
+            uploaded_by: item.UploadedBy || item.Author?.Title || 'System',
+            uploaded_at: item.Created || new Date().toISOString(),
+            modified: item.Modified || new Date().toISOString(),
+            status: item.Status || 'Active',
+            sharepoint_uploaded: item.SharePointUploaded || true,
+            sharepoint_url: item.SharePointURL || '',
+            file_link: item.DocumentLink || '',
+            original_filename: item.OriginalFilename || ''
+          }));
+          
+          setProcedures(mappedProcedures);
+          setSharePointAvailable(true);
+          
+          console.log('✅ Procedures loaded from SharePoint:', mappedProcedures.length);
+          console.log('📊 Sample procedure:', mappedProcedures[0]);
+          
+          // Load notifications after procedures are loaded
+          setTimeout(() => loadNotifications(mappedProcedures), 500);
+          
+        } else {
+          const errorText = await procResponse.text();
+          console.log('⚠️ SharePoint procedures not accessible (status:', procResponse.status, ')');
+          console.log('Error details:', errorText);
+          setSharePointAvailable(false);
+          loadMockData();
+        }
+      } catch (procError) {
+        console.error('❌ Error fetching procedures:', procError);
+        setSharePointAvailable(false);
+        loadMockData();
+      }
+
+      // 📊 **Load Dashboard Data from SharePoint (Optional)**
+      try {
+        console.log('📊 Fetching dashboard data from SharePoint...');
         
-        // Load dashboard summary from SharePoint
-        const dashboardSummary = await spService.getDashboardSummary();
-        
-        // Get current user info
-        const currentUser = spService.getCurrentUser();
-        
-        // Structure dashboard data
-        const dashData = {
-          stats: {
-            total: dashboardSummary.total,
-            expired: dashboardSummary.expired,
-            expiringSoon: dashboardSummary.expiringSoon,
-            highQuality: dashboardSummary.highQuality,
-            averageScore: dashboardSummary.averageScore,
-            sharePointUploaded: dashboardSummary.sharePointUploaded
-          },
-          byLOB: dashboardSummary.byLOB,
-          userInfo: {
-            displayName: currentUser.displayName,
-            email: currentUser.email,
-            staffId: currentUser.staffId,
-            department: 'SharePoint User',
-            jobTitle: 'Loaded from SharePoint'
-          },
-          recentActivity: await generateRecentActivity(proceduresData)
-        };
-        
-        setDashboardData(dashData);
-        
-        console.log('✅ SharePoint data loaded successfully');
-        console.log('📊 Procedures from SharePoint List:', proceduresData.length);
-        console.log('📈 Dashboard stats:', dashData.stats);
-        
-      } else {
-        console.log('⚠️ SharePoint not available, using mock data');
-        await loadMockData();
+        const dashResponse = await fetch(config.dashboardUrl, {
+          method: 'GET',
+          headers: getHeaders(),
+          credentials: 'include'
+        });
+
+        if (dashResponse.ok) {
+          const dashData = await dashResponse.json();
+          console.log('📊 Dashboard data from SharePoint:', dashData);
+          
+          if (dashData.d.results.length > 0) {
+            const dashboardItem = dashData.d.results[0];
+            setDashboardData({
+              stats: {
+                total: dashboardItem.TotalProcedures || procedures.length,
+                expired: dashboardItem.ExpiredProcedures || 0,
+                expiringSoon: dashboardItem.ExpiringSoonProcedures || 0,
+                highQuality: dashboardItem.HighQualityProcedures || 0,
+                averageScore: dashboardItem.AverageQualityScore || 0
+              },
+              userInfo: {
+                displayName: user?.displayName || 'SharePoint User',
+                email: user?.email || 'user@hsbc.com',
+                department: 'Loaded from SharePoint',
+                jobTitle: user?.role || 'User'
+              }
+            });
+          } else {
+            // Calculate dashboard data from procedures
+            generateDashboardFromProcedures();
+          }
+        } else {
+          console.log('⚠️ Dashboard data not available, calculating from procedures');
+          generateDashboardFromProcedures();
+        }
+      } catch (dashError) {
+        console.log('⚠️ Dashboard endpoint not available, calculating from procedures');
+        generateDashboardFromProcedures();
       }
       
     } catch (err) {
-      console.error('❌ Error loading SharePoint data:', err);
+      console.error('❌ Error loading initial data:', err);
       setError('Failed to load data from SharePoint: ' + err.message);
-      
-      // Fallback to mock data
-      try {
-        console.log('🔄 Loading fallback mock data...');
-        await loadMockData();
-      } catch (mockError) {
-        console.error('❌ Failed to load mock data:', mockError);
-      }
+      setSharePointAvailable(false);
+      loadMockData();
     } finally {
       setLoading(false);
     }
   };
 
-  const loadMockData = async () => {
-    // Mock data for development/demo
+  // 📊 **Generate Dashboard Data from Procedures**
+  const generateDashboardFromProcedures = () => {
+    if (procedures.length === 0) return;
+    
+    const now = new Date();
+    const stats = {
+      total: procedures.length,
+      expired: procedures.filter(p => new Date(p.expiry) < now).length,
+      expiringSoon: procedures.filter(p => {
+        const expiry = new Date(p.expiry);
+        const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+        return daysLeft > 0 && daysLeft <= 30;
+      }).length,
+      highQuality: procedures.filter(p => (p.score || 0) >= 80).length,
+      averageScore: procedures.length > 0 ? 
+        Math.round(procedures.reduce((sum, p) => sum + (p.score || 0), 0) / procedures.length) : 0
+    };
+
+    setDashboardData({
+      stats,
+      userInfo: {
+        displayName: user?.displayName || 'SharePoint User',
+        email: user?.email || 'user@hsbc.com',
+        department: 'Calculated from SharePoint data',
+        jobTitle: user?.role || 'User'
+      }
+    });
+
+    console.log('📊 Dashboard stats calculated:', stats);
+  };
+
+  // 🔔 **Load Notifications from Procedures Data**
+  const loadNotifications = (proceduresList = procedures) => {
+    try {
+      console.log('🔔 Generating notifications from procedures...');
+      
+      const now = new Date();
+      const notificationsList = [];
+      
+      if (proceduresList && proceduresList.length > 0) {
+        // Expiring procedures
+        const expiring = proceduresList.filter(p => {
+          const expiry = new Date(p.expiry);
+          const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+          return daysLeft > 0 && daysLeft <= 30;
+        });
+
+        // Expired procedures
+        const expired = proceduresList.filter(p => new Date(p.expiry) < now);
+
+        // Low quality procedures
+        const lowQuality = proceduresList.filter(p => (p.score || 0) < 60);
+
+        // Create notification objects
+        expiring.forEach(proc => {
+          const daysLeft = Math.ceil((new Date(proc.expiry) - now) / (1000 * 60 * 60 * 24));
+          notificationsList.push({
+            id: `expiring-${proc.id}`,
+            type: 'warning',
+            icon: <Schedule />,
+            title: `Procedure Expiring Soon`,
+            message: `"${proc.name}" expires in ${daysLeft} days`,
+            timestamp: new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000),
+            priority: daysLeft <= 7 ? 'high' : 'medium',
+            procedureId: proc.id
+          });
+        });
+
+        expired.forEach(proc => {
+          const daysOverdue = Math.ceil((now - new Date(proc.expiry)) / (1000 * 60 * 60 * 24));
+          notificationsList.push({
+            id: `expired-${proc.id}`,
+            type: 'error',
+            icon: <ErrorIcon />,
+            title: `Procedure Expired`,
+            message: `"${proc.name}" expired ${daysOverdue} days ago`,
+            timestamp: new Date(proc.expiry),
+            priority: 'high',
+            procedureId: proc.id
+          });
+        });
+
+        lowQuality.forEach(proc => {
+          notificationsList.push({
+            id: `quality-${proc.id}`,
+            type: 'info',
+            icon: <Assignment />,
+            title: `Low Quality Score`,
+            message: `"${proc.name}" has ${proc.score}% quality score`,
+            timestamp: new Date(proc.uploaded_at || Date.now()),
+            priority: 'low',
+            procedureId: proc.id
+          });
+        });
+      }
+
+      // Add system notifications
+      if (isAdmin) {
+        notificationsList.push({
+          id: 'system-1',
+          type: 'success',
+          icon: <CheckCircle />,
+          title: 'SharePoint Integration',
+          message: sharePointAvailable ? 
+            'SharePoint connection is active' : 
+            'Running in demo mode',
+          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
+          priority: 'low'
+        });
+      }
+
+      // Sort by priority and timestamp
+      const sortedNotifications = notificationsList.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
+          return priorityOrder[b.priority] - priorityOrder[a.priority];
+        }
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
+
+      setNotifications(sortedNotifications);
+      setUnreadCount(sortedNotifications.filter(n => n.priority === 'high').length);
+      
+      console.log('✅ Notifications generated:', sortedNotifications.length);
+      
+    } catch (err) {
+      console.error('❌ Error generating notifications:', err);
+    }
+  };
+
+  // 📝 **Load Mock Data for Demo**
+  const loadMockData = () => {
+    console.log('📝 Loading mock data for demonstration...');
+    
     const mockProcedures = [
       {
         id: 1,
         name: "Risk Assessment Framework",
-        lob: "GRM",
+        lob: "IWPB",
         primary_owner: "John Smith",
-        expiry: "2024-12-15",
+        primary_owner_email: "john.smith@hsbc.com",
+        expiry: "2024-07-15", // Expiring soon
         score: 92,
+        risk_rating: "High",
+        periodic_review: "Annual",
         status: "Active"
       },
       {
         id: 2,
-        name: "Trading Compliance Guidelines",
-        lob: "CIB", 
+        name: "Trading Compliance Guidelines", 
+        lob: "CIB",
         primary_owner: "Sarah Johnson",
-        expiry: "2024-07-20",
-        score: 78,
+        primary_owner_email: "sarah.johnson@hsbc.com",
+        expiry: "2024-05-20", // Expired
+        score: 45, // Low quality
+        risk_rating: "Medium",
+        periodic_review: "Semi-Annual",
         status: "Active"
       },
       {
         id: 3,
         name: "Client Onboarding Process",
-        lob: "IWPB",
-        primary_owner: "Mike Chen", 
-        expiry: "2024-06-01",
-        score: 85,
+        lob: "GCOO",
+        primary_owner: "Mike Chen",
+        primary_owner_email: "mike.chen@hsbc.com",
+        expiry: "2025-01-15",
+        score: 88,
+        risk_rating: "Low",
+        periodic_review: "Annual",
         status: "Active"
       }
     ];
 
+    setProcedures(mockProcedures);
+    
     const mockStats = {
-      total: 247,
-      expired: 8,
-      expiringSoon: 23,
-      highQuality: 186,
-      averageScore: 84
+      total: 3,
+      expiringSoon: 1,
+      expired: 1,
+      highQuality: 2,
+      averageScore: 75
     };
 
-    setProcedures(mockProcedures);
     setDashboardData({
       stats: mockStats,
       userInfo: {
-        displayName: "Demo User",
-        email: "demo@hsbc.com",
-        department: "Development Environment"
-      },
-      recentActivity: await generateRecentActivity(mockProcedures)
-    });
-  };
-
-  const generateRecentActivity = async (proceduresData) => {
-    try {
-      // Get recent audit log from SharePoint if available
-      if (sharePointAvailable) {
-        const auditLog = await spService.getAuditLog(5);
-        return auditLog.map(log => ({
-          id: log.id,
-          action: log.action,
-          procedure: log.details.procedureName || 'Unknown Procedure',
-          time: getTimeAgo(log.timestamp),
-          type: log.actionType.toLowerCase(),
-          score: log.details.score || null
-        }));
+        displayName: user?.displayName || "Demo User",
+        email: user?.email || "demo@hsbc.com",
+        department: "Development Environment",
+        jobTitle: "Demo Mode"
       }
-    } catch (error) {
-      console.warn('⚠️ Could not load audit log, generating mock activity');
-    }
-
-    // Generate mock activity from procedures
-    return proceduresData.slice(0, 3).map((proc, index) => ({
-      id: proc.id,
-      action: getActivityAction(proc.status),
-      procedure: proc.name,
-      time: `${index + 1} hour${index !== 0 ? 's' : ''} ago`,
-      type: 'update',
-      score: proc.score
-    }));
+    });
+    
+    // Load notifications for mock data
+    setTimeout(() => loadNotifications(mockProcedures), 100);
   };
 
-  const getActivityAction = (status) => {
-    switch (status) {
-      case 'Expired': return 'Procedure expired';
-      case 'Expiring': return 'Procedure expiring soon';
-      default: return 'Procedure updated';
+  // 🔔 **Notification Handlers**
+  const handleNotificationClick = (event) => {
+    setNotificationAnchor(event.currentTarget);
+  };
+
+  const handleNotificationClose = () => {
+    setNotificationAnchor(null);
+  };
+
+  const handleNotificationItemClick = (notification) => {
+    if (notification.procedureId) {
+      navigate('procedures', { highlightId: notification.procedureId });
+    }
+    handleNotificationClose();
+  };
+
+  const getNotificationColor = (type) => {
+    switch (type) {
+      case 'error': return '#f44336';
+      case 'warning': return '#ff9800';
+      case 'success': return '#4caf50';
+      default: return '#2196f3';
     }
   };
 
-  const getTimeAgo = (timestamp) => {
-    const date = new Date(timestamp);
+  const formatTimeAgo = (timestamp) => {
     const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    const diff = Math.floor((now - new Date(timestamp)) / 1000);
     
-    if (diffInHours < 1) return 'Less than an hour ago';
-    if (diffInHours < 24) return `${diffInHours} hour${diffInHours !== 1 ? 's' : ''} ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays} day${diffInDays !== 1 ? 's' : ''} ago`;
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
   };
 
   // Show loading while SharePoint context initializes
@@ -220,6 +426,7 @@ const HSBCProceduresHub = () => {
         }}>
           <Toolbar>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+              {/* 🎯 **FIXED: HBEG Branding** */}
               <Box sx={{
                 width: 60, height: 30,
                 background: 'linear-gradient(135deg, #d40000, #b30000)',
@@ -231,7 +438,7 @@ const HSBCProceduresHub = () => {
                 fontSize: '12px',
                 borderRadius: 1
               }}>
-                HSBC
+                HBEG
               </Box>
               <Typography variant="h6" component="div" color="white">
                 Procedures Hub
@@ -265,7 +472,7 @@ const HSBCProceduresHub = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f6fa' }}>
-      {/* Professional App Bar */}
+      {/* 🎯 **FIXED: Professional App Bar with HBEG Branding** */}
       <AppBar position="fixed" sx={{ 
         zIndex: theme.zIndex.drawer + 1,
         background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
@@ -281,6 +488,7 @@ const HSBCProceduresHub = () => {
           </IconButton>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+            {/* 🎯 **FIXED: HBEG Branding** */}
             <Box sx={{
               width: 60, height: 30,
               background: 'linear-gradient(135deg, #d40000, #b30000)',
@@ -292,7 +500,7 @@ const HSBCProceduresHub = () => {
               fontSize: '12px',
               borderRadius: 1
             }}>
-              HSBC
+              HBEG
             </Box>
             <Typography variant="h6" component="div">
               Procedures Hub
@@ -300,7 +508,6 @@ const HSBCProceduresHub = () => {
             
             {/* SharePoint Status Indicator */}
             <Chip 
-              icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
               label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
               size="small"
               color={sharePointAvailable ? 'success' : 'warning'}
@@ -314,15 +521,32 @@ const HSBCProceduresHub = () => {
 
           {user && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Badge badgeContent={dashboardData?.stats?.expiringSoon || 0} color="error">
-                <Notifications />
-              </Badge>
+              {/* 🔔 **Working Notifications Bell** */}
+              <IconButton
+                color="inherit"
+                onClick={handleNotificationClick}
+                sx={{ 
+                  '&:hover': { 
+                    backgroundColor: 'rgba(255,255,255,0.1)' 
+                  }
+                }}
+              >
+                <Badge 
+                  badgeContent={unreadCount} 
+                  color="error"
+                  invisible={unreadCount === 0}
+                >
+                  <Notifications />
+                </Badge>
+              </IconButton>
+
               <Chip 
                 avatar={<Avatar sx={{ bgcolor: '#d40000' }}>{user.displayName?.[0] || 'U'}</Avatar>}
                 label={user.displayName || user.staffId}
                 variant="outlined"
                 sx={{ color: 'white', borderColor: 'white' }}
               />
+              
               <Chip 
                 label={user.role || 'User'}
                 size="small"
@@ -336,12 +560,103 @@ const HSBCProceduresHub = () => {
         </Toolbar>
       </AppBar>
 
+      {/* 🔔 **Notifications Menu** */}
+      <Menu
+        anchorEl={notificationAnchor}
+        open={Boolean(notificationAnchor)}
+        onClose={handleNotificationClose}
+        PaperProps={{
+          sx: {
+            width: 400,
+            maxHeight: 500,
+            overflow: 'auto'
+          }
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+      >
+        <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
+          <Typography variant="h6" fontWeight="bold">
+            Notifications
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {notifications.length} total • {unreadCount} high priority
+          </Typography>
+          {sharePointAvailable && (
+            <Chip 
+              label="Live Data" 
+              size="small" 
+              color="success" 
+              variant="outlined"
+              sx={{ ml: 1, fontSize: '0.6rem', height: 16 }}
+            />
+          )}
+        </Box>
+
+        {notifications.length === 0 ? (
+          <MenuItem>
+            <Box sx={{ textAlign: 'center', py: 4, width: '100%' }}>
+              <CheckCircle sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+              <Typography variant="body2" color="text.secondary">
+                No notifications
+              </Typography>
+            </Box>
+          </MenuItem>
+        ) : (
+          notifications.slice(0, 10).map((notification) => (
+            <MenuItem
+              key={notification.id}
+              onClick={() => handleNotificationItemClick(notification)}
+              sx={{ 
+                borderLeft: `4px solid ${getNotificationColor(notification.type)}`,
+                py: 1.5,
+                '&:hover': {
+                  backgroundColor: `${getNotificationColor(notification.type)}10`
+                }
+              }}
+            >
+              <ListItemIcon sx={{ color: getNotificationColor(notification.type) }}>
+                {notification.icon}
+              </ListItemIcon>
+              <ListItemText
+                primary={notification.title}
+                secondary={
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.5 }}>
+                      {notification.message}
+                    </Typography>
+                    <Typography variant="caption" color="text.disabled">
+                      {formatTimeAgo(notification.timestamp)}
+                    </Typography>
+                  </Box>
+                }
+              />
+              {notification.priority === 'high' && (
+                <Chip label="High" size="small" color="error" />
+              )}
+            </MenuItem>
+          ))
+        )}
+
+        {notifications.length > 10 && (
+          <>
+            <Divider />
+            <MenuItem onClick={handleNotificationClose} sx={{ justifyContent: 'center' }}>
+              <Typography variant="body2" color="primary">
+                View All Notifications
+              </Typography>
+            </MenuItem>
+          </>
+        )}
+      </Menu>
+
       {/* Navigation Drawer */}
       <NavigationDrawer 
         open={drawerOpen} 
         onClose={() => setDrawerOpen(false)}
         user={user}
         isAdmin={isAdmin}
+        isUploader={isUploader}
       />
 
       {/* Main Content */}
@@ -359,8 +674,27 @@ const HSBCProceduresHub = () => {
               onClose={() => {}}
             >
               <Typography variant="body2">
-                <strong>Demo Mode:</strong> SharePoint Lists are not available in this environment. 
+                <strong>Demo Mode:</strong> SharePoint connection not available. 
                 Displaying sample data for demonstration purposes.
+              </Typography>
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                Expected endpoint: https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Procedures')/items
+              </Typography>
+            </Alert>
+          )}
+
+          {/* SharePoint Success Alert */}
+          {sharePointAvailable && procedures.length > 0 && (
+            <Alert 
+              severity="success" 
+              sx={{ mb: 3 }}
+              onClose={() => {}}
+            >
+              <Typography variant="body2">
+                <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures from SharePoint Lists.
+              </Typography>
+              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                Source: https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Procedures')/items
               </Typography>
             </Alert>
           )}
@@ -378,28 +712,16 @@ const HSBCProceduresHub = () => {
             </Alert>
           )}
 
-          {/* SharePoint Success Alert */}
-          {sharePointAvailable && procedures.length > 0 && (
-            <Alert 
-              severity="success" 
-              sx={{ mb: 3 }}
-              onClose={() => {}}
-            >
-              <Typography variant="body2">
-                <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures from SharePoint Lists.
-              </Typography>
-            </Alert>
-          )}
-
           <PageRouter
             currentPage={currentPage}
             procedures={procedures}
             dashboardData={dashboardData}
             user={user}
             isAdmin={isAdmin}
+            isUploader={isUploader}
             onDataRefresh={loadInitialData}
-            sharePointService={spService}
             sharePointAvailable={sharePointAvailable}
+            notifications={notifications}
           />
         </Container>
       </Box>
