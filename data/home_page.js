@@ -1,151 +1,174 @@
-import React, { useState, useEffect } from 'react';
+// pages/HomePage.js - Enhanced with HBEG branding and role-based access
+import React from 'react';
 import {
   Box, Typography, Alert, Grid, Card, CardContent,
-  Paper, alpha, LinearProgress, Badge, Chip, Menu, MenuItem,
-  List, ListItem, ListItemText, Divider, IconButton, Popover
+  Paper, alpha, LinearProgress, Badge, Chip
 } from '@mui/material';
 import {
   Dashboard, Schedule, TrendingUp, Error as ErrorIcon,
   Folder, Person, CloudUpload, Warning, CheckCircle,
   Business, Assessment, Star, Timeline, BarChart,
-  PieChart, Security, CalendarToday, Notifications,
-  NotificationsActive, AdminPanelSettings, Upload
+  PieChart, Security, CalendarToday, AdminPanelSettings
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart as RechartsBarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { useNavigation } from '../contexts/NavigationContext';
 
-const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
-  const [currentPage, setCurrentPage] = useState('home');
-  const [notifications, setNotifications] = useState([]);
-  const [notificationAnchor, setNotificationAnchor] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, sharePointAvailable }) => {
+  const { navigate } = useNavigation();
 
-  // Mock navigation function for demo
-  const navigate = (page, data = {}) => {
-    setCurrentPage(page);
-    console.log('📍 Navigating to:', page);
-  };
-
-  // Check if user is admin
-  const isAdmin = user?.role === 'admin';
-  
-  // Check if user is uploader (admin or has upload permissions)
-  const isUploader = isAdmin || user?.permissions?.includes('upload') || user?.role === 'uploader';
-
-  // Mock data for demo
-  const stats = {
-    total: 247,
-    expiringSoon: 23,
-    expired: 8,
-    highQuality: 186
-  };
-
-  // Generate notifications based on real data
-  useEffect(() => {
-    const generateNotifications = () => {
-      const notifs = [];
-      let unread = 0;
-
-      // Critical notifications for expired procedures
-      if (stats.expired > 0) {
-        notifs.push({
-          id: 1,
-          type: 'critical',
-          title: 'Procedures Expired',
-          message: `${stats.expired} procedure${stats.expired !== 1 ? 's have' : ' has'} expired and require immediate attention`,
-          time: '2 hours ago',
-          unread: true,
-          action: () => navigate('procedures', { filter: 'expired' })
-        });
-        unread++;
-      }
-
-      // Warning notifications for expiring procedures
-      if (stats.expiringSoon > 0) {
-        notifs.push({
-          id: 2,
-          type: 'warning',
-          title: 'Procedures Expiring Soon',
-          message: `${stats.expiringSoon} procedure${stats.expiringSoon !== 1 ? 's are' : ' is'} expiring within 30 days`,
-          time: '4 hours ago',
-          unread: true,
-          action: () => navigate('procedures', { filter: 'expiring' })
-        });
-        unread++;
-      }
-
-      // Info notifications for recent uploads (admin only)
-      if (isAdmin) {
-        notifs.push({
-          id: 3,
-          type: 'info',
-          title: 'New Procedure Uploaded',
-          message: 'Risk Assessment Framework v2.1 was uploaded by John Smith',
-          time: '1 day ago',
-          unread: false,
-          action: () => navigate('admin-panel', { tab: 'audit' })
-        });
-
-        notifs.push({
-          id: 4,
-          type: 'success',
-          title: 'Quality Score Improved',
-          message: 'Overall quality score increased to 84% (+3% this month)',
-          time: '2 days ago',
-          unread: false,
-          action: () => navigate('admin-panel', { tab: 'analytics' })
-        });
-      }
-
-      // Success notification for compliance
-      if (stats.expired === 0 && stats.expiringSoon <= 5) {
-        notifs.push({
-          id: 5,
-          type: 'success',
-          title: 'Excellent Compliance',
-          message: 'All procedures are up to date with high quality scores',
-          time: '1 week ago',
-          unread: false,
-          action: () => navigate('procedures')
-        });
-      }
-
-      setNotifications(notifs);
-      setUnreadCount(unread);
-    };
-
-    generateNotifications();
-  }, [stats, isAdmin]);
-
-  const handleNotificationClick = (event) => {
-    setNotificationAnchor(event.currentTarget);
-  };
-
-  const handleNotificationClose = () => {
-    setNotificationAnchor(false);
-  };
-
-  const handleNotificationItemClick = (notification) => {
-    if (notification.action) {
-      notification.action();
-    }
-    // Mark as read
-    setNotifications(prev => 
-      prev.map(n => n.id === notification.id ? { ...n, unread: false } : n)
-    );
-    setUnreadCount(prev => Math.max(0, prev - 1));
-    handleNotificationClose();
-  };
-
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'critical': return <ErrorIcon sx={{ color: '#f44336' }} />;
-      case 'warning': return <Warning sx={{ color: '#ff9800' }} />;
-      case 'success': return <CheckCircle sx={{ color: '#4caf50' }} />;
-      default: return <Notifications sx={{ color: '#2196f3' }} />;
+  // Your actual LOB configuration
+  const lobConfig = {
+    'IWPB': {
+      name: 'International Wealth and Premier Banking',
+      color: '#1976d2',
+      icon: '🏦'
+    },
+    'CIB': {
+      name: 'Commercial and Institutional Banking', 
+      color: '#388e3c',
+      icon: '🏢'
+    },
+    'GCOO': {
+      name: 'Group Chief Operating Officer',
+      color: '#f57c00',
+      icon: '⚙️'
     }
   };
 
-  // Define quick links based on user role
+  // Risk Rating Configuration
+  const riskConfig = {
+    'High': { color: '#f44336', label: 'High Risk' },
+    'Medium': { color: '#ff9800', label: 'Medium Risk' },
+    'Low': { color: '#4caf50', label: 'Low Risk' },
+    'Critical': { color: '#d32f2f', label: 'Critical Risk' }
+  };
+
+  // Annual Review Configuration
+  const reviewConfig = {
+    'Annual': { color: '#2196f3', label: 'Annual Review' },
+    'Semi-Annual': { color: '#9c27b0', label: 'Semi-Annual Review' },
+    'Quarterly': { color: '#ff5722', label: 'Quarterly Review' },
+    'Monthly': { color: '#607d8b', label: 'Monthly Review' },
+    'Bi-Annual': { color: '#795548', label: 'Bi-Annual Review' }
+  };
+
+  // Calculate Risk Rating Data from SharePoint procedures
+  const calculateRiskData = () => {
+    if (!procedures || procedures.length === 0) {
+      return [];
+    }
+
+    const riskStats = {};
+    
+    procedures.forEach(proc => {
+      const risk = proc.risk_rating || 'Unknown';
+      if (!riskStats[risk]) {
+        riskStats[risk] = 0;
+      }
+      riskStats[risk]++;
+    });
+
+    return Object.entries(riskStats).map(([risk, count]) => ({
+      name: risk,
+      value: count,
+      label: riskConfig[risk]?.label || risk,
+      color: riskConfig[risk]?.color || '#9e9e9e',
+      percentage: Math.round((count / procedures.length) * 100)
+    }));
+  };
+
+  // Calculate Annual Review Data from SharePoint procedures
+  const calculateReviewData = () => {
+    if (!procedures || procedures.length === 0) {
+      return [];
+    }
+
+    const reviewStats = {};
+    
+    procedures.forEach(proc => {
+      const review = proc.periodic_review || 'Not Set';
+      if (!reviewStats[review]) {
+        reviewStats[review] = 0;
+      }
+      reviewStats[review]++;
+    });
+
+    return Object.entries(reviewStats).map(([review, count]) => ({
+      name: review,
+      count: count,
+      label: reviewConfig[review]?.label || review,
+      color: reviewConfig[review]?.color || '#9e9e9e',
+      percentage: Math.round((count / procedures.length) * 100)
+    }));
+  };
+
+  // Calculate real LOB data from your SharePoint procedures
+  const calculateLOBData = () => {
+    if (!procedures || procedures.length === 0) {
+      return {};
+    }
+
+    const lobStats = {};
+    
+    procedures.forEach(proc => {
+      const lob = proc.lob;
+      if (lob && lobConfig[lob]) {
+        if (!lobStats[lob]) {
+          lobStats[lob] = {
+            count: 0,
+            totalScore: 0,
+            expired: 0,
+            expiringSoon: 0,
+            procedures: []
+          };
+        }
+        
+        lobStats[lob].count++;
+        lobStats[lob].totalScore += proc.score || 0;
+        lobStats[lob].procedures.push(proc);
+        
+        // Check expiry status
+        const expiry = new Date(proc.expiry);
+        const now = new Date();
+        const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+        
+        if (daysLeft < 0) {
+          lobStats[lob].expired++;
+        } else if (daysLeft <= 30) {
+          lobStats[lob].expiringSoon++;
+        }
+      }
+    });
+
+    // Calculate averages
+    Object.keys(lobStats).forEach(lob => {
+      lobStats[lob].avgScore = lobStats[lob].count > 0 ? 
+        Math.round(lobStats[lob].totalScore / lobStats[lob].count) : 0;
+    });
+
+    return lobStats;
+  };
+
+  const realLOBData = calculateLOBData();
+  const riskData = calculateRiskData();
+  const reviewData = calculateReviewData();
+  const hasRealData = Object.keys(realLOBData).length > 0;
+
+  // Stats from dashboardData or calculated from procedures
+  const stats = dashboardData?.stats || {
+    total: procedures?.length || 0,
+    expiringSoon: procedures?.filter(p => {
+      const expiry = new Date(p.expiry);
+      const now = new Date();
+      const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+      return daysLeft > 0 && daysLeft <= 30;
+    }).length || 0,
+    expired: procedures?.filter(p => new Date(p.expiry) < new Date()).length || 0,
+    highQuality: procedures?.filter(p => (p.score || 0) >= 80).length || 0
+  };
+
+  // 🎯 **UPDATED: Role-based Quick Links**
   const quickLinks = [
     { 
       title: 'All Procedures', 
@@ -154,179 +177,76 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
       color: '#1976d2',
       description: 'View all procedures',
       count: stats.total,
-      show: true
-    },
-    { 
-      title: 'Admin Panel', 
-      path: 'admin-panel', 
+      showFor: 'all' // Show for everyone
+    }
+  ];
+
+  // Add admin-only links
+  if (isAdmin) {
+    quickLinks.push({ 
+      title: 'Admin Dashboard', 
+      path: 'admin-dashboard', 
       icon: <AdminPanelSettings />, 
       color: '#f44336',
-      description: 'Manage procedures & users',
+      description: 'Admin management panel',
       count: '⚙️',
-      show: isAdmin
-    },
-    { 
+      showFor: 'admin'
+    });
+  }
+
+  // Add uploader links (admins + uploaders)
+  if (isAdmin || isUploader) {
+    quickLinks.push({ 
       title: 'Upload New', 
-      path: 'upload-procedure', 
-      icon: <Upload />, 
+      path: 'admin-panel', 
+      icon: <CloudUpload />, 
       color: '#7b1fa2',
-      description: 'Upload new procedure',
+      description: 'Upload procedure',
       count: '+',
-      show: isUploader
+      showFor: 'uploader'
+    });
+  }
+
+  // Custom tooltip for charts
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <Box
+          sx={{
+            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            padding: 2,
+            border: '1px solid #ccc',
+            borderRadius: 1,
+            boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
+          }}
+        >
+          <Typography variant="body2" fontWeight="bold">
+            {data.label || data.name}
+          </Typography>
+          <Typography variant="body2" color="primary">
+            Count: {data.value || data.count}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {data.percentage}% of total
+          </Typography>
+        </Box>
+      );
     }
-  ].filter(link => link.show);
+    return null;
+  };
 
   return (
     <Box>
       {/* Enhanced Header */}
-      <Box sx={{ 
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
-        color: 'white',
-        py: 3,
-        px: 3,
-        mb: 4,
-        borderRadius: 2,
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Left Side - Logo and Title */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{
-              width: 80, height: 40,
-              background: 'linear-gradient(135deg, #d40000, #b30000)',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 'bold',
-              fontSize: '16px',
-              borderRadius: 1
-            }}>
-              HBEG
-            </Box>
-            <Box>
-              <Typography variant="h4" fontWeight="bold">
-                Procedures Hub
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                Centralized procedure management with AI-powered quality analysis
-              </Typography>
-            </Box>
-          </Box>
-
-          {/* Right Side - User Info and Notifications */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {/* Working Notifications Bell */}
-            <IconButton
-              color="inherit"
-              onClick={handleNotificationClick}
-              sx={{ 
-                position: 'relative',
-                '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
-              }}
-            >
-              <Badge badgeContent={unreadCount} color="error">
-                {unreadCount > 0 ? <NotificationsActive /> : <Notifications />}
-              </Badge>
-            </IconButton>
-
-            {/* User Info */}
-            {user && (
-              <>
-                <Chip 
-                  label={user.displayName || user.staffId}
-                  variant="outlined"
-                  sx={{ color: 'white', borderColor: 'white' }}
-                />
-                <Chip 
-                  label={user.role}
-                  size="small"
-                  sx={{ 
-                    bgcolor: user.role === 'admin' ? '#f44336' : 
-                            isUploader ? '#ff9800' : 'rgba(255,255,255,0.2)',
-                    color: 'white'
-                  }}
-                />
-              </>
-            )}
-          </Box>
-        </Box>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          HBEG Procedures Hub
+        </Typography>
+        <Typography variant="body1" color="text.secondary">
+          Centralized procedure management with AI-powered quality analysis
+        </Typography>
       </Box>
-
-      {/* Notifications Popover */}
-      <Popover
-        open={Boolean(notificationAnchor)}
-        anchorEl={notificationAnchor}
-        onClose={handleNotificationClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-      >
-        <Box sx={{ width: 400, maxHeight: 500, overflow: 'auto' }}>
-          <Box sx={{ p: 2, borderBottom: '1px solid #eee' }}>
-            <Typography variant="h6" fontWeight="bold">
-              Notifications ({unreadCount} unread)
-            </Typography>
-          </Box>
-          <List sx={{ p: 0 }}>
-            {notifications.length > 0 ? (
-              notifications.map((notification, index) => (
-                <React.Fragment key={notification.id}>
-                  <ListItem
-                    button
-                    onClick={() => handleNotificationItemClick(notification)}
-                    sx={{
-                      backgroundColor: notification.unread ? alpha('#2196f3', 0.05) : 'transparent',
-                      borderLeft: notification.unread ? '4px solid #2196f3' : '4px solid transparent',
-                      '&:hover': {
-                        backgroundColor: alpha('#2196f3', 0.08)
-                      }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, width: '100%' }}>
-                      {getNotificationIcon(notification.type)}
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" fontWeight={notification.unread ? 'bold' : 'normal'}>
-                          {notification.title}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                          {notification.message}
-                        </Typography>
-                        <Typography variant="caption" color="primary" sx={{ display: 'block', mt: 0.5 }}>
-                          {notification.time}
-                        </Typography>
-                      </Box>
-                      {notification.unread && (
-                        <Box sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          backgroundColor: '#2196f3',
-                          mt: 1
-                        }} />
-                      )}
-                    </Box>
-                  </ListItem>
-                  {index < notifications.length - 1 && <Divider />}
-                </React.Fragment>
-              ))
-            ) : (
-              <ListItem>
-                <ListItemText 
-                  primary="No notifications"
-                  secondary="You're all caught up!"
-                  sx={{ textAlign: 'center' }}
-                />
-              </ListItem>
-            )}
-          </List>
-        </Box>
-      </Popover>
 
       {/* SharePoint Status & User Welcome */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -334,10 +254,18 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
           {user && (
             <Alert severity="success" sx={{ mb: 0 }}>
               Welcome back, <strong>{user.displayName || user.staffId}</strong>! 
-              You are logged in as <strong>{user.role}</strong>.
-              {user.permissions && (
+              You are logged in as <strong>{user.role}</strong>
+              {(isAdmin || isUploader) && (
+                <Chip 
+                  label={isAdmin ? 'Admin Access' : 'Uploader Access'} 
+                  size="small" 
+                  color={isAdmin ? 'error' : 'warning'}
+                  sx={{ ml: 1, fontSize: '0.7rem' }}
+                />
+              )}
+              {user.source && (
                 <Typography variant="caption" display="block" sx={{ mt: 0.5, opacity: 0.8 }}>
-                  Permissions: {user.permissions.join(', ')}
+                  Authenticated via: {user.source}
                 </Typography>
               )}
             </Alert>
@@ -362,9 +290,9 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
         </Grid>
       </Grid>
 
-      {/* Enhanced Stats Cards */}
+      {/* Enhanced Stats Cards - Only 2 Clickable */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Total Procedures Card */}
+        {/* CLICKABLE: Total Procedures Card */}
         <Grid item xs={12} sm={6} md={3}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -410,7 +338,7 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
           </motion.div>
         </Grid>
 
-        {/* Need Attention Card */}
+        {/* CLICKABLE: Need Attention Card */}
         <Grid item xs={12} sm={6} md={3}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -467,7 +395,7 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
           </motion.div>
         </Grid>
 
-        {/* Compliance Card */}
+        {/* NON-CLICKABLE: Compliance Card */}
         <Grid item xs={12} sm={6} md={3}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -513,7 +441,7 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
           </motion.div>
         </Grid>
 
-        {/* High Quality Card */}
+        {/* NON-CLICKABLE: High Quality Card */}
         <Grid item xs={12} sm={6} md={3}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -559,95 +487,380 @@ const HomePage = ({ user, dashboardData, procedures, sharePointAvailable }) => {
         </Grid>
       </Grid>
 
-      {/* Role-Based Quick Access Links */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {quickLinks.map((link, index) => (
-          <Grid item xs={12} md={quickLinks.length > 2 ? 4 : 6} key={link.path}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.4 + index * 0.1 }}
-            >
-              <Card 
-                sx={{ 
-                  height: '100%',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
-                  '&:hover': {
-                    transform: 'translateY(-6px)',
-                    boxShadow: `0 12px 40px ${alpha(link.color, 0.2)}`,
-                    '& .icon-box': {
-                      backgroundColor: link.color,
-                      color: 'white'
-                    }
-                  }
-                }}
-                onClick={() => navigate(link.path)}
-              >
-                <CardContent sx={{ p: 4 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box 
-                        className="icon-box"
-                        sx={{ 
-                          p: 2, 
-                          borderRadius: 3, 
-                          bgcolor: alpha(link.color, 0.1),
-                          color: link.color,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          transition: 'all 0.3s ease'
-                        }}
-                      >
-                        {link.icon}
-                      </Box>
-                      <Typography variant="h5" fontWeight="bold" color={link.color}>
-                        {link.title}
+      {/* NEW: Risk Rating & Annual Review Charts */}
+      {sharePointAvailable && procedures && procedures.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+        >
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* Risk Rating Pie Chart */}
+            <Grid item xs={12} md={6}>
+              <Card sx={{ 
+                height: 400,
+                background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              }}>
+                <CardContent sx={{ p: 3, height: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Security sx={{ mr: 1, color: '#f44336' }} />
+                    <Typography variant="h6" fontWeight="bold">
+                      Procedures by Risk Rating
+                    </Typography>
+                    <Chip 
+                      icon={<PieChart />}
+                      label="Live Data"
+                      size="small"
+                      color="error"
+                      variant="outlined"
+                      sx={{ ml: 'auto' }}
+                    />
+                  </Box>
+                  
+                  {riskData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsPieChart>
+                        <Pie
+                          data={riskData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={120}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {riskData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend 
+                          verticalAlign="bottom" 
+                          height={36}
+                          iconType="circle"
+                          wrapperStyle={{
+                            paddingTop: '20px',
+                            fontSize: '12px'
+                          }}
+                        />
+                      </RechartsPieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      height: 300,
+                      flexDirection: 'column',
+                      color: 'text.secondary'
+                    }}>
+                      <Security sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                      <Typography variant="body2">
+                        No risk rating data available
                       </Typography>
                     </Box>
-                    <Typography variant="h3" fontWeight="bold" color={link.color}>
-                      {link.count}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body1" color="text.secondary">
-                    {link.description}
-                  </Typography>
+                  )}
                 </CardContent>
               </Card>
-            </motion.div>
-          </Grid>
-        ))}
-      </Grid>
+            </Grid>
 
-      {/* Role Information Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.7 }}
-      >
-        <Alert 
-          severity={isAdmin ? "error" : isUploader ? "warning" : "info"} 
-          sx={{ mb: 4 }}
+            {/* Annual Review Bar Chart */}
+            <Grid item xs={12} md={6}>
+              <Card sx={{ 
+                height: 400,
+                background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+              }}>
+                <CardContent sx={{ p: 3, height: '100%' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <CalendarToday sx={{ mr: 1, color: '#2196f3' }} />
+                    <Typography variant="h6" fontWeight="bold">
+                      Procedures by Annual Review
+                    </Typography>
+                    <Chip 
+                      icon={<BarChart />}
+                      label="Live Data"
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ ml: 'auto' }}
+                    />
+                  </Box>
+                  
+                  {reviewData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartsBarChart data={reviewData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45}
+                          textAnchor="end"
+                          height={60}
+                          fontSize={12}
+                        />
+                        <YAxis fontSize={12} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar 
+                          dataKey="count" 
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {reviewData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </RechartsBarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      height: 300,
+                      flexDirection: 'column',
+                      color: 'text.secondary'
+                    }}>
+                      <CalendarToday sx={{ fontSize: 48, mb: 2, opacity: 0.5 }} />
+                      <Typography variant="body2">
+                        No periodic review data available
+                      </Typography>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </motion.div>
+      )}
+
+      {/* Real LOB Breakdown using SharePoint Data */}
+      {hasRealData && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.5 }}
         >
-          <Typography variant="h6" gutterBottom>
-            {isAdmin ? '🔐 Administrator Access' : 
-             isUploader ? '📤 Upload Permissions' : 
-             '👤 Standard User'}
-          </Typography>
-          <Typography variant="body2">
-            {isAdmin ? 
-              'You have full administrative access including user management, audit logs, and procedure deletion.' :
-              isUploader ?
-              'You can upload new procedures and view your upload history.' :
-              'You can view all procedures and receive notifications about expiring documents.'
-            }
-          </Typography>
-        </Alert>
-      </motion.div>
-    </Box>
-  );
+          <Paper sx={{ p: 4, mb: 4, background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Box>
+                <Typography variant="h5" fontWeight="bold" gutterBottom>
+                  📊 Procedures by Line of Business
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Live data from SharePoint • {stats.total} total procedures across {Object.keys(realLOBData).length} LOBs
+                </Typography>
+              </Box>
+              <Chip 
+                icon={<Timeline />}
+                label="Real-time Data"
+                color="success" 
+                variant="outlined"
+              />
+            </Box>
+            
+            <Grid container spacing={3}>
+              {Object.entries(realLOBData).map(([lob, data]) => {
+                const config = lobConfig[lob];
+                const percentage = Math.round((data.count / stats.total) * 100);
+                
+                return (
+                  <Grid item xs={12} md={4} key={lob}>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
+                      <Card 
+                        sx={{ 
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          background: `linear-gradient(135deg, ${alpha(config.color, 0.1)} 0%, ${alpha(config.color, 0.05)} 100%)`,
+                          border: `2px solid ${alpha(config.color, 0.2)}`,
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: `0 12px 32px ${alpha(config.color, 0.3)}`,
+                            borderColor: config.color
+                          }
+                        }}
+                        onClick={() => navigate('procedures')}
+                      >
+                        <CardContent sx={{ p: 3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Typography variant="h3" sx={{ mr: 1 }}>
+                              {config.icon}
+                            </Typography>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="h4" fontWeight="bold" color={config.color}>
+                                {data.count}
+                              </Typography>
+                              <Typography variant="body2" fontWeight="bold" gutterBottom>
+                                {lob}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          
+                          <Typography variant="caption" color="text.secondary" display="block" gutterBottom>
+                            {config.name}
+                          </Typography>
+                          
+                          <Box sx={{ mt: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography variant="caption">Quality Score</Typography>
+                              <Typography variant="caption" fontWeight="bold">
+                                {data.avgScore}%
+                              </Typography>
+                            </Box>
+                            <LinearProgress 
+                              variant="determinate" 
+                              value={data.avgScore} 
+                              sx={{ 
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: alpha(config.color, 0.1),
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: config.color,
+                                  borderRadius: 4
+                                }
+                              }}
+                            />
+                          </Box>
+                          
+                          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                            <Chip 
+                              label={`${percentage}%`}
+                              size="small"
+                              sx={{ 
+                                backgroundColor: alpha(config.color, 0.1),
+                                color: config.color,
+                                fontWeight: 'bold'
+                              }} 
+/>
+                           {data.expiringSoon > 0 && (
+                             <Chip 
+                               label={`${data.expiringSoon} expiring`}
+                               size="small"
+                               color="warning"
+                             />
+                           )}
+                           {data.expired > 0 && (
+                             <Chip 
+                               label={`${data.expired} expired`}
+                               size="small"
+                               color="error"
+                             />
+                           )}
+                         </Box>
+                       </CardContent>
+                     </Card>
+                   </motion.div>
+                 </Grid>
+               );
+             })}
+           </Grid>
+         </Paper>
+       </motion.div>
+     )}
+
+     {/* 🎯 **UPDATED: Role-based Quick Access Links** */}
+     <Grid container spacing={3} sx={{ mb: 4 }}>
+       {quickLinks.map((link, index) => (
+         <Grid item xs={12} md={quickLinks.length === 3 ? 4 : 6} key={link.path}>
+           <motion.div
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
+           >
+             <Card 
+               sx={{ 
+                 height: '100%',
+                 cursor: 'pointer',
+                 transition: 'all 0.3s ease',
+                 background: 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
+                 border: link.showFor === 'admin' ? '2px solid #f44336' : 
+                        link.showFor === 'uploader' ? '2px solid #7b1fa2' : 
+                        '2px solid transparent',
+                 '&:hover': {
+                   transform: 'translateY(-6px)',
+                   boxShadow: `0 12px 40px ${alpha(link.color, 0.2)}`,
+                   '& .icon-box': {
+                     backgroundColor: link.color,
+                     color: 'white'
+                   }
+                 }
+               }}
+               onClick={() => navigate(link.path)}
+             >
+               <CardContent sx={{ p: 4 }}>
+                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                     <Box 
+                       className="icon-box"
+                       sx={{ 
+                         p: 2, 
+                         borderRadius: 3, 
+                         bgcolor: alpha(link.color, 0.1),
+                         color: link.color,
+                         display: 'flex',
+                         alignItems: 'center',
+                         justifyContent: 'center',
+                         transition: 'all 0.3s ease'
+                       }}
+                     >
+                       {link.icon}
+                     </Box>
+                     <Typography variant="h5" fontWeight="bold" color={link.color}>
+                       {link.title}
+                     </Typography>
+                   </Box>
+                   <Typography variant="h3" fontWeight="bold" color={link.color}>
+                     {link.count}
+                   </Typography>
+                 </Box>
+                 <Typography variant="body1" color="text.secondary">
+                   {link.description}
+                 </Typography>
+                 
+                 {/* Role indicator */}
+                 {link.showFor !== 'all' && (
+                   <Box sx={{ mt: 2 }}>
+                     <Chip 
+                       label={link.showFor === 'admin' ? 'Admin Only' : 'Admin & Uploaders'}
+                       size="small"
+                       color={link.showFor === 'admin' ? 'error' : 'secondary'}
+                       variant="outlined"
+                     />
+                   </Box>
+                 )}
+               </CardContent>
+             </Card>
+           </motion.div>
+         </Grid>
+       ))}
+     </Grid>
+
+     {/* Empty State Message for New Installations */}
+     {!hasRealData && sharePointAvailable && (
+       <motion.div
+         initial={{ opacity: 0, y: 20 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ duration: 0.4, delay: 0.7 }}
+       >
+         <Alert severity="info" sx={{ mb: 4 }}>
+           <Typography variant="h6" gutterBottom>
+             🎯 Ready to Get Started!
+           </Typography>
+           <Typography variant="body2">
+             Your SharePoint integration is working perfectly. Start by uploading some procedures to see the LOB breakdown and risk analysis charts with real data.
+             {(isAdmin || isUploader) && (
+               <>
+                 {' '}Click <strong>"Upload New"</strong> above to add your first procedure.
+               </>
+             )}
+           </Typography>
+         </Alert>
+       </motion.div>
+     )}
+   </Box>
+ );
 };
 
 export default HomePage;
