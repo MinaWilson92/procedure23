@@ -1,42 +1,12 @@
-// services/SharePointService.js - Fixed for Your List URLs
+// services/SharePointService.js - Enhanced with List Management
 class SharePointService {
   constructor() {
-    // Safe SharePoint context checking for build time
-    this.siteUrl = this.getSafeSharePointUrl();
-    this.requestDigest = this.getSafeRequestDigest();
-    
-    // Your actual list URLs (relative to site)
-    this.listUrls = {
-      procedures: '/sites/EmployeeEng/lists/Procedures',
-      userRoles: '/sites/EmployeeEng/lists/UserRoles',
-      auditLog: '/sites/EmployeeEng/lists/AuditLog'
-    };
-
-    console.log('🔧 SharePointService initialized:', {
-      siteUrl: this.siteUrl,
-      hasDigest: !!this.requestDigest,
-      isSharePointEnv: this.isSharePointAvailable(),
-      listUrls: this.listUrls
-    });
+    this.baseUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+    this.proceduresListUrl = `${this.baseUrl}/_api/web/lists/getbytitle('Procedures')/items`;
+    this.requestDigest = this.getRequestDigest();
   }
 
-  // Safe SharePoint URL getter
-  getSafeSharePointUrl() {
-    try {
-      if (typeof window !== 'undefined' && typeof window._spPageContextInfo !== 'undefined') {
-        return window._spPageContextInfo.webAbsoluteUrl;
-      }
-      if (typeof window !== 'undefined') {
-        return window.location.origin;
-      }
-      return 'http://localhost:3000'; // Build-time fallback
-    } catch (error) {
-      return 'http://localhost:3000';
-    }
-  }
-
-  // Safe request digest getter
-  getSafeRequestDigest() {
+  getRequestDigest() {
     try {
       if (typeof document !== 'undefined') {
         const digestElement = document.getElementById('__REQUESTDIGEST');
@@ -48,483 +18,270 @@ class SharePointService {
     }
   }
 
-  // Build correct API URL for your lists
-  buildListApiUrl(listType, operation = 'items') {
-    const baseUrl = this.siteUrl || window.location.origin;
-    const listPath = this.listUrls[listType];
+  getHeaders(includeDigest = false) {
+    const headers = {
+      'Accept': 'application/json; odata=verbose',
+      'Content-Type': 'application/json; odata=verbose'
+    };
     
-    // Use the correct SharePoint API format for your list structure
-    return `${baseUrl}/_api/web/GetList('${listPath}')/${operation}`;
+    if (includeDigest && this.requestDigest) {
+      headers['X-RequestDigest'] = this.requestDigest;
+    }
+    
+    return headers;
   }
 
-  // ===================================================================
-  // PROCEDURES LIST OPERATIONS
-  // ===================================================================
-
-  // GET all procedures from SharePoint List
-  async getProcedures() {
+  /**
+   * Upload file to SharePoint document library
+   */
+  async uploadFileToSharePoint(file, targetPath, filename) {
     try {
-      if (!this.isSharePointAvailable()) {
-        console.log('📋 SharePoint not available, returning mock procedures');
-        return this.getMockProcedures();
-      }
+      console.log('📤 Uploading file to SharePoint...');
+      console.log('Target path:', targetPath);
+      console.log('Filename:', filename);
 
-      console.log('📋 Fetching procedures from SharePoint list...');
+      // Ensure folder exists first
+      await this.ensureFolderExists(targetPath);
+
+      // Upload file
+      const uploadUrl = `${this.baseUrl}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${targetPath}')/Files/add(url='${filename}',overwrite=true)`;
       
-      const apiUrl = this.buildListApiUrl('procedures') + '?$select=*&$orderby=Id desc&$top=1000';
-      console.log('🔗 API URL:', apiUrl);
+      const fileBuffer = await this.fileToArrayBuffer(file);
       
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: { 
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
           'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose'
-        }
+          'X-RequestDigest': this.requestDigest
+        },
+        credentials: 'include',
+        body: fileBuffer
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch procedures: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`File upload failed: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      const procedures = data.d.results.map(this.mapSharePointToModel.bind(this));
+      const result = await response.json();
       
-      console.log('✅ Procedures fetched successfully:', procedures.length);
-      return procedures;
-      
+      const fileInfo = {
+        serverRelativeUrl: result.d.ServerRelativeUrl,
+        webUrl: `${this.baseUrl}${result.d.ServerRelativeUrl}`,
+        filename: filename,
+        size: file.size
+      };
+
+      console.log('✅ File uploaded successfully:', fileInfo);
+      return fileInfo;
+
     } catch (error) {
-      console.error('❌ Error fetching procedures, using mock data:', error);
-      return this.getMockProcedures();
+      console.error('❌ File upload failed:', error);
+      throw error;
     }
   }
 
-  // CREATE procedure in SharePoint List
-  async createProcedure(procedureData, analysisResult, fileUploadResult = null) {
+  /**
+   * Create procedure record in SharePoint Procedures list
+   */
+  async createProcedureRecord(procedureData, analysisData, fileInfo) {
     try {
-      if (!this.isSharePointAvailable()) {
-        console.log('📝 SharePoint not available, returning mock success');
-        return this.getMockCreateResult(procedureData);
-      }
+      console.log('📝 Creating procedure record in SharePoint list...');
 
-      console.log('📝 Creating procedure in SharePoint list...');
-      
-      // Prepare the data for SharePoint list
       const listItemData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
+        
+        // Basic procedure information
         Title: procedureData.name,
-        ExpiryDate: procedureData.expiry,
         PrimaryOwner: procedureData.primary_owner,
         PrimaryOwnerEmail: procedureData.primary_owner_email,
         SecondaryOwner: procedureData.secondary_owner || '',
         SecondaryOwnerEmail: procedureData.secondary_owner_email || '',
         LOB: procedureData.lob,
-        ProcedureSubsection: procedureData.procedure_subsection || '',
-        QualityScore: analysisResult.score,
-        AnalysisDetails: JSON.stringify(analysisResult.details),
-        AIRecommendations: JSON.stringify(analysisResult.aiRecommendations || []),
-        UploadedBy: this.getCurrentUser().staffId,
+        ProcedureSubsection: procedureData.procedure_subsection,
+        ExpiryDate: procedureData.expiry,
+        
+        // AI Analysis results
+        QualityScore: analysisData.score,
+        AnalysisDetails: JSON.stringify(analysisData.details),
+        AIRecommendations: JSON.stringify(analysisData.aiRecommendations),
+        
+        // Extracted data from AI analysis
+        RiskRating: analysisData.details.riskRating || 'Medium',
+        PeriodicReview: analysisData.details.periodicReview || 'Annual',
+        DocumentOwners: analysisData.details.owners?.join('; ') || '',
+        SignOffDates: analysisData.details.signOffDates?.join('; ') || '',
+        Departments: analysisData.details.departments?.join('; ') || '',
+        
+        // File information
+        DocumentLink: fileInfo.serverRelativeUrl,
+        SharePointURL: fileInfo.webUrl,
+        OriginalFilename: fileInfo.filename,
+        FileSize: fileInfo.size,
+        
+        // Metadata
+        UploadedBy: procedureData.uploaded_by || 'System',
         UploadedAt: new Date().toISOString(),
         Status: 'Active',
-        OriginalFilename: fileUploadResult?.originalName || '',
-        FileSize: fileUploadResult?.fileSize || 0
+        SharePointUploaded: true,
+        
+        // Quality flags
+        HasDocumentControl: analysisData.details.hasDocumentControl,
+        HasRiskAssessment: analysisData.details.hasRiskAssessment,
+        HasPeriodicReview: analysisData.details.hasPeriodicReview,
+        HasOwners: analysisData.details.hasOwners,
+        
+        // Analysis summary
+        FoundElements: analysisData.details.foundElements?.join('; ') || '',
+        MissingElements: analysisData.details.missingElements?.join('; ') || '',
+        TemplateCompliance: analysisData.details.summary?.templateCompliance || 'Unknown'
       };
 
-      // Add file information if uploaded
-      if (fileUploadResult) {
-        listItemData.DocumentLink = fileUploadResult.serverRelativeUrl;
-        listItemData.SharePointURL = fileUploadResult.webUrl;
-        listItemData.SharePointUploaded = true;
-      }
+      console.log('📋 List item data prepared:', {
+        Title: listItemData.Title,
+        QualityScore: listItemData.QualityScore,
+        DocumentLink: listItemData.DocumentLink,
+        RiskRating: listItemData.RiskRating
+      });
 
-      const apiUrl = this.buildListApiUrl('procedures');
-      console.log('🔗 Create API URL:', apiUrl);
-
-      const response = await fetch(apiUrl, {
+      const response = await fetch(this.proceduresListUrl, {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose',
-          'X-RequestDigest': this.requestDigest
-        },
+        headers: this.getHeaders(true),
+        credentials: 'include',
         body: JSON.stringify(listItemData)
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to create procedure: ${response.status} - ${errorText}`);
+        throw new Error(`List item creation failed: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Procedure created successfully:', result.d.Id);
       
-      return {
-        success: true,
-        procedureId: result.d.Id,
-        procedure: this.mapSharePointToModel(result.d)
+      const procedureRecord = {
+        id: result.d.Id,
+        name: result.d.Title,
+        score: result.d.QualityScore,
+        documentLink: result.d.DocumentLink,
+        sharePointUrl: result.d.SharePointURL,
+        created: result.d.Created,
+        listItemId: result.d.Id
       };
-      
+
+      console.log('✅ Procedure record created successfully:', procedureRecord);
+      return procedureRecord;
+
     } catch (error) {
-      console.error('❌ Error creating procedure:', error);
-      return this.getMockCreateResult(procedureData);
+      console.error('❌ Failed to create procedure record:', error);
+      throw error;
     }
   }
 
-  // ===================================================================
-  // DASHBOARD DATA
-  // ===================================================================
-
-  // GET dashboard summary data
-  async getDashboardSummary() {
+  /**
+   * Ensure SharePoint folder exists
+   */
+  async ensureFolderExists(targetPath) {
     try {
-      console.log('📊 Getting dashboard summary...');
+      // Check if folder exists
+      const checkUrl = `${this.baseUrl}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${targetPath}')`;
       
-      const procedures = await this.getProcedures();
-      const now = new Date();
-      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+      const checkResponse = await fetch(checkUrl, {
+        method: 'GET',
+        headers: this.getHeaders(),
+        credentials: 'include'
+      });
 
-      const summary = {
-        total: procedures.length,
-        expired: procedures.filter(p => new Date(p.expiry) < now).length,
-        expiringSoon: procedures.filter(p => {
-          const expiry = new Date(p.expiry);
-          return expiry > now && expiry - now < THIRTY_DAYS;
-        }).length,
-        highQuality: procedures.filter(p => (p.score || 0) >= 80).length,
-        mediumQuality: procedures.filter(p => (p.score || 0) >= 60 && (p.score || 0) < 80).length,
-        lowQuality: procedures.filter(p => (p.score || 0) < 60).length,
-        averageScore: procedures.length > 0 ? 
-          Math.round(procedures.reduce((sum, p) => sum + (p.score || 0), 0) / procedures.length) : 0,
-        sharePointUploaded: procedures.filter(p => p.sharepoint_uploaded === true).length,
-        byLOB: this.groupByLOB(procedures)
-      };
-
-      console.log('✅ Dashboard summary prepared:', summary);
-      return summary;
-      
-    } catch (error) {
-      console.error('❌ Error getting dashboard summary:', error);
-      return this.getMockDashboardSummary();
-    }
-  }
-
-  // ===================================================================
-  // USER MANAGEMENT
-  // ===================================================================
-
-  // GET current user info (build-safe)
-  getCurrentUser() {
-    try {
-      if (typeof window !== 'undefined' && typeof window._spPageContextInfo !== 'undefined') {
-        return {
-          staffId: window._spPageContextInfo.userId?.toString() || '43898931',
-          displayName: window._spPageContextInfo.userDisplayName || 'SharePoint User',
-          email: window._spPageContextInfo.userEmail || 'user@hsbc.com',
-          loginName: window._spPageContextInfo.userLoginName || 'sharepoint\\user'
-        };
-      } else {
-        // Development fallback
-        return {
-          staffId: '43898931',
-          displayName: 'Mina Antoun Wilson Ross',
-          email: '43898931@hsbc.com',
-          loginName: 'dev\\43898931'
-        };
-      }
-    } catch (error) {
-      console.warn('⚠️ Error getting current user, using fallback:', error);
-      return {
-        staffId: '43898931',
-        displayName: 'Demo User',
-        email: 'demo@hsbc.com',
-        loginName: 'demo\\user'
-      };
-    }
-  }
-
-  // CHECK user role
-  async getUserRole(staffId = null) {
-    try {
-      if (!this.isSharePointAvailable()) {
-        // Default role determination for development
-        const userId = staffId || this.getCurrentUser().staffId;
-        const adminUsers = ['43898931', 'admin', 'mina.antoun', 'wilson.ross'];
-        return adminUsers.includes(userId) ? 'admin' : 'user';
+      if (checkResponse.ok) {
+        console.log('✅ Folder exists:', targetPath);
+        return;
       }
 
-      const userId = staffId || this.getCurrentUser().staffId;
+      // Create folder if it doesn't exist
+      console.log('📁 Creating folder:', targetPath);
       
-      const apiUrl = this.buildListApiUrl('userRoles') + `?$filter=Title eq '${userId}'`;
-      console.log('🔗 UserRole API URL:', apiUrl);
+      const pathParts = targetPath.split('/');
+      let currentPath = '';
       
-      const response = await fetch(apiUrl, {
-        headers: { 'Accept': 'application/json; odata=verbose' }
+      for (const part of pathParts) {
+        if (part) {
+          currentPath += `/${part}`;
+          await this.createSingleFolder(currentPath);
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error ensuring folder exists:', error);
+      // Don't throw here - let the upload attempt anyway
+    }
+  }
+
+  async createSingleFolder(folderPath) {
+    try {
+      const createUrl = `${this.baseUrl}/_api/web/folders/add('/sites/EmployeeEng${folderPath}')`;
+      
+      const response = await fetch(createUrl, {
+        method: 'POST',
+        headers: this.getHeaders(true),
+        credentials: 'include'
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.d.results.length > 0) {
-          return data.d.results[0].UserRole;
-        }
+        console.log('✅ Folder created:', folderPath);
       }
-
-      // Default role determination
-      const adminUsers = ['43898931', 'admin', 'mina.antoun', 'wilson.ross'];
-      return adminUsers.includes(userId) ? 'admin' : 'user';
-      
     } catch (error) {
-      console.warn('⚠️ Error checking user role:', error);
-      return 'user';
+      // Folder might already exist, ignore error
+      console.log('⚠️ Folder creation skipped:', folderPath);
     }
   }
 
-  // GET audit log entries
-  async getAuditLog(limit = 100) {
+  /**
+   * Convert file to ArrayBuffer for SharePoint upload
+   */
+  async fileToArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Update procedure record in SharePoint list
+   */
+  async updateProcedureRecord(procedureId, updates) {
     try {
-      if (!this.isSharePointAvailable()) {
-        return this.getMockAuditLog();
-      }
+      console.log('📝 Updating procedure record:', procedureId);
 
-      const apiUrl = this.buildListApiUrl('auditLog') + `?$select=*&$orderby=LogTimestamp desc&$top=${limit}`;
-      console.log('🔗 AuditLog API URL:', apiUrl);
+      const updateUrl = `${this.proceduresListUrl}(${procedureId})`;
+      const updateData = {
+        __metadata: { type: 'SP.Data.ProceduresListItem' },
+        ...updates
+      };
 
-      const response = await fetch(apiUrl, {
-        headers: { 'Accept': 'application/json; odata=verbose' }
+      const response = await fetch(updateUrl, {
+        method: 'POST',
+        headers: {
+          ...this.getHeaders(true),
+          'X-HTTP-Method': 'MERGE',
+          'IF-MATCH': '*'
+        },
+        credentials: 'include',
+        body: JSON.stringify(updateData)
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch audit log: ${response.status}`);
+      if (!response.ok && response.status !== 204) {
+        const errorText = await response.text();
+        throw new Error(`Update failed: ${response.status} - ${errorText}`);
       }
 
-      const data = await response.json();
-      return data.d.results.map(item => ({
-        id: item.Id,
-        action: item.Title,
-        timestamp: item.LogTimestamp,
-        userId: item.UserId,
-        details: this.safeJsonParse(item.Details, {}),
-        actionType: item.ActionType
-      }));
-      
+      console.log('✅ Procedure record updated successfully');
+      return true;
+
     } catch (error) {
-      console.error('❌ Error fetching audit log:', error);
-      return this.getMockAuditLog();
+      console.error('❌ Failed to update procedure record:', error);
+      throw error;
     }
-  }
-
-  // ===================================================================
-  // HELPER METHODS
-  // ===================================================================
-
-  // Convert SharePoint list item to your app format
-  mapSharePointToModel(spItem) {
-    return {
-      id: spItem.Id,
-      name: spItem.Title,
-      expiry: spItem.ExpiryDate,
-      primary_owner: spItem.PrimaryOwner,
-      primary_owner_email: spItem.PrimaryOwnerEmail,
-      secondary_owner: spItem.SecondaryOwner || '',
-      secondary_owner_email: spItem.SecondaryOwnerEmail || '',
-      lob: spItem.LOB,
-      procedure_subsection: spItem.ProcedureSubsection || '',
-      score: spItem.QualityScore || 0,
-      quality_details: this.safeJsonParse(spItem.AnalysisDetails, {}),
-      ai_recommendations: this.safeJsonParse(spItem.AIRecommendations, []),
-      uploaded_by: spItem.UploadedBy,
-      uploaded_at: spItem.UploadedAt,
-      status: spItem.Status || 'Active',
-      file_link: spItem.DocumentLink || '',
-      original_filename: spItem.OriginalFilename || '',
-      file_size: spItem.FileSize || 0,
-      sharepoint_uploaded: spItem.SharePointUploaded || false,
-      sharepoint_url: spItem.SharePointURL || ''
-    };
-  }
-
-  // Safe JSON parsing
-  safeJsonParse(jsonString, defaultValue) {
-    try {
-      return jsonString ? JSON.parse(jsonString) : defaultValue;
-    } catch (error) {
-      console.warn('⚠️ JSON parse error:', error);
-      return defaultValue;
-    }
-  }
-
-  // Group procedures by LOB
-  groupByLOB(procedures) {
-    const byLOB = {};
-    procedures.forEach(proc => {
-      const lob = proc.lob || 'Other';
-      if (!byLOB[lob]) {
-        byLOB[lob] = { count: 0, avgScore: 0, procedures: [] };
-      }
-      byLOB[lob].count++;
-      byLOB[lob].avgScore += proc.score || 0;
-      byLOB[lob].procedures.push(proc);
-    });
-
-    // Calculate averages
-    Object.keys(byLOB).forEach(lob => {
-      byLOB[lob].avgScore = byLOB[lob].count > 0 ? 
-        Math.round(byLOB[lob].avgScore / byLOB[lob].count) : 0;
-    });
-
-    return byLOB;
-  }
-
-  // Check if SharePoint is available (build-safe)
-  isSharePointAvailable() {
-    try {
-      return typeof window !== 'undefined' && 
-             typeof window._spPageContextInfo !== 'undefined' && 
-             window._spPageContextInfo.webAbsoluteUrl;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  // Test connection to your lists
-  async testListConnections() {
-    console.log('🧪 Testing connections to SharePoint lists...');
-    
-    const tests = [
-      { name: 'Procedures', type: 'procedures' },
-      { name: 'UserRoles', type: 'userRoles' },
-      { name: 'AuditLog', type: 'auditLog' }
-    ];
-
-    for (const test of tests) {
-      try {
-        const apiUrl = this.buildListApiUrl(test.type) + '?$select=Id&$top=1';
-        console.log(`🔗 Testing ${test.name}: ${apiUrl}`);
-        
-        const response = await fetch(apiUrl, {
-          headers: { 'Accept': 'application/json; odata=verbose' }
-        });
-
-        if (response.ok) {
-          console.log(`✅ ${test.name}: Connection successful`);
-        } else {
-          console.log(`❌ ${test.name}: Connection failed (${response.status})`);
-        }
-      } catch (error) {
-        console.log(`❌ ${test.name}: Error - ${error.message}`);
-      }
-    }
-  }
-
-  // ===================================================================
-  // MOCK DATA FOR DEVELOPMENT/FALLBACK
-  // ===================================================================
-
-  getMockProcedures() {
-    return [
-      {
-        id: 1,
-        name: "Risk Assessment Framework",
-        lob: "GRM",
-        primary_owner: "John Smith",
-        primary_owner_email: "john.smith@hsbc.com",
-        expiry: "2024-12-15",
-        score: 92,
-        status: "Active"
-      },
-      {
-        id: 2,
-        name: "Trading Compliance Guidelines",
-        lob: "CIB", 
-        primary_owner: "Sarah Johnson",
-        primary_owner_email: "sarah.johnson@hsbc.com",
-        expiry: "2024-07-20",
-        score: 78,
-        status: "Active"
-      },
-      {
-        id: 3,
-        name: "Client Onboarding Process",
-        lob: "IWPB",
-        primary_owner: "Mike Chen",
-        primary_owner_email: "mike.chen@hsbc.com",
-        expiry: "2024-06-01",
-        score: 85,
-        status: "Active"
-      },
-      {
-        id: 4,
-        name: "Data Protection Protocol",
-        lob: "GCOO",
-        primary_owner: "Lisa Wang",
-        primary_owner_email: "lisa.wang@hsbc.com",
-        expiry: "2025-03-10",
-        score: 94,
-        status: "Active"
-      },
-      {
-        id: 5,
-        name: "Investment Analysis Standards",
-        lob: "IWPB",
-        primary_owner: "David Brown",
-        primary_owner_email: "david.brown@hsbc.com",
-        expiry: "2024-11-30",
-        score: 88,
-        status: "Active"
-      }
-    ];
-  }
-
-  getMockDashboardSummary() {
-    return {
-      total: 247,
-      expired: 8,
-      expiringSoon: 23,
-      highQuality: 186,
-      mediumQuality: 45,
-      lowQuality: 16,
-      averageScore: 84,
-      sharePointUploaded: 198,
-      byLOB: {
-        'IWPB': { count: 45, avgScore: 87 },
-        'CIB': { count: 67, avgScore: 82 },
-        'GCOO': { count: 38, avgScore: 89 },
-        'GRM': { count: 52, avgScore: 85 },
-        'GF': { count: 29, avgScore: 81 },
-        'GTRB': { count: 16, avgScore: 86 }
-      }
-    };
-  }
-
-  getMockCreateResult(procedureData) {
-    return {
-      success: true,
-      procedureId: Date.now(),
-      procedure: {
-        id: Date.now(),
-        name: procedureData.name,
-        score: Math.floor(Math.random() * 30) + 70
-      }
-    };
-  }
-
-  getMockAuditLog() {
-    return [
-      {
-        id: 1,
-        action: 'Procedure Updated',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        userId: '43898931',
-        details: { procedureName: 'Risk Assessment Framework', score: 92 },
-        actionType: 'UPDATE'
-      },
-      {
-        id: 2,
-        action: 'Procedure Created',
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        userId: '43898931',
-        details: { procedureName: 'Trading Guidelines', score: 78 },
-        actionType: 'CREATE'
-      }
-    ];
   }
 }
 
