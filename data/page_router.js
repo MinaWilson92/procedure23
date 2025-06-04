@@ -1,9 +1,10 @@
-// components/PageRouter.js - Page Routing Logic
+// components/PageRouter.js - Updated with Admin Dashboard Route
 import React from 'react';
 import HomePage from '../pages/HomePage';
 import UserDashboardPage from '../pages/UserDashboardPage';
 import ProceduresPage from '../pages/ProceduresPage';
 import AdminPanelPage from '../pages/AdminPanelPage';
+import AdminDashboardPage from '../pages/AdminDashboardPage';
 
 const PageRouter = ({ currentPage, ...props }) => {
   switch (currentPage) {
@@ -15,6 +16,8 @@ const PageRouter = ({ currentPage, ...props }) => {
       return <ProceduresPage {...props} />;
     case 'admin-panel':
       return <AdminPanelPage {...props} />;
+    case 'admin-dashboard':
+      return <AdminDashboardPage {...props} />;
     case 'submit-procedure':
       return <AdminPanelPage {...props} />;
     default:
