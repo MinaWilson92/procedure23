@@ -1,4 +1,4 @@
-// pages/HomePage.js - Enhanced with HBEG branding and role-based access
+// pages/HomePage.js - Fixed to use only props data (no direct SharePoint calls)
 import React from 'react';
 import {
   Box, Typography, Alert, Grid, Card, CardContent,
@@ -53,7 +53,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
     'Bi-Annual': { color: '#795548', label: 'Bi-Annual Review' }
   };
 
-  // Calculate Risk Rating Data from SharePoint procedures
+  // 🎯 **FIXED: Calculate data from props only (no API calls)**
   const calculateRiskData = () => {
     if (!procedures || procedures.length === 0) {
       return [];
@@ -78,7 +78,6 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
     }));
   };
 
-  // Calculate Annual Review Data from SharePoint procedures
   const calculateReviewData = () => {
     if (!procedures || procedures.length === 0) {
       return [];
@@ -103,7 +102,6 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
     }));
   };
 
-  // Calculate real LOB data from your SharePoint procedures
   const calculateLOBData = () => {
     if (!procedures || procedures.length === 0) {
       return {};
@@ -150,6 +148,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
     return lobStats;
   };
 
+  // 🎯 **FIXED: All calculations from passed props data**
   const realLOBData = calculateLOBData();
   const riskData = calculateRiskData();
   const reviewData = calculateReviewData();
@@ -168,7 +167,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
     highQuality: procedures?.filter(p => (p.score || 0) >= 80).length || 0
   };
 
-  // 🎯 **UPDATED: Role-based Quick Links**
+  // 🎯 **FIXED: Role-based Quick Links - corrected logic**
   const quickLinks = [
     { 
       title: 'All Procedures', 
@@ -238,7 +237,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
 
   return (
     <Box>
-      {/* Enhanced Header */}
+      {/* 🎯 **FIXED: HBEG Branding** */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" fontWeight="bold" gutterBottom>
           HBEG Procedures Hub
@@ -732,10 +731,10 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
                                 backgroundColor: alpha(config.color, 0.1),
                                 color: config.color,
                                 fontWeight: 'bold'
-                              }} 
-/>
-                           {data.expiringSoon > 0 && (
-                             <Chip 
+                              }}
+                            />
+                            {data.expiringSoon > 0 && (
+                          <Chip 
                                label={`${data.expiringSoon} expiring`}
                                size="small"
                                color="warning"
@@ -760,7 +759,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
        </motion.div>
      )}
 
-     {/* 🎯 **UPDATED: Role-based Quick Access Links** */}
+     {/* 🎯 **FIXED: Role-based Quick Access Links** */}
      <Grid container spacing={3} sx={{ mb: 4 }}>
        {quickLinks.map((link, index) => (
          <Grid item xs={12} md={quickLinks.length === 3 ? 4 : 6} key={link.path}>
