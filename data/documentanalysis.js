@@ -732,128 +732,107 @@ function analyzeDefinitionsSection(text) {
     /([A-Z]{2,})\s*:\s*([^•\n]+)/g, // Acronyms followed by definitions
     /•\s+([A-Z]{2,})\s*:\s*([^•\n]+)/g // Bullet points with definitions
   ];
-
   definitionPatterns.forEach(pattern => {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      if (match[1] && match[2]) {
-        analysis.definitions.push({
-          term: match[1].trim(),
-          definition: match[2].trim()
-        });
-      }
-    }
-  });
+   const matches = text.matchAll(pattern);
+   for (const match of matches) {
+     if (match[1] && match[2]) {
+       analysis.definitions.push({
+         term: match[1].trim(),
+         definition: match[2].trim()
+       });
+     }
+   }
+ });
 
-  console.log('Definitions analysis result:', {
-    found: analysis.found,
-    count: analysis.definitions.length
-  });
-  return analysis;
+ console.log('Definitions analysis result:', {
+   found: analysis.found,
+   count: analysis.definitions.length
+ });
+ return analysis;
 }
 
 function analyzeGovernanceSection(text) {
-  console.log('🔍 Analyzing Governance section...');
-  
-  const analysis = {
-    found: false,
-    details: []
-  };
+ console.log('🔍 Analyzing Governance section...');
+ 
+ const analysis = {
+   found: false,
+   details: []
+ };
 
-  // Look for governance section
-  const governancePattern = /governance\s+of\s+this\s+document/gi;
-  if (governancePattern.test(text)) {
-    analysis.found = true;
-    analysis.details.push('Governance section present');
-  }
+ // Look for governance section
+ const governancePattern = /governance\s+of\s+this\s+document/gi;
+ if (governancePattern.test(text)) {
+   analysis.found = true;
+   analysis.details.push('Governance section present');
+ }
 
-  console.log('Governance analysis result:', analysis);
-  return analysis;
+ console.log('Governance analysis result:', analysis);
+ return analysis;
 }
 
 function analyzeUpdateTriggers(text) {
-  console.log('🔍 Analyzing Update Triggers...');
-  
-  const analysis = {
-    found: false,
-    triggers: []
-  };
+ console.log('🔍 Analyzing Update Triggers...');
+ 
+ const analysis = {
+   found: false,
+   triggers: []
+ };
 
-  // Look for triggers section
-  const triggersPattern = /triggers?\s+for\s+document\s+update/gi;
-  if (!triggersPattern.test(text)) {
-    return analysis;
-  }
+ // Look for triggers section
+ const triggersPattern = /triggers?\s+for\s+document\s+update/gi;
+ if (!triggersPattern.test(text)) {
+   return analysis;
+ }
 
-  analysis.found = true;
+ analysis.found = true;
 
-  // Extract common triggers
-  const triggerPatterns = [
-    /change\s+in\s+(?:global\s+or\s+)?local\s+(?:policy|law|regulations?)/gi,
-    /change\s+in\s+scope,?\s*activities,?\s*processes/gi,
-    /material\s+(?:regulatory|legal|business)\s+environment\s+changes?/gi
-  ];
+ // Extract common triggers
+ const triggerPatterns = [
+   /change\s+in\s+(?:global\s+or\s+)?local\s+(?:policy|law|regulations?)/gi,
+   /change\s+in\s+scope,?\s*activities,?\s*processes/gi,
+   /material\s+(?:regulatory|legal|business)\s+environment\s+changes?/gi
+ ];
 
-  triggerPatterns.forEach(pattern => {
-    const matches = text.matchAll(pattern);
-    for (const match of matches) {
-      analysis.triggers.push(match[0]);
-    }
-  });
+ triggerPatterns.forEach(pattern => {
+   const matches = text.matchAll(pattern);
+   for (const match of matches) {
+     analysis.triggers.push(match[0]);
+   }
+ });
 
-  console.log('Update Triggers analysis result:', analysis);
-  return analysis;
-}
-
-// Enhanced name validation for HSBC context
-function isValidOwnerName(name) {
-  if (!name || name.length < 2 || name.length > 50) return false;
-  
-  // Remove common noise patterns
-  const excludePatterns = [
-    /last\s+updated?\s+date/gi,
-    /sign[\s-]*off\s+date/gi,
-    /effective\s+date/gi,
-    /version\s+\d+/gi,
-    /table\s+of\s+contents/gi,
-    /page\s+\d+/gi,
-    /^\d+$/,  // Numbers only
-    /^[^a-zA-Z]*$/,  // No letters
-    /position\/department/gi,
-    /role/gi,
-    /name/gi,
-    /streamlining$/gi // Department name only
-  ];
-  
-  for (const pattern of excludePatterns) {
-    if (pattern.test(name)) return false;
-  }
-
-  // Must contain at least one letter and look like a name
-  if (!/[a-zA-Z]/.test(name)) return false;
-
-  // Should look like a name (has space or multiple words)
-  const words = name.trim().split(/\s+/).filter(word => word.length >= 2);
-  if (words.length >= 1 && words.every(word => /^[a-zA-Z\s\-\.]+$/.test(word))) {
-    return true;
-  }
-
-  return false;
+ console.log('Update Triggers analysis result:', analysis);
+ return analysis;
 }
 
 // ===============================
 // Export for SharePoint CDN
 // ===============================
 if (typeof window !== 'undefined') {
-  window.documentAnalysis = {
-    analyzeDocument,
-    analyzeDocumentControlTable,
-    analyzeHSBCRiskAssessment,
-    analyzePeriodicReview,
-    analyzeDefinitionsSection,
-    analyzeGovernanceSection,
-    analyzeUpdateTriggers,
-    isValidOwnerName
-  };
-  console.log('✅ Enhanced HSBC Document Analysis Engine loaded successfully with 85% threshold and 5 critical deciders');
+ window.documentAnalysis = {
+   analyzeDocument,
+   analyzeDocumentControlTable,
+   analyzeHSBCRiskAssessment,
+   analyzePeriodicReview,
+   analyzeDefinitionsSection,
+   analyzeGovernanceSection,
+   analyzeUpdateTriggers,
+   isValidOwnerName
+ };
+ console.log('✅ Enhanced HSBC Document Analysis Engine loaded successfully with 85% threshold, 5 critical deciders, and improved owner extraction');
+}
+
+// ===============================
+// Export for Node.js/Module environments
+// ===============================
+if (typeof module !== 'undefined' && module.exports) {
+ module.exports = {
+   analyzeDocument,
+   analyzeDocumentControlTable,
+   analyzeHSBCRiskAssessment,
+   analyzePeriodicReview,
+   analyzeDefinitionsSection,
+   analyzeGovernanceSection,
+   analyzeUpdateTriggers,
+   isValidOwnerName
+ };
 }
