@@ -25,7 +25,7 @@ const procedureData = {
   
   // ✅ FILE INFO FIELDS
   QualityScore: Number((analysisResult && analysisResult.score) || 0),
-  DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
+DocumentLink: sharePointPath ? `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}` : '',
   OriginalFilename: (file && file.name) || 'unknown.doc',
   FileSize: Number((file && file.size) || 0),
   
