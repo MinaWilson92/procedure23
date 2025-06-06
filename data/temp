@@ -1,5 +1,48 @@
+
+
+
 const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <script src="/sites/EmployeeEng/SiteAssets/js/documentAnalysis.js"></script>
+
+
+
+// 4. Create procedure list item with comprehensive AI data
+const procedureData = {
+  __metadata: { type: 'SP.Data.ProceduresListItem' },
+  
+  // ✅ BASIC FIELDS 
+  Title: formData.name || 'Untitled Procedure',
+  ExpiryDate: formData.expiry ? new Date(formData.expiry).toISOString() : new Date().toISOString(),
+  PrimaryOwner: formData.primary_owner || 'Unknown',
+  PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
+  SecondaryOwner: formData.secondary_owner || '',
+  SecondaryOwnerEmail: formData.secondary_owner_email || '',
+  LOB: formData.lob || 'Unknown',
+  ProcedureSubsection: formData.procedure_subsection || '',
+  
+  // ✅ FILE INFO FIELDS
+  QualityScore: Number((analysisResult && analysisResult.score) || 0),
+  DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
+  OriginalFilename: (file && file.name) || 'unknown.doc',
+  FileSize: Number((file && file.size) || 0),
+  
+  // ✅ METADATA FIELDS
+  UploadedBy: formData.primary_owner || 'Unknown',
+  UploadedAt: new Date().toISOString(),
+  Status: 'Active',
+  SharePointUploaded: true,
+  SharepointPath: sharePointPath || '',
+  RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
+  PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
+  
+  // ✅ SAFE JSON STRINGS (no complex objects)
+  AnalysisDetails: JSON.stringify({
+    score: (analysisResult && analysisResult.score) || 0,
+    templateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown'
+  }),
+  AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations && analysisResult.aiRecommendations.slice(0, 3)) || []),
+  DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || [])
+};
