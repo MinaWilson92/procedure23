@@ -543,27 +543,33 @@ function analyzePeriodicReview(text) {
 
   analysis.found = true;
 
-  // Extract review frequency
+  // 🔧 FIXED: Extract review frequency - prioritize frequency words first
   const frequencyPatterns = [
-    /(?:annually|yearly)\s*[-–]\s*for\s+the\s+(high|medium|low)\s+risk/gi,
+    // Pattern 1: Your exact format "Annually – For the High risk rated LP/OI"
+    /(annually|yearly|quarterly|monthly|bi-annually|semi-annually)\s*[-–]\s*for\s+the\s+(high|medium|low)\s+risk/gi,
+    // Pattern 2: Just the frequency word anywhere in the section
     /(annually|yearly|quarterly|monthly|bi-annually|semi-annually)/gi
   ];
 
   for (const pattern of frequencyPatterns) {
     const match = pattern.exec(text);
     if (match) {
+      // Take the FIRST capture group (the frequency, not the risk level)
       analysis.frequency = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
-      if (match.length > 2) {
+      
+      // If we have both frequency and risk level, add to details
+      if (match.length > 2 && match[2]) {
         analysis.details.push(`${analysis.frequency} for ${match[2]} risk rated procedures`);
       }
-      break;
+      
+      console.log(`✅ FIXED: Extracted frequency "${analysis.frequency}" from periodic review`);
+      break; // Stop after first match
     }
   }
 
   console.log('Periodic Review analysis result:', analysis);
   return analysis;
 }
-
 function analyzeDefinitionsSection(text) {
   console.log('🔍 Analyzing Definitions section...');
   
