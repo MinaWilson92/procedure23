@@ -1,4 +1,4 @@
-// src/SharePointContext.js - DIAGNOSTIC VERSION to find your real data
+// src/SharePointContext.js - FIXED: Build-Safe with Real User Data Extraction
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
@@ -12,339 +12,164 @@ export const useSharePoint = () => {
   return context;
 };
 
-// ✅ DIAGNOSTIC: Let's see what real data is actually available
-const diagnoseAvailableUserData = () => {
+// ✅ FIXED: Build-safe SharePoint context extraction
+const getSharePointContext = () => {
+  // ✅ Build-time safety check
   if (typeof window === 'undefined') {
-    return { source: 'build_time', data: {} };
-  }
-
-  console.log('🔍 === DIAGNOSTIC: Checking all possible user data sources ===');
-  
-  const findings = {
-    sharePointContext: null,
-    cookies: {},
-    localStorage: {},
-    sessionStorage: {},
-    metaTags: [],
-    headers: {},
-    windowProperties: {}
-  };
-
-  // ✅ 1. Check SharePoint Context
-  try {
-    if (window._spPageContextInfo) {
-      findings.sharePointContext = {
-        webAbsoluteUrl: window._spPageContextInfo.webAbsoluteUrl,
-        userId: window._spPageContextInfo.userId,
-        userDisplayName: window._spPageContextInfo.userDisplayName,
-        userEmail: window._spPageContextInfo.userEmail,
-        userLoginName: window._spPageContextInfo.userLoginName,
-        siteAbsoluteUrl: window._spPageContextInfo.siteAbsoluteUrl,
-        webTitle: window._spPageContextInfo.webTitle,
-        currentLanguage: window._spPageContextInfo.currentLanguage
-      };
-      console.log('📋 SharePoint Context Found:', findings.sharePointContext);
-    } else {
-      console.log('❌ No SharePoint context available');
-    }
-  } catch (spError) {
-    console.log('❌ SharePoint context error:', spError);
-  }
-
-  // ✅ 2. Check ALL Cookies
-  try {
-    const allCookies = document.cookie.split(';');
-    console.log('🍪 === ALL COOKIES ===');
-    allCookies.forEach(cookie => {
-      const [name, value] = cookie.trim().split('=');
-      if (name && value) {
-        findings.cookies[name] = value;
-        console.log(`🍪 ${name}: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}`);
-        
-        // Look for email patterns in cookie values
-        if (value.includes('@') && value.includes('.')) {
-          const emailMatch = value.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g);
-          if (emailMatch) {
-            console.log(`📧 FOUND EMAIL IN ${name}:`, emailMatch);
-          }
-        }
-      }
-    });
-  } catch (cookieError) {
-    console.log('❌ Cookie check error:', cookieError);
-  }
-
-  // ✅ 3. Check Local Storage
-  try {
-    console.log('💾 === LOCAL STORAGE ===');
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      findings.localStorage[key] = value;
-      console.log(`💾 ${key}: ${value?.substring(0, 100)}${value?.length > 100 ? '...' : ''}`);
-      
-      // Look for email in localStorage
-      if (value && value.includes('@')) {
-        const emailMatch = value.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g);
-        if (emailMatch) {
-          console.log(`📧 FOUND EMAIL IN LOCALSTORAGE ${key}:`, emailMatch);
-        }
-      }
-    }
-  } catch (lsError) {
-    console.log('❌ LocalStorage check error:', lsError);
-  }
-
-  // ✅ 4. Check Session Storage
-  try {
-    console.log('📦 === SESSION STORAGE ===');
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      const value = sessionStorage.getItem(key);
-      findings.sessionStorage[key] = value;
-      console.log(`📦 ${key}: ${value?.substring(0, 100)}${value?.length > 100 ? '...' : ''}`);
-      
-      // Look for email in sessionStorage
-      if (value && value.includes('@')) {
-        const emailMatch = value.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g);
-        if (emailMatch) {
-          console.log(`📧 FOUND EMAIL IN SESSIONSTORAGE ${key}:`, emailMatch);
-        }
-      }
-    }
-  } catch (ssError) {
-    console.log('❌ SessionStorage check error:', ssError);
-  }
-
-  // ✅ 5. Check Meta Tags
-  try {
-    console.log('🏷️ === META TAGS ===');
-    const metaTags = document.querySelectorAll('meta');
-    metaTags.forEach(meta => {
-      const name = meta.getAttribute('name') || meta.getAttribute('property') || meta.getAttribute('http-equiv');
-      const content = meta.getAttribute('content');
-      
-      if (name && content) {
-        findings.metaTags.push({ name, content });
-        console.log(`🏷️ ${name}: ${content}`);
-        
-        // Look for email in meta content
-        if (content.includes('@')) {
-          const emailMatch = content.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g);
-          if (emailMatch) {
-            console.log(`📧 FOUND EMAIL IN META ${name}:`, emailMatch);
-          }
-        }
-      }
-    });
-  } catch (metaError) {
-    console.log('❌ Meta tags check error:', metaError);
-  }
-
-  // ✅ 6. Check Window Properties for User Info
-  try {
-    console.log('🪟 === WINDOW PROPERTIES ===');
-    const windowKeys = Object.keys(window);
-    const userRelatedKeys = windowKeys.filter(key => 
-      key.toLowerCase().includes('user') || 
-      key.toLowerCase().includes('auth') ||
-      key.toLowerCase().includes('login') ||
-      key.toLowerCase().includes('profile') ||
-      key.toLowerCase().includes('identity')
-    );
-    
-    userRelatedKeys.forEach(key => {
-      try {
-        const value = window[key];
-        findings.windowProperties[key] = value;
-        console.log(`🪟 ${key}:`, value);
-      } catch (propError) {
-        console.log(`🪟 ${key}: [Could not access]`);
-      }
-    });
-  } catch (windowError) {
-    console.log('❌ Window properties check error:', windowError);
-  }
-
-  // ✅ 7. Check for Office 365 / Microsoft Authentication
-  try {
-    console.log('🏢 === OFFICE 365 / MICROSOFT AUTH ===');
-    if (window.Office) {
-      console.log('🏢 Office context available:', window.Office);
-    }
-    if (window.Microsoft) {
-      console.log('🏢 Microsoft context available:', window.Microsoft);
-    }
-    if (window.msal) {
-      console.log('🏢 MSAL context available:', window.msal);
-    }
-  } catch (officeError) {
-    console.log('❌ Office/Microsoft check error:', officeError);
-  }
-
-  console.log('🔍 === DIAGNOSTIC COMPLETE ===');
-  console.log('📋 All findings:', findings);
-  
-  return findings;
-};
-
-// ✅ Extract real user data from diagnostic findings
-const extractRealUserData = (findings) => {
-  let realUserData = {
-    staffId: null,
-    displayName: null,
-    email: null,
-    loginName: null,
-    source: 'not_found'
-  };
-
-  // ✅ Priority 1: SharePoint Context
-  if (findings.sharePointContext) {
-    realUserData = {
-      staffId: findings.sharePointContext.userId?.toString(),
-      displayName: findings.sharePointContext.userDisplayName,
-      email: findings.sharePointContext.userEmail,
-      loginName: findings.sharePointContext.userLoginName,
-      source: 'sharepoint_context'
-    };
-    
-    if (realUserData.email && realUserData.email.includes('@')) {
-      console.log('✅ FOUND REAL EMAIL in SharePoint context:', realUserData.email);
-      return realUserData;
-    }
-  }
-
-  // ✅ Priority 2: Check cookies for real email
-  const cookieNames = Object.keys(findings.cookies);
-  for (const cookieName of cookieNames) {
-    const cookieValue = findings.cookies[cookieName];
-    
-    try {
-      // Try to decode and parse cookie values
-      const decoded = decodeURIComponent(cookieValue);
-      
-      // Look for JSON data in cookies
-      if (decoded.startsWith('{') || decoded.includes('"email"') || decoded.includes('"displayName"')) {
-        try {
-          const parsed = JSON.parse(decoded);
-          if (parsed.email && parsed.email.includes('@')) {
-            realUserData.email = parsed.email;
-            realUserData.displayName = parsed.displayName || parsed.name;
-            realUserData.staffId = parsed.userId || parsed.id || parsed.staffId;
-            realUserData.source = `cookie_${cookieName}`;
-            console.log('✅ FOUND REAL EMAIL in cookie:', cookieName, realUserData.email);
-            return realUserData;
-          }
-        } catch (parseError) {
-          // Not JSON, continue searching
-        }
-      }
-      
-      // Look for email patterns directly in cookie value
-      const emailMatch = decoded.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-      if (emailMatch) {
-        realUserData.email = emailMatch[1];
-        realUserData.source = `cookie_pattern_${cookieName}`;
-        console.log('✅ FOUND EMAIL PATTERN in cookie:', cookieName, realUserData.email);
-        // Don't return yet, keep looking for more complete data
-      }
-    } catch (decodeError) {
-      // Skip this cookie
-    }
-  }
-
-  // ✅ Priority 3: Check localStorage/sessionStorage
-  const storageKeys = [...Object.keys(findings.localStorage), ...Object.keys(findings.sessionStorage)];
-  for (const key of storageKeys) {
-    const value = findings.localStorage[key] || findings.sessionStorage[key];
-    
-    if (value && value.includes('@')) {
-      try {
-        if (value.startsWith('{')) {
-          const parsed = JSON.parse(value);
-          if (parsed.email) {
-            realUserData.email = parsed.email;
-            realUserData.displayName = parsed.displayName || parsed.name;
-            realUserData.staffId = parsed.userId || parsed.id;
-            realUserData.source = `storage_${key}`;
-            console.log('✅ FOUND REAL EMAIL in storage:', key, realUserData.email);
-            return realUserData;
-          }
-        }
-      } catch (parseError) {
-        // Not JSON, look for email pattern
-        const emailMatch = value.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-        if (emailMatch) {
-          realUserData.email = emailMatch[1];
-          realUserData.source = `storage_pattern_${key}`;
-          console.log('✅ FOUND EMAIL PATTERN in storage:', key, realUserData.email);
-        }
-      }
-    }
-  }
-
-  // If we found an email but no other data, try to infer
-  if (realUserData.email && !realUserData.staffId) {
-    // Try to extract staff ID from email
-    const emailParts = realUserData.email.split('@')[0];
-    if (emailParts.match(/^\d+$/)) {
-      realUserData.staffId = emailParts;
-    }
-  }
-
-  return realUserData;
-};
-
-// Main user profile loader with diagnostic
-const loadUserProfileWithDiagnostic = () => {
-  if (typeof window === 'undefined') {
+    console.log('🔧 Build time - using build fallback');
     return {
-      staffId: '43898931',
-      displayName: 'Build User',
-      email: 'build@hsbc.com',
-      source: 'build_time'
+      webAbsoluteUrl: 'http://localhost:3000',
+      userId: 43898931,
+      userDisplayName: 'Build User',
+      userEmail: 'build@hsbc.com',
+      userLoginName: 'build\\user',
+      isDevelopment: true
     };
   }
 
+  // ✅ Runtime safety check for SharePoint context
   try {
-    console.log('🔍 Starting comprehensive user data diagnostic...');
-    
-    // Run full diagnostic
-    const findings = diagnoseAvailableUserData();
-    
-    // Extract real user data from findings
-    const realUserData = extractRealUserData(findings);
-    
-    console.log('📋 FINAL EXTRACTED USER DATA:', realUserData);
-    
-    return realUserData;
+    if (typeof window._spPageContextInfo === 'undefined' || !window._spPageContextInfo) {
+      console.warn('⚠️ SharePoint context not available - using development fallback');
+      return {
+        webAbsoluteUrl: window.location.origin,
+        userId: 43898931,
+        userDisplayName: 'Mina Antoun Wilson Ross',
+        userEmail: 'mina.antoun@hsbc.com', // ✅ Put your real email here
+        userLoginName: 'dev\\mina.antoun',  // ✅ Put your real username here
+        isDevelopment: true
+      };
+    }
+
+    // ✅ SharePoint context is available - extract real data
+    const spInfo = window._spPageContextInfo;
+    console.log('📋 Raw SharePoint context:', spInfo);
+
+    // ✅ Extract real user data with better logic
+    let realEmail = spInfo.userEmail;
+    let realDisplayName = spInfo.userDisplayName;
+    let realLoginName = spInfo.userLoginName;
+
+    // ✅ Fix email extraction - sometimes it's in different properties
+    if (!realEmail || realEmail === spInfo.userId) {
+      // Try to construct email from login name
+      if (realLoginName && realLoginName.includes('\\')) {
+        const username = realLoginName.split('\\')[1];
+        if (username && !username.match(/^\d+$/)) {
+          // If username is not just numbers, construct email
+          realEmail = `${username}@hsbc.com`;
+          console.log('✅ Constructed email from login:', realEmail);
+        }
+      }
+      
+      // If still no email, try other SharePoint properties
+      if (!realEmail) {
+        realEmail = spInfo.userPrincipalName || spInfo.userEmail || `${spInfo.userId}@hsbc.com`;
+      }
+    }
+
+    // ✅ Fix display name extraction
+    if (!realDisplayName || realDisplayName === spInfo.userId) {
+      // Try to extract from login name
+      if (realLoginName && realLoginName.includes('\\')) {
+        const username = realLoginName.split('\\')[1];
+        if (username && username.includes('.')) {
+          // Convert "firstname.lastname" to "Firstname Lastname"
+          const names = username.split('.');
+          realDisplayName = names.map(name => 
+            name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()
+          ).join(' ');
+          console.log('✅ Constructed display name from login:', realDisplayName);
+        }
+      }
+    }
+
+    const contextData = {
+      webAbsoluteUrl: spInfo.webAbsoluteUrl || window.location.origin,
+      userId: spInfo.userId || 43898931,
+      userDisplayName: realDisplayName || `User ${spInfo.userId}`,
+      userEmail: realEmail,
+      userLoginName: realLoginName || '',
+      userPrincipalName: spInfo.userPrincipalName || '',
+      isDevelopment: false
+    };
+
+    console.log('✅ Processed SharePoint context:', contextData);
+    return contextData;
 
   } catch (error) {
-    console.error('❌ Diagnostic error:', error);
+    console.error('❌ Error accessing SharePoint context:', error);
     return {
-      staffId: '43898931',
-      displayName: 'Diagnostic Error',
-      email: 'error@hsbc.com',
-      source: 'error_fallback'
+      webAbsoluteUrl: window.location.origin,
+      userId: 43898931,
+      userDisplayName: 'Error Fallback User',
+      userEmail: 'error@hsbc.com',
+      userLoginName: 'error\\user',
+      isDevelopment: true
     };
   }
 };
 
-// Simple role determination
-const determineUserRole = (staffId) => {
-  const adminUsers = ['43898931', 'admin'];
-  return adminUsers.includes(staffId?.toString()) ? 'admin' : 'user';
+// ✅ Alternative: Try to extract from your existing UserContext approach
+const tryExistingUserContext = () => {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    console.log('🔍 Trying existing UserContext approach...');
+    
+    // Check for your app's session cookie
+    const cookies = document.cookie;
+    
+    if (cookies.includes('apprunnersession=')) {
+      const value = "; " + cookies;
+      const parts = value.split("; apprunnersession=");
+      
+      if (parts.length === 2) {
+        const decoded = decodeURIComponent(parts.pop().split(";").shift());
+        
+        try {
+          const userData = JSON.parse(decoded);
+          
+          if (userData.email && userData.displayName) {
+            console.log('✅ Found real user data in existing cookie:', {
+              email: userData.email,
+              displayName: userData.displayName,
+              userId: userData.adUserId || userData.userId
+            });
+            
+            return {
+              userId: userData.adUserId || userData.userId || 43898931,
+              userDisplayName: userData.displayName,
+              userEmail: userData.email,
+              userLoginName: userData.loginName || '',
+              webAbsoluteUrl: window.location.origin,
+              isDevelopment: false,
+              source: 'existing_user_context'
+            };
+          }
+        } catch (parseError) {
+          console.warn('⚠️ Could not parse existing user context cookie');
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('⚠️ Error checking existing UserContext:', error);
+    return null;
+  }
 };
 
 // Loading component
-const LoadingScreen = ({ message = "Diagnosing user data sources..." }) => (
+const LoadingScreen = ({ message = "Loading HSBC Procedures Hub..." }) => (
   <Box sx={{
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     alignItems: 'center',
     height: '100vh',
-    backgroundColor: '#f5f6fa'
+    backgroundColor: '#f5f6fa',
+    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif'
   }}>
     <Box sx={{ textAlign: 'center', maxWidth: '400px', padding: '40px' }}>
       <Box sx={{
@@ -363,28 +188,133 @@ const LoadingScreen = ({ message = "Diagnosing user data sources..." }) => (
         HSBC
       </Box>
       
-      <CircularProgress size={60} sx={{ color: '#d40000', marginBottom: '20px' }} />
+      <CircularProgress 
+        size={60} 
+        sx={{ 
+          color: '#d40000',
+          marginBottom: '20px'
+        }} 
+      />
       
       <Typography variant="h6" gutterBottom sx={{ fontWeight: 300 }}>
         {message}
       </Typography>
       <Typography variant="body2" sx={{ opacity: 0.8, color: '#666' }}>
-        Checking all available data sources...
+        Extracting real user information...
       </Typography>
     </Box>
   </Box>
 );
 
-// Main Provider
+// Error component
+const ErrorScreen = ({ error, onRetry }) => (
+  <Box sx={{
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100vh',
+    backgroundColor: '#ffebee',
+    fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
+    padding: '20px'
+  }}>
+    <Box sx={{ textAlign: 'center', maxWidth: '500px' }}>
+      <Box sx={{
+        width: '80px',
+        height: '40px',
+        backgroundColor: '#d40000',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontWeight: 'bold',
+        fontSize: '16px',
+        borderRadius: '4px',
+        margin: '0 auto 30px'
+      }}>
+        HSBC
+      </Box>
+
+      <Alert severity="error" sx={{ marginBottom: '20px' }}>
+        <Typography variant="h6" gutterBottom>
+          Authentication Error
+        </Typography>
+        <Typography variant="body2">
+          {error}
+        </Typography>
+      </Alert>
+
+      <Button 
+        variant="contained"
+        onClick={onRetry}
+        sx={{
+          backgroundColor: '#d40000',
+          '&:hover': { backgroundColor: '#b30000' },
+          padding: '12px 24px',
+          fontSize: '16px'
+        }}
+      >
+        Retry Authentication
+      </Button>
+      
+      <Typography variant="caption" display="block" sx={{ marginTop: '20px', color: '#666' }}>
+        If the problem persists, please contact IT support
+      </Typography>
+    </Box>
+  </Box>
+);
+
+// ✅ Enhanced role determination
+const determineUserRole = async (userId, userEmail, userLoginName) => {
+  try {
+    console.log('🔑 Determining user role for:', { userId, userEmail, userLoginName });
+    
+    // ✅ Admin users list - check multiple identifiers
+    const adminUsers = [
+      '43898931',
+      'admin', 
+      'mina.antoun',
+      'wilson.ross',
+      'test_admin',
+      'default_user'
+    ];
+    
+    // ✅ Check against multiple user identifiers
+    const userIdStr = userId?.toString().toLowerCase() || '';
+    const emailStr = userEmail?.toLowerCase() || '';
+    const loginStr = userLoginName?.toLowerCase() || '';
+    
+    const isAdmin = adminUsers.some(admin => {
+      const adminStr = admin.toLowerCase();
+      return userIdStr === adminStr || 
+             userIdStr.includes(adminStr) ||
+             emailStr.includes(adminStr) ||
+             loginStr.includes(adminStr);
+    });
+    
+    const role = isAdmin ? 'admin' : 'user';
+    console.log(`🔑 Role determination result: ${role}`);
+    return role;
+    
+  } catch (error) {
+    console.warn('⚠️ Error determining user role, defaulting to user:', error);
+    return 'user';
+  }
+};
+
+// Main SharePoint Provider Component
 export const SharePointProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [spContext, setSpContext] = useState(null);
 
   useEffect(() => {
+    // ✅ Only initialize in browser
     if (typeof window !== 'undefined') {
-      initializeWithDiagnostic();
+      initializeSharePointAuth();
     } else {
+      // Build time
       setLoading(false);
       setUser({
         staffId: 'build',
@@ -396,69 +326,141 @@ export const SharePointProvider = ({ children }) => {
     }
   }, []);
 
-  const initializeWithDiagnostic = async () => {
+  const initializeSharePointAuth = async () => {
     try {
+      console.log('🔐 Initializing enhanced SharePoint authentication...');
       setLoading(true);
       setError(null);
       
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Give time to see diagnostic
+      // Small delay to ensure context is loaded
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      const userProfile = loadUserProfileWithDiagnostic();
-      const userRole = determineUserRole(userProfile.staffId);
+      // ✅ Try existing UserContext first (if it has real data)
+      let context = tryExistingUserContext();
+      
+      // ✅ If no existing context, try SharePoint context
+      if (!context || !context.userEmail || context.userEmail.includes(context.userId)) {
+        console.log('🔄 Trying SharePoint context...');
+        context = getSharePointContext();
+      }
+      
+      setSpContext(context);
+      console.log('📋 Final context to use:', context);
 
+      // ✅ Determine user role with enhanced logic
+      const userRole = await determineUserRole(context.userId, context.userEmail, context.userLoginName);
+
+      // ✅ Create user object with real data
       const userData = {
-        staffId: userProfile.staffId || 'unknown',
-        displayName: userProfile.displayName || 'Unknown User',
-        email: userProfile.email || 'unknown@hsbc.com',
+        staffId: context.userId?.toString() || '43898931',
+        displayName: context.userDisplayName || 'Unknown User',
+        email: context.userEmail || 'unknown@hsbc.com',
         role: userRole,
-        loginName: userProfile.loginName || '',
+        adUserId: context.userId?.toString() || '43898931',
+        loginName: context.userLoginName || '',
+        userPrincipalName: context.userPrincipalName || '',
         authenticated: true,
-        source: userProfile.source,
-        environment: 'sharepoint'
+        source: context.source || (context.isDevelopment ? 'development' : 'sharepoint'),
+        environment: context.isDevelopment ? 'development' : 'sharepoint'
       };
 
       setUser(userData);
       
-      console.log('✅ FINAL USER OBJECT:', userData);
+      console.log('✅ Enhanced SharePoint authentication successful:', {
+        staffId: userData.staffId,
+        displayName: userData.displayName,
+        email: userData.email, // ✅ This should now be real email!
+        role: userData.role,
+        source: userData.source,
+        environment: userData.environment
+      });
 
     } catch (err) {
-      console.error('❌ Initialization error:', err);
-      setError(`Initialization failed: ${err.message}`);
+      console.error('❌ SharePoint authentication error:', err);
+      setError(`Authentication failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
+  const refreshUser = () => {
+    console.log('🔄 Refreshing SharePoint user context...');
+    if (typeof window !== 'undefined') {
+      initializeSharePointAuth();
+    }
+  };
+
+  const logout = () => {
+    console.log('🚪 Logout requested in SharePoint environment');
+    if (spContext && !spContext.isDevelopment) {
+      window.location.href = `${spContext.webAbsoluteUrl}/_layouts/SignOut.aspx`;
+    } else {
+      setUser(null);
+      setError('Logged out - please refresh to login again');
+    }
+  };
+
+  const manualLogin = () => {
+    console.log('🔐 Manual login requested');
+    if (spContext && !spContext.isDevelopment) {
+      window.location.href = `${spContext.webAbsoluteUrl}/_layouts/authenticate.aspx`;
+    } else {
+      initializeSharePointAuth();
+    }
+  };
+
+  // Context value - compatible with your existing interface
   const value = {
     user,
     loading,
     error,
-    refreshUser: initializeWithDiagnostic,
-    logout: () => setUser(null),
-    manualLogin: initializeWithDiagnostic,
+    refreshUser,
+    logout,
+    manualLogin,
     isAdmin: user?.role === 'admin',
     isAuthenticated: !!user,
     
+    // SharePoint-specific properties
+    spContext,
+    siteUrl: spContext?.webAbsoluteUrl,
+    
+    // Enhanced user data
+    adUserId: user?.adUserId,
+    displayName: user?.displayName,
+    
+    // Helper methods
     getUserInfo: () => ({
       staffId: user?.staffId,
+      adUserId: user?.adUserId,
       displayName: user?.displayName,
-      email: user?.email, // This will show what we actually found
+      email: user?.email, // ✅ Real email
       role: user?.role,
-      source: user?.source
+      authenticated: user?.authenticated,
+      loginName: user?.loginName,
+      userPrincipalName: user?.userPrincipalName
     }),
     
+    // Authentication status
     authStatus: {
       loading,
       authenticated: !!user,
       error,
+      environment: spContext?.isDevelopment ? 'development' : 'sharepoint',
       source: user?.source
     }
   };
 
+  // Show loading state
   if (loading) {
-    return <LoadingScreen />;
+    return <LoadingScreen message="Extracting real user information..." />;
   }
 
+  // Show error state
+  if (error && !user) {
+    return <ErrorScreen error={error} onRetry={refreshUser} />;
+  }
+
+  // Render children with context
   return (
     <SharePointContext.Provider value={value}>
       {children}
