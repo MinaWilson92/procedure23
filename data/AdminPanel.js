@@ -1,4 +1,4 @@
-// pages/AdminPanelPage.js - Enhanced with AI Workflow
+// pages/AdminPanelPage.js - Enhanced with AI workflow
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, Typography, Card, CardContent, TextField, Button,
@@ -37,7 +37,7 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
   // UI state
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState('ready'); // ready, analyzing, uploading, success, error
+  const [submitStatus, setSubmitStatus] = useState('ready');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [activeStep, setActiveStep] = useState(0);
@@ -69,7 +69,6 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
       [name]: value
     }));
 
-    // Reset subsection when LOB changes
     if (name === 'lob') {
       setFormData(prev => ({
         ...prev,
@@ -148,7 +147,6 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
         setSuccess(`✅ Procedure uploaded successfully! ID: ${result.procedureId}`);
         setSubmitStatus('success');
         
-        // Refresh data and reset form after success
         setTimeout(() => {
           handleReset();
           if (onDataRefresh) onDataRefresh();
@@ -187,12 +185,10 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
     setActiveStep(0);
     setSubmitStatus('ready');
     
-    // Clear file input
     const fileInput = document.getElementById('file-input');
     if (fileInput) fileInput.value = '';
   };
 
-  // Get status color
   const getStatusColor = () => {
     switch (submitStatus) {
       case 'success': return 'success';
@@ -348,7 +344,6 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                         </FormControl>
                       </Grid>
 
-                      {/* Owner and Date Fields */}
                       <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
@@ -540,6 +535,18 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                           />
                         </Box>
 
+                        {/* Template Compliance Badge */}
+                        {documentAnalysis.details?.summary?.templateCompliance && (
+                          <Box sx={{ mb: 2 }}>
+                            <Chip 
+                              label={`Template Compliance: ${documentAnalysis.details.summary.templateCompliance}`}
+                              color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
+                                     documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
+                              variant="outlined"
+                            />
+                          </Box>
+                        )}
+
                         {/* Found Elements */}
                         <Accordion sx={{ mb: 2 }}>
                           <AccordionSummary expandIcon={<ExpandMore />}>
@@ -584,103 +591,194 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                           </Accordion>
                         )}
 
-                        {/* AI Recommendations */}
-                        {documentAnalysis.aiRecommendations?.length > 0 && (
-                          <Accordion>
+                        {/* HSBC Extracted Data */}
+                        {(documentAnalysis.details.riskRating || documentAnalysis.details.periodicReview || documentAnalysis.details.owners?.length > 0) && (
+                          <Accordion sx={{ mb: 2 }}>
                             <AccordionSummary expandIcon={<ExpandMore />}>
                               <Typography variant="h6">
-                                🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
+                                📊 Extracted HSBC Data
                               </Typography>
                             </AccordionSummary>
                             <AccordionDetails>
                               <TableContainer component={Paper} variant="outlined">
                                 <Table size="small">
                                   <TableHead>
-                                    <TableRow>
-                                      <TableCell>Priority</TableCell>
-                                      <TableCell>Category</TableCell>
-                                      <TableCell>Recommendation</TableCell>
-                                      <TableCell>Impact</TableCell>
-                                    </TableRow>
-                                  </TableHead>
-                                  <TableBody>
-                                    {documentAnalysis.aiRecommendations.map((rec, index) => (
-                                      <TableRow key={index}>
-                                        <TableCell>
-                                          <Chip 
-                                            label={rec.priority}
-                                            size="small"
-                                            color={rec.priority === 'HIGH' ? 'error' : rec.priority === 'MEDIUM' ? 'warning' : 'info'}
-                                          />
-                                        </TableCell>
-                                        <TableCell>{rec.category}</TableCell>
-                                        <TableCell>{rec.message}</TableCell>
-                                        <TableCell>{rec.impact}</TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </TableContainer>
-                            </AccordionDetails>
-                          </Accordion>
-                        )}
-                      </CardContent>
-                    </Card>
+                                   <TableRow>
+                                     <TableCell><strong>Field</strong></TableCell>
+                                     <TableCell><strong>Status</strong></TableCell>
+                                     <TableCell><strong>Value</strong></TableCell>
+                                   </TableRow>
+                                 </TableHead>
+                                 <TableBody>
+                                   <TableRow>
+                                     <TableCell>Document Owners</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.owners?.length > 0 ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.owners?.length > 0 ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.owners?.join(', ') || 'Not found'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Risk Rating</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.riskRating ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.riskRating ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.riskRating || 'Not specified'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Periodic Review</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.periodicReview ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.periodicReview ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.periodicReview || 'Not specified'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Sign-off Dates</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.signOffDates?.length > 0 ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.signOffDates?.length > 0 ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.signOffDates?.join(', ') || 'Not found'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Departments</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.departments?.length > 0 ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.departments?.length > 0 ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.departments?.join(', ') || 'Not found'}
+                                     </TableCell>
+                                   </TableRow>
+                                 </TableBody>
+                               </Table>
+                             </TableContainer>
+                           </AccordionDetails>
+                         </Accordion>
+                       )}
 
-                    {/* Upload Button */}
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-                      <Button
-                        variant="outlined"
-                        onClick={handleReset}
-                        startIcon={<Refresh />}
-                        disabled={loading}
-                      >
-                        Reset Form
-                      </Button>
-                      <Button
-                        variant="contained"
-                        onClick={handleUploadToSharePoint}
-                        disabled={loading || !documentAnalysis.accepted}
-                        startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                        size="large"
-                        sx={{ minWidth: 200 }}
-                      >
-                        {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
-                      </Button>
-                    </Box>
+                       {/* AI Recommendations */}
+                       {documentAnalysis.aiRecommendations?.length > 0 && (
+                         <Accordion>
+                           <AccordionSummary expandIcon={<ExpandMore />}>
+                             <Typography variant="h6">
+                               🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
+                             </Typography>
+                           </AccordionSummary>
+                           <AccordionDetails>
+                             <TableContainer component={Paper} variant="outlined">
+                               <Table size="small">
+                                 <TableHead>
+                                   <TableRow>
+                                     <TableCell>Priority</TableCell>
+                                     <TableCell>Category</TableCell>
+                                     <TableCell>Recommendation</TableCell>
+                                     <TableCell>Impact</TableCell>
+                                   </TableRow>
+                                 </TableHead>
+                                 <TableBody>
+                                   {documentAnalysis.aiRecommendations.map((rec, index) => (
+                                     <TableRow key={index}>
+                                       <TableCell>
+                                         <Chip 
+                                           label={rec.priority}
+                                           size="small"
+                                           color={rec.priority === 'HIGH' ? 'error' : rec.priority === 'MEDIUM' ? 'warning' : 'info'}
+                                         />
+                                       </TableCell>
+                                       <TableCell>{rec.category}</TableCell>
+                                       <TableCell>{rec.message}</TableCell>
+                                       <TableCell>{rec.impact}</TableCell>
+                                     </TableRow>
+                                   ))}
+                                 </TableBody>
+                               </Table>
+                             </TableContainer>
+                           </AccordionDetails>
+                         </Accordion>
+                       )}
+                     </CardContent>
+                   </Card>
 
-                    {!documentAnalysis.accepted && (
-                      <Alert severity="warning" sx={{ mt: 2 }}>
-                        Document must achieve at least 80% quality score before upload. 
-                        Please address the AI recommendations above and re-analyze.
-                      </Alert>
-                    )}
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
+                   {/* Upload Button */}
+                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+                     <Button
+                       variant="outlined"
+                       onClick={handleReset}
+                       startIcon={<Refresh />}
+                       disabled={loading}
+                     >
+                       Reset Form
+                     </Button>
+                     <Button
+                       variant="contained"
+                       onClick={handleUploadToSharePoint}
+                       disabled={loading || !documentAnalysis.accepted}
+                       startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                       size="large"
+                       sx={{ minWidth: 200 }}
+                     >
+                       {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
+                     </Button>
+                   </Box>
 
-          {/* Right Panel - Info & Status */}
-          <Grid item xs={12} lg={4}>
-            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  📋 Upload Status
-                </Typography>
-                <Box sx={{ mb: 2 }}>
-                  <Chip 
-                    label={submitStatus.toUpperCase()}
-                    color={getStatusColor()}
-                    sx={{ mb: 1 }}
-                  />
-                </Box>
-                
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Current Step: {activeStep + 1} of {steps.length}
-                </Typography>
-                
-                {submitStatus === 'analyzing' && (
+                   {!documentAnalysis.accepted && (
+                     <Alert severity="warning" sx={{ mt: 2 }}>
+                       Document must achieve at least 80% quality score before upload. 
+                       Please address the AI recommendations above and re-analyze.
+                     </Alert>
+                   )}
+                 </Box>
+               )}
+             </CardContent>
+           </Card>
+         </Grid>
+
+         {/* Right Panel - Info & Status */}
+         <Grid item xs={12} lg={4}>
+           <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+             <CardContent>
+               <Typography variant="h6" gutterBottom>
+                 📋 Upload Status
+               </Typography>
+               <Box sx={{ mb: 2 }}>
+                 <Chip 
+                   label={submitStatus.toUpperCase()}
+                   color={getStatusColor()}
+                   sx={{ mb: 1 }}
+                 />
+               </Box>
+               
+               <Typography variant="body2" color="text.secondary" gutterBottom>
+                 Current Step: {activeStep + 1} of {steps.length}
+               </Typography>
+               
+               {submitStatus === 'analyzing' && (
                  <Box sx={{ mt: 2 }}>
                    <LinearProgress />
                    <Typography variant="caption" display="block" sx={{ mt: 1 }}>
@@ -699,6 +797,75 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                )}
              </CardContent>
            </Card>
+
+           {/* Analysis Summary Card */}
+           {documentAnalysis && (
+             <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+               <CardContent>
+                 <Typography variant="h6" gutterBottom>
+                   🎯 Analysis Summary
+                 </Typography>
+                 
+                 <Box sx={{ mb: 2 }}>
+                   <Typography variant="body2" color="text.secondary">
+                     Quality Score
+                   </Typography>
+                   <Typography variant="h4" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
+                     {documentAnalysis.score}%
+                   </Typography>
+                 </Box>
+
+                 {documentAnalysis.details?.summary && (
+                   <Box sx={{ mb: 2 }}>
+                     <Typography variant="body2" color="text.secondary">
+                       Template Compliance
+                     </Typography>
+                     <Chip 
+                       label={documentAnalysis.details.summary.templateCompliance}
+                       color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
+                              documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
+                       size="small"
+                     />
+                   </Box>
+                 )}
+
+                 <Divider sx={{ my: 2 }} />
+
+                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, textAlign: 'center' }}>
+                   <Box>
+                     <Typography variant="h5" color="success.main" fontWeight="bold">
+                       {documentAnalysis.details?.foundElements?.length || 0}
+                     </Typography>
+                     <Typography variant="caption" color="text.secondary">
+                       Found Elements
+                     </Typography>
+                   </Box>
+                   <Box>
+                     <Typography variant="h5" color="error.main" fontWeight="bold">
+                       {documentAnalysis.details?.missingElements?.length || 0}
+                     </Typography>
+                     <Typography variant="caption" color="text.secondary">
+                       Missing Elements
+                     </Typography>
+                   </Box>
+                 </Box>
+
+                 {documentAnalysis.details?.riskRating && (
+                   <Box sx={{ mt: 2 }}>
+                     <Typography variant="body2" color="text.secondary">
+                       Risk Rating
+                     </Typography>
+                     <Chip 
+                       label={documentAnalysis.details.riskRating}
+                       color={documentAnalysis.details.riskRating === 'High' ? 'error' : 
+                              documentAnalysis.details.riskRating === 'Medium' ? 'warning' : 'success'}
+                       size="small"
+                     />
+                   </Box>
+                 )}
+               </CardContent>
+             </Card>
+           )}
 
            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
              <CardContent>
