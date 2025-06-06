@@ -3,7 +3,7 @@ import { sharePointPaths } from '../config/paths';
 
 class DocumentAnalyzer {
   constructor() {
-    this.minimumScore = 80;
+    this.minimumScore = 85;
     
     // LOB subsection configuration for UI
     this.lobSubsections = {
