@@ -1,4 +1,4 @@
-// pages/AdminPanelPage.js - Enhanced with AI workflow
+// pages/AdminPanelPage.js - Updated with User ID-based auth and proper field population
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, Typography, Card, CardContent, TextField, Button,
@@ -15,18 +15,20 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
+import { useSharePoint } from '../SharePointContext'; // ✅ Use SharePoint context
 import DocumentAnalyzer from '../services/DocumentAnalyzer';
 
-const AdminPanelPage = ({ user, onDataRefresh }) => {
+const AdminPanelPage = ({ onDataRefresh }) => {
   const { navigate } = useNavigation();
+  const { user, isAdmin } = useSharePoint(); // ✅ Get user from SharePoint context
   const [documentAnalyzer] = useState(() => new DocumentAnalyzer());
   
-  // Form state
+  // ✅ Updated form state - only auto-populate display name
   const [formData, setFormData] = useState({
     name: '',
     expiry: '',
-    primary_owner: user?.staffId || '',
-    primary_owner_email: user?.email || '',
+    primary_owner: '', // ✅ Will be populated with display name only
+    primary_owner_email: '', // ✅ Left empty for manual entry
     secondary_owner: '',
     secondary_owner_email: '',
     lob: '',
@@ -51,15 +53,33 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
     { label: 'Upload to SharePoint', description: 'Final upload if score ≥ 80%' }
   ];
 
-  // Set default expiry date (1 year from now)
+  // ✅ Check admin access on component mount
+  useEffect(() => {
+    if (!isAdmin) {
+      setError('Access denied. Admin privileges required.');
+      setTimeout(() => navigate('home'), 3000);
+      return;
+    }
+    
+    console.log('✅ Admin access granted for user:', {
+      staffId: user?.staffId,
+      displayName: user?.displayName,
+      role: user?.role
+    });
+  }, [isAdmin, user, navigate]);
+
+  // ✅ Set default expiry date and auto-populate display name only
   useEffect(() => {
     const defaultExpiry = new Date();
     defaultExpiry.setFullYear(defaultExpiry.getFullYear() + 1);
+    
     setFormData(prev => ({
       ...prev,
-      expiry: defaultExpiry.toISOString().split('T')[0]
+      expiry: defaultExpiry.toISOString().split('T')[0],
+      primary_owner: user?.displayName || '' // ✅ Only auto-populate display name
+      // ✅ primary_owner_email stays empty for manual entry
     }));
-  }, []);
+  }, [user]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -126,6 +146,25 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
     }
   };
 
+  // ✅ Updated validation - ensure primary owner is name, not email
+  const validateForm = () => {
+    if (!formData.name || !formData.primary_owner || !formData.lob) {
+      throw new Error('Please fill in all required fields (Name, Primary Owner, LOB)');
+    }
+
+    // ✅ Validate that primary owner is a name, not email
+    if (formData.primary_owner && formData.primary_owner.includes('@')) {
+      throw new Error('Primary Owner should be a name, not an email address');
+    }
+
+    // ✅ Validate email format if provided
+    if (formData.primary_owner_email && !formData.primary_owner_email.includes('@')) {
+      throw new Error('Please enter a valid email address for Primary Owner Email');
+    }
+
+    return true;
+  };
+
   // Upload to SharePoint
   const handleUploadToSharePoint = async () => {
     if (!documentAnalysis?.accepted) {
@@ -134,6 +173,9 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
     }
 
     try {
+      // ✅ Validate form before upload
+      validateForm();
+
       setLoading(true);
       setSubmitStatus('uploading');
       setError(null);
@@ -141,7 +183,15 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
 
       console.log('🚀 Starting upload to SharePoint...');
 
-      const result = await documentAnalyzer.uploadProcedureWithAnalysis(formData, selectedFile);
+      // ✅ Add user context data for backend processing
+      const uploadData = {
+        ...formData,
+        uploaded_by_user_id: user?.staffId, // ✅ Include user ID for backend
+        uploaded_by_name: user?.displayName, // ✅ Include display name
+        uploaded_by_role: user?.role // ✅ Include role for audit
+      };
+
+      const result = await documentAnalyzer.uploadProcedureWithAnalysis(uploadData, selectedFile);
 
       if (result.success) {
         setSuccess(`✅ Procedure uploaded successfully! ID: ${result.procedureId}`);
@@ -165,13 +215,15 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
     }
   };
 
-  // Reset form
+  // ✅ Updated reset form - only auto-populate display name
   const handleReset = () => {
+    const defaultExpiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    
     setFormData({
       name: '',
-      expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      primary_owner: user?.staffId || '',
-      primary_owner_email: user?.email || '',
+      expiry: defaultExpiry.toISOString().split('T')[0],
+      primary_owner: user?.displayName || '', // ✅ Only auto-populate display name
+      primary_owner_email: '', // ✅ Leave empty for manual entry
       secondary_owner: '',
       secondary_owner_email: '',
       lob: '',
@@ -205,6 +257,35 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
     return '#f44336';
   };
 
+  // ✅ Show access denied if not admin
+  if (!isAdmin) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Card sx={{ maxWidth: 500, textAlign: 'center' }}>
+          <CardContent sx={{ p: 4 }}>
+            <Error sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              Access Denied
+            </Typography>
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              Admin privileges required to access this page.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              User ID: {user?.staffId} | Role: {user?.role}
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('home')}
+              startIcon={<ArrowBack />}
+            >
+              Return to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa' }}>
       {/* Header */}
@@ -227,15 +308,26 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                 AI-powered document quality assessment and SharePoint integration
               </Typography>
             </Box>
-            <Chip 
-              label={user?.role || 'User'} 
-              size="small"
-              sx={{ 
-                backgroundColor: user?.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
-                color: 'white',
-                fontWeight: 'bold'
-              }}
-            />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Chip 
+                label={`${user?.displayName} (${user?.staffId})`}
+                size="small"
+                sx={{ 
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontWeight: 'normal'
+                }}
+              />
+              <Chip 
+                label={user?.role || 'User'} 
+                size="small"
+                sx={{ 
+                  backgroundColor: user?.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  fontWeight: 'bold'
+                }}
+              />
+            </Box>
           </Box>
         </Container>
       </Box>
@@ -347,12 +439,14 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                       <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
-                          label="Primary Owner"
+                          label="Primary Owner (Name)"
                           name="primary_owner"
                           value={formData.primary_owner}
                           onChange={handleInputChange}
                           required
                           variant="outlined"
+                          placeholder="Enter the full name of the primary owner"
+                          helperText="✅ Auto-populated with your name. Enter a different name if needed."
                         />
                       </Grid>
 
@@ -365,17 +459,33 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                           onChange={handleInputChange}
                           type="email"
                           variant="outlined"
+                          placeholder="Enter the email address of the primary owner"
+                          helperText="📧 Enter the actual email address manually"
                         />
                       </Grid>
 
                       <Grid item xs={12} sm={6}>
                         <TextField
                           fullWidth
-                          label="Secondary Owner"
+                          label="Secondary Owner (Optional)"
                           name="secondary_owner"
                           value={formData.secondary_owner}
                           onChange={handleInputChange}
                           variant="outlined"
+                          placeholder="Enter the name of the secondary owner"
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="Secondary Owner Email (Optional)"
+                          name="secondary_owner_email"
+                          value={formData.secondary_owner_email}
+                          onChange={handleInputChange}
+                          type="email"
+                          variant="outlined"
+                          placeholder="Enter the secondary owner's email"
                         />
                       </Grid>
 
@@ -390,11 +500,25 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                           required
                           variant="outlined"
                           InputLabelProps={{ shrink: true }}
+                          helperText="📅 Defaults to 1 year from today"
+                        />
+                      </Grid>
+
+                      <Grid item xs={12} sm={6}>
+                        <TextField
+                          fullWidth
+                          label="SharePoint Folder (Optional)"
+                          name="sharepoint_folder"
+                          value={formData.sharepoint_folder}
+                          onChange={handleInputChange}
+                          variant="outlined"
+                          placeholder="Custom SharePoint folder path"
+                          helperText="🗂️ Leave empty for default folder structure"
                         />
                       </Grid>
                     </Grid>
 
-                    {formData.name && formData.lob && (
+                    {formData.name && formData.lob && formData.primary_owner && (
                       <Button
                         variant="contained"
                         onClick={() => setActiveStep(1)}
@@ -761,6 +885,49 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
 
          {/* Right Panel - Info & Status */}
          <Grid item xs={12} lg={4}>
+           {/* ✅ User Info Card */}
+           <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+             <CardContent>
+               <Typography variant="h6" gutterBottom>
+                 👤 Current User
+               </Typography>
+               <Box sx={{ mb: 2 }}>
+                 <Typography variant="body2" color="text.secondary">
+                   Display Name
+                 </Typography>
+                 <Typography variant="body1" fontWeight="bold">
+                   {user?.displayName || 'Unknown User'}
+                 </Typography>
+               </Box>
+               <Box sx={{ mb: 2 }}>
+                 <Typography variant="body2" color="text.secondary">
+                   User ID
+                 </Typography>
+                 <Typography variant="body1" fontWeight="bold">
+                   {user?.staffId || 'Unknown ID'}
+                 </Typography>
+               </Box>
+               <Box sx={{ mb: 2 }}>
+                 <Typography variant="body2" color="text.secondary">
+                   Role
+                 </Typography>
+                 <Chip 
+                   label={user?.role || 'User'}
+                   color={user?.role === 'admin' ? 'error' : 'default'}
+                   size="small"
+                 />
+               </Box>
+               <Box>
+                 <Typography variant="body2" color="text.secondary">
+                   Authentication Source
+                 </Typography>
+                 <Typography variant="caption" color="text.secondary">
+                   {user?.source || 'Unknown'}
+                 </Typography>
+               </Box>
+             </CardContent>
+           </Card>
+
            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
              <CardContent>
                <Typography variant="h6" gutterBottom>
@@ -867,10 +1034,11 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
              </Card>
            )}
 
+           {/* ✅ Updated Guidelines Card */}
            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
              <CardContent>
                <Typography variant="h6" gutterBottom>
-                 ℹ️ AI Analysis Guidelines
+                 ℹ️ Admin Guidelines
                </Typography>
                <List dense>
                  <ListItem>
@@ -883,25 +1051,31 @@ const AdminPanelPage = ({ user, onDataRefresh }) => {
                  <ListItem>
                    <ListItemIcon><Security fontSize="small" /></ListItemIcon>
                    <ListItemText 
-                     primary="Document Control"
-                     secondary="Owners, sign-off dates, versions"
+                     primary="Access Control"
+                     secondary="Admin access based on User ID"
                    />
                  </ListItem>
                  <ListItem>
                    <ListItemIcon><Warning fontSize="small" /></ListItemIcon>
                    <ListItemText 
-                     primary="Risk Assessment"
-                     secondary="Risk rating and evaluation"
+                     primary="Manual Email Entry"
+                     secondary="Email fields must be filled manually"
                    />
                  </ListItem>
                  <ListItem>
                    <ListItemIcon><CalendarToday fontSize="small" /></ListItemIcon>
                    <ListItemText 
-                     primary="Periodic Review"
-                     secondary="Review schedule and frequency"
+                     primary="Auto-filled Fields"
+                     secondary="Name and expiry date pre-populated"
                    />
                  </ListItem>
                </List>
+               
+               <Divider sx={{ my: 2 }} />
+               
+               <Typography variant="body2" color="text.secondary">
+                 <strong>Access Granted:</strong> User ID {user?.staffId} has admin privileges.
+               </Typography>
              </CardContent>
            </Card>
          </Grid>
