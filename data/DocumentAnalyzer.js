@@ -317,7 +317,7 @@ class DocumentAnalyzer {
 
  async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
    try {
-     const uploadUrl = sharePointPaths.getUploadUrl(sharePointPaths.baseSite.split('/').pop(), sharePointPath, file.name);
+const uploadUrl = sharePointPaths.getUploadUrl(formData.lob, formData.procedure_subsection, file.name);
      
      const response = await fetch(uploadUrl, {
        method: 'POST',
