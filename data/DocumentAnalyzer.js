@@ -317,8 +317,8 @@ const procedureData = {
  }
 
  async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
-   try {
-const uploadUrl = sharePointPaths.getUploadUrl(formData.lob, formData.procedure_subsection, file.name);
+  try {
+    const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
      
      const response = await fetch(uploadUrl, {
        method: 'POST',
