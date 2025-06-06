@@ -196,49 +196,50 @@ class DocumentAnalyzer {
       const fileUploadResult = await this.uploadFileToSharePoint(file, sharePointPath, requestDigest);
       
       // 4. Create procedure list item with comprehensive AI data
-      const procedureData = {
-        __metadata: { type: 'SP.Data.ProceduresListItem' },
-        Title: formData.name,
-        ExpiryDate: formData.expiry,
-        PrimaryOwner: formData.primary_owner,
-        PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner}@hsbc.com`,
-       SecondaryOwner: formData.secondary_owner || '',
-       SecondaryOwnerEmail: formData.secondary_owner_email || '',
-       LOB: formData.lob,
-       ProcedureSubsection: formData.procedure_subsection,
-       SharePointPath: sharePointPath,
-       DocumentLink: fileUploadResult.serverRelativeUrl,
-       OriginalFilename: file.name,
-       FileSize: file.size,
-       
-       // ✅ COMPREHENSIVE AI ANALYSIS RESULTS
-       QualityScore: analysisResult.score,
-       TemplateCompliance: analysisResult.details?.summary?.templateCompliance || 'Unknown',
-       AnalysisDetails: JSON.stringify(analysisResult.details),
-       AIRecommendations: JSON.stringify(analysisResult.aiRecommendations || []),
-       
-       // ✅ EXTRACTED HSBC-SPECIFIC DATA
-       RiskRating: analysisResult.details?.riskRating || 'Not Specified',
-       PeriodicReview: analysisResult.details?.periodicReview || 'Not Specified',
-       DocumentOwners: JSON.stringify(analysisResult.details?.owners || []),
-       SignOffDates: JSON.stringify(analysisResult.details?.signOffDates || []),
-       Departments: JSON.stringify(analysisResult.details?.departments || []),
-       
-       // ✅ DETAILED ANALYSIS METRICS
-       FoundElements: JSON.stringify(analysisResult.details?.foundElements || []),
-       MissingElements: JSON.stringify(analysisResult.details?.missingElements || []),
-       HasDocumentControl: analysisResult.details?.hasDocumentControl || false,
-       HasRiskAssessment: analysisResult.details?.hasRiskAssessment || false,
-       HasPeriodicReview: analysisResult.details?.hasPeriodicReview || false,
-       StructureScore: analysisResult.details?.summary?.structureScore || 0,
-       GovernanceScore: analysisResult.details?.summary?.governanceScore || 0,
-       
-       // Upload metadata
-       UploadedBy: formData.primary_owner,
-       UploadedAt: new Date().toISOString(),
-       Status: 'Active',
-       SharePointUploaded: true
-     };
+// 4. Create procedure list item with comprehensive AI data
+const procedureData = {
+  __metadata: { type: 'SP.Data.ProceduresListItem' },
+  Title: formData.name || 'Untitled Procedure',
+  ExpiryDate: formData.expiry || new Date().toISOString(),
+  PrimaryOwner: formData.primary_owner || 'Unknown',
+  PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
+  SecondaryOwner: formData.secondary_owner || '',
+  SecondaryOwnerEmail: formData.secondary_owner_email || '',
+  LOB: formData.lob || 'Unknown',
+  ProcedureSubsection: formData.procedure_subsection || '',
+  SharePointPath: sharePointPath || '',
+  DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
+  OriginalFilename: (file && file.name) || 'unknown.doc',
+  FileSize: (file && file.size) || 0,
+  
+  // ✅ SAFE AI ANALYSIS RESULTS
+  QualityScore: (analysisResult && analysisResult.score) || 0,
+  TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
+  AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
+  AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations) || []),
+  
+  // ✅ SAFE HSBC-SPECIFIC DATA
+  RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
+  PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
+  DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || []),
+  SignOffDates: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.signOffDates) || []),
+  Departments: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.departments) || []),
+  
+  // ✅ SAFE ANALYSIS METRICS
+  FoundElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.foundElements) || []),
+  MissingElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.missingElements) || []),
+  HasDocumentControl: (analysisResult && analysisResult.details && analysisResult.details.hasDocumentControl) || false,
+  HasRiskAssessment: (analysisResult && analysisResult.details && analysisResult.details.hasRiskAssessment) || false,
+  HasPeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.hasPeriodicReview) || false,
+  StructureScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.structureScore) || 0,
+  GovernanceScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.governanceScore) || 0,
+  
+  // Upload metadata
+  UploadedBy: formData.primary_owner || 'Unknown',
+  UploadedAt: new Date().toISOString(),
+  Status: 'Active',
+  SharePointUploaded: true
+};
      
      const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
      
