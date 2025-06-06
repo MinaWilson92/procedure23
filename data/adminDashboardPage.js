@@ -1,4 +1,4 @@
-// pages/AdminDashboardPage.js - Fixed with Correct SharePoint API Endpoints
+// pages/AdminDashboardPage.js - Updated for User ID-based Access Control
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, Button, Alert,
@@ -15,10 +15,12 @@ import {
   Person, CalendarToday, Business, Assessment, Cancel
 } from '@mui/icons-material';
 import { useNavigation } from '../contexts/NavigationContext';
+import { useSharePoint } from '../SharePointContext'; // ✅ Use SharePoint context
 import { motion } from 'framer-motion';
 
-const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePointAvailable }) => {
+const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const { navigate } = useNavigation();
+  const { user, isAdmin } = useSharePoint(); // ✅ Get user from SharePoint context
   const [activeTab, setActiveTab] = useState(0);
   const [auditLog, setAuditLog] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
@@ -30,9 +32,33 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
   const [deleteDialog, setDeleteDialog] = useState({ open: false, procedure: null });
   const [accessDialog, setAccessDialog] = useState({ open: false });
   
-  // Form states
-  const [newUser, setNewUser] = useState({ email: '', role: 'user' });
+  // ✅ Updated form states - User ID based instead of email
+  const [newUser, setNewUser] = useState({ 
+    userId: '', // ✅ Changed from email to userId
+    displayName: '', // ✅ Added display name
+    role: 'user' 
+  });
   const [editingProcedure, setEditingProcedure] = useState({});
+
+  // ✅ Check admin access on component mount
+  useEffect(() => {
+    if (!isAdmin) {
+      console.log('❌ Access denied - user is not admin:', {
+        staffId: user?.staffId,
+        role: user?.role
+      });
+      return;
+    }
+    
+    console.log('✅ Admin access granted for user:', {
+      staffId: user?.staffId,
+      displayName: user?.displayName,
+      role: user?.role
+    });
+    
+    loadAuditLog();
+    loadUserRoles();
+  }, [isAdmin, sharePointAvailable]);
 
   // 🎯 **FIXED: Correct SharePoint API Configuration**
   const getSharePointConfig = () => {
@@ -60,13 +86,6 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
     return headers;
   };
 
-  useEffect(() => {
-    if (isAdmin) {
-      loadAuditLog();
-      loadUserRoles();
-    }
-  }, [isAdmin, sharePointAvailable]);
-
   // 📊 **Load Audit Log from SharePoint AuditLog List**
   const loadAuditLog = async () => {
     try {
@@ -76,13 +95,12 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
       if (sharePointAvailable) {
         console.log('🔍 Loading audit log from SharePoint...');
         
-        // Use the correct endpoint pattern from your console
         const auditUrl = `${config.auditLogListUrl}?$select=*&$orderby=Modified desc&$top=50`;
         
         const response = await fetch(auditUrl, {
           method: 'GET',
           headers: getHeaders(),
-          credentials: 'include' // Important for SharePoint authentication
+          credentials: 'include'
         });
 
         if (response.ok) {
@@ -115,7 +133,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
     }
   };
 
-  // 👥 **Load User Roles from SharePoint UserRoles List**
+  // ✅ **Updated: Load User Roles - User ID based instead of email**
   const loadUserRoles = async () => {
     try {
       const config = getSharePointConfig();
@@ -123,7 +141,6 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
       if (sharePointAvailable) {
         console.log('👥 Loading user roles from SharePoint...');
         
-        // Use the correct endpoint pattern from your console
         const rolesUrl = `${config.userRolesListUrl}?$select=*&$orderby=Modified desc&$top=100`;
         
         const response = await fetch(rolesUrl, {
@@ -136,7 +153,8 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
           const data = await response.json();
           const users = data.d.results.map(item => ({
             id: item.Id,
-            email: item.Title, // Assuming Title contains email
+            userId: item.Title, // ✅ Title contains User ID, not email
+            displayName: item.DisplayName || item.UserDisplayName || `User ${item.Title}`, // ✅ Added display name
             role: item.UserRole || 'user',
             lastLogin: new Date(item.LastLogin || item.Modified),
             status: item.Status || 'active',
@@ -169,15 +187,12 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
       if (sharePointAvailable) {
         console.log('📝 Updating procedure in SharePoint:', procedure.id);
         
-        // Use the correct endpoint pattern for updating specific item
         const updateUrl = `${config.proceduresListUrl}(${procedure.id})`;
         
-        // Prepare update data for SharePoint - match your actual column names
         const updateData = {
           __metadata: { type: 'SP.Data.ProceduresListItem' }
         };
 
-        // Map form fields to SharePoint columns (adjust these to match your actual column names)
         if (updates.name) updateData.Title = updates.name;
         if (updates.primary_owner) updateData.PrimaryOwner = updates.primary_owner;
         if (updates.primary_owner_email) updateData.PrimaryOwnerEmail = updates.primary_owner_email;
@@ -199,11 +214,10 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
         });
 
         if (response.ok || response.status === 204) {
-          // Log the action to audit log
           await logAuditAction('PROCEDURE_UPDATED', procedure.name, {
             procedureId: procedure.id,
             updates: updates,
-            updatedBy: user?.staffId || user?.email
+            updatedBy: user?.staffId // ✅ Use User ID for audit
           });
           
           setNotification({ type: 'success', message: 'Procedure updated successfully in SharePoint' });
@@ -214,7 +228,6 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
           setNotification({ type: 'error', message: `Failed to update procedure in SharePoint (${response.status})` });
         }
       } else {
-        // Mock update for demo
         console.log('📝 Mock procedure update:', updates);
         setNotification({ type: 'success', message: 'Procedure updated successfully (Demo Mode)' });
         onDataRefresh();
@@ -237,7 +250,6 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
       if (sharePointAvailable) {
         console.log('🗑️ Deleting procedure from SharePoint:', procedure.id);
         
-        // Use the correct endpoint pattern for deleting specific item
         const deleteUrl = `${config.proceduresListUrl}(${procedure.id})`;
         
         const response = await fetch(deleteUrl, {
@@ -251,23 +263,21 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
         });
 
         if (response.ok || response.status === 204) {
-          // Log the action to audit log
           await logAuditAction('PROCEDURE_DELETED', procedure.name, {
             procedureId: procedure.id,
-            deletedBy: user?.staffId || user?.email,
+            deletedBy: user?.staffId, // ✅ Use User ID for audit
             reason: 'Admin deletion'
           });
           
           setNotification({ type: 'success', message: 'Procedure deleted successfully from SharePoint' });
           onDataRefresh();
-          loadAuditLog(); // Refresh audit log
+          loadAuditLog();
         } else {
           const errorText = await response.text();
           console.error('SharePoint delete error:', response.status, errorText);
           setNotification({ type: 'error', message: `Failed to delete procedure from SharePoint (${response.status})` });
         }
       } else {
-        // Mock delete for demo
         console.log('🗑️ Mock procedure delete:', procedure.name);
         setNotification({ type: 'success', message: 'Procedure deleted successfully (Demo Mode)' });
         onDataRefresh();
@@ -281,22 +291,30 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
     }
   };
 
-  // 👤 **Handle User Access Management - Add to SharePoint UserRoles List**
+  // ✅ **Updated: Handle User Access Management - User ID based**
   const handleGrantAccess = async () => {
     try {
+      // ✅ Validate User ID (should be numeric for HSBC)
+      if (!newUser.userId || !newUser.userId.match(/^\d+$/)) {
+        setNotification({ type: 'error', message: 'Please enter a valid User ID (numeric)' });
+        return;
+      }
+
       setLoading(true);
       const config = getSharePointConfig();
       
       if (sharePointAvailable) {
-        console.log('👤 Granting access in SharePoint:', newUser);
+        console.log('👤 Granting access in SharePoint for User ID:', newUser.userId);
         
+        // ✅ Updated data structure for User ID-based access
         const userData = {
           __metadata: { type: 'SP.Data.UserRolesListItem' },
-          Title: newUser.email, // Email as title
+          Title: newUser.userId, // ✅ User ID as title
+          DisplayName: newUser.displayName || `User ${newUser.userId}`, // ✅ Display name
           UserRole: newUser.role,
           Status: 'active',
           LastLogin: new Date().toISOString(),
-          GrantedBy: user?.staffId || user?.email
+          GrantedBy: user?.staffId // ✅ Track who granted access
         };
 
         const response = await fetch(config.userRolesListUrl, {
@@ -307,27 +325,44 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
         });
 
         if (response.ok) {
-          // Log the action to audit log
           await logAuditAction('USER_ACCESS_GRANTED', null, {
-            targetUser: newUser.email,
+            targetUserId: newUser.userId, // ✅ Use User ID instead of email
+            targetUserName: newUser.displayName,
             role: newUser.role,
-            grantedBy: user?.staffId || user?.email
+            grantedBy: user?.staffId
           });
           
-          setNotification({ type: 'success', message: `Access granted to ${newUser.email} in SharePoint` });
+          setNotification({ 
+            type: 'success', 
+            message: `Access granted to User ID ${newUser.userId} (${newUser.displayName}) in SharePoint` 
+          });
           loadUserRoles();
-          setNewUser({ email: '', role: 'user' });
+          setNewUser({ userId: '', displayName: '', role: 'user' });
         } else {
           const errorText = await response.text();
           console.error('SharePoint access grant error:', response.status, errorText);
           setNotification({ type: 'error', message: `Failed to grant access in SharePoint (${response.status})` });
         }
       } else {
-        // Mock access grant for demo
-        console.log('👤 Mock access grant:', newUser);
-        setNotification({ type: 'success', message: `Access granted to ${newUser.email} (Demo Mode)` });
-        loadUserRoles();
-        setNewUser({ email: '', role: 'user' });
+        console.log('👤 Mock access grant for User ID:', newUser.userId);
+        setNotification({ 
+          type: 'success', 
+          message: `Access granted to User ID ${newUser.userId} (${newUser.displayName}) - Demo Mode` 
+        });
+        
+        // ✅ Add to mock data
+        const mockUser = {
+          id: Date.now(),
+          userId: newUser.userId,
+          displayName: newUser.displayName || `User ${newUser.userId}`,
+          role: newUser.role,
+          lastLogin: new Date(),
+          status: 'active',
+          created: new Date(),
+          createdBy: user?.staffId
+        };
+        setUserRoles(prev => [mockUser, ...prev]);
+        setNewUser({ userId: '', displayName: '', role: 'user' });
       }
     } catch (err) {
       console.error('❌ Error granting access:', err);
@@ -348,7 +383,8 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
           __metadata: { type: 'SP.Data.AuditLogListItem' },
           Title: action,
           ActionType: action,
-          UserId: user?.staffId || user?.email || 'System',
+          UserId: user?.staffId || 'System', // ✅ Use User ID for logging
+          UserDisplayName: user?.displayName || '', // ✅ Include display name
           ProcedureName: procedureName,
           LogTimestamp: new Date().toISOString(),
           Details: JSON.stringify(details),
@@ -363,7 +399,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
         });
         
         if (response.ok) {
-          console.log('📝 Audit action logged successfully:', action);
+          console.log('📝 Audit action logged successfully:', action, 'by User ID:', user?.staffId);
         } else {
           console.log('⚠️ Failed to log audit action:', response.status);
         }
@@ -387,16 +423,16 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
       {
         id: 1,
         action: 'PROCEDURE_UPLOADED',
-        user: 'john.smith@hsbc.com',
+        user: '12345678', // ✅ Mock User ID
         procedureName: 'Risk Assessment Framework',
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        details: { score: 92, lob: 'IWPB' },
+        details: { score: 92, lob: 'IWPB', uploadedBy: '12345678' },
         status: 'SUCCESS'
       },
       {
         id: 2,
         action: 'PROCEDURE_UPDATED',
-        user: 'admin@hsbc.com',
+        user: user?.staffId || '43898931', // ✅ Current admin User ID
         procedureName: 'Trading Guidelines',
         timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
         details: { field: 'expiry_date', oldValue: '2024-06-01', newValue: '2024-12-01' },
@@ -405,30 +441,42 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
       {
         id: 3,
         action: 'USER_ACCESS_GRANTED',
-        user: 'admin@hsbc.com',
+        user: user?.staffId || '43898931', // ✅ Current admin User ID
         procedureName: null,
         timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-        details: { targetUser: 'sarah.johnson@hsbc.com', role: 'uploader' },
-        status: 'SUCCESS'
-      },
-      {
-        id: 4,
-        action: 'PROCEDURE_DELETED',
-        user: 'admin@hsbc.com',
-        procedureName: 'Outdated Process',
-        timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-        details: { reason: 'Obsolete procedure' },
+        details: { targetUserId: '87654321', targetUserName: 'Sarah Johnson', role: 'user' },
         status: 'SUCCESS'
       }
     ]);
   };
 
+  // ✅ **Updated: Mock user roles with User IDs**
   const loadMockUserRoles = () => {
     setUserRoles([
-      { id: 1, email: 'admin@hsbc.com', role: 'admin', lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000), status: 'active' },
-      { id: 2, email: 'john.smith@hsbc.com', role: 'uploader', lastLogin: new Date(Date.now() - 5 * 60 * 60 * 1000), status: 'active' },
-      { id: 3, email: 'sarah.johnson@hsbc.com', role: 'uploader', lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000), status: 'active' },
-      { id: 4, email: 'mike.chen@hsbc.com', role: 'user', lastLogin: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), status: 'active' }
+      { 
+        id: 1, 
+        userId: user?.staffId || '43898931', // ✅ Current admin User ID
+        displayName: user?.displayName || 'Admin User',
+        role: 'admin', 
+        lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000), 
+        status: 'active' 
+      },
+      { 
+        id: 2, 
+        userId: '12345678', 
+        displayName: 'John Smith',
+        role: 'user', 
+        lastLogin: new Date(Date.now() - 5 * 60 * 60 * 1000), 
+        status: 'active' 
+      },
+      { 
+        id: 3, 
+        userId: '87654321', 
+        displayName: 'Sarah Johnson',
+        role: 'user', 
+        lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000), 
+        status: 'active' 
+      }
     ]);
   };
 
@@ -491,14 +539,32 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
     uploaderUsers: userRoles.filter(u => u.role === 'uploader').length
   };
 
+  // ✅ Show access denied if not admin
   if (!isAdmin) {
     return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        <Typography variant="h6">Access Denied</Typography>
-        <Typography variant="body2">
-          You need administrator privileges to access this page.
-        </Typography>
-      </Alert>
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Card sx={{ maxWidth: 500, textAlign: 'center' }}>
+          <CardContent sx={{ p: 4 }}>
+            <ErrorIcon sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              Access Denied
+            </Typography>
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              Admin privileges required to access the Admin Dashboard.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              User ID: {user?.staffId} | Role: {user?.role}
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('home')}
+              startIcon={<Dashboard />}
+            >
+              Return to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
     );
   }
 
@@ -514,13 +580,19 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
           Comprehensive administration and management tools
         </Typography>
         
-        {/* SharePoint Status Indicator */}
-        <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+        {/* SharePoint Status & User Info */}
+        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           <Chip 
             icon={sharePointAvailable ? <CheckCircle /> : <Warning />}
             label={sharePointAvailable ? 'SharePoint Connected - Live Data' : 'Demo Mode - Mock Data'}
             color={sharePointAvailable ? 'success' : 'warning'}
             variant="outlined"
+          />
+          <Chip 
+            label={`Admin: ${user?.displayName} (${user?.staffId})`}
+            color="error"
+            variant="outlined"
+            icon={<Person />}
           />
           {sharePointAvailable && (
             <Chip 
@@ -870,7 +942,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
                      secondary={
                        <Box>
                          <Typography variant="body2" color="text.secondary">
-                           {entry.procedureName ? `"${entry.procedureName}"` : 'System action'} by {entry.user}
+                           {entry.procedureName ? `"${entry.procedureName}"` : 'System action'} by User ID: {entry.user}
                          </Typography>
                          <Typography variant="caption" color="text.disabled">
                            {formatTimeAgo(entry.timestamp)} • {new Date(entry.timestamp).toLocaleString()}
@@ -910,7 +982,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
          </Box>
        </TabPanel>
 
-       {/* Tab 3: Access Rights */}
+       {/* ✅ Tab 3: Access Rights - User ID Based */}
        <TabPanel hidden={activeTab !== 2}>
          <Box sx={{ p: 3 }}>
            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -938,6 +1010,14 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
            </Box>
 
            {loading && <LinearProgress sx={{ mb: 2 }} />}
+
+           {/* ✅ Updated Access Control Info */}
+           <Alert severity="info" sx={{ mb: 3 }}>
+             <Typography variant="body2">
+               <strong>Access Control:</strong> User access is managed by User ID (not email). 
+               Add User IDs to grant access to the system.
+             </Typography>
+           </Alert>
 
            {/* User Stats */}
            <Grid container spacing={2} sx={{ mb: 3 }}>
@@ -967,11 +1047,12 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
              </Grid>
            </Grid>
 
+           {/* ✅ Updated User Table - User ID Based */}
            <TableContainer component={Paper} variant="outlined">
              <Table>
                <TableHead>
                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                   <TableCell><strong>User</strong></TableCell>
+                   <TableCell><strong>User ID & Name</strong></TableCell>
                    <TableCell><strong>Role</strong></TableCell>
                    <TableCell><strong>Last Login</strong></TableCell>
                    <TableCell><strong>Status</strong></TableCell>
@@ -984,14 +1065,14 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
                      <TableCell>
                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                          <Avatar sx={{ width: 32, height: 32 }}>
-                           {userRole.email[0].toUpperCase()}
+                           {userRole.displayName?.[0] || userRole.userId?.[0] || 'U'}
                          </Avatar>
                          <Box>
                            <Typography variant="body2" fontWeight="medium">
-                             {userRole.email}
+                             {userRole.displayName || `User ${userRole.userId}`}
                            </Typography>
                            <Typography variant="caption" color="text.secondary">
-                             ID: {userRole.id}
+                             User ID: {userRole.userId}
                              {sharePointAvailable && (
                                <Chip 
                                  label="SharePoint" 
@@ -1054,7 +1135,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
                </Typography>
                {sharePointAvailable && (
                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                   User roles are stored in SharePoint UserRoles list
+                   User roles are stored in SharePoint UserRoles list by User ID
                  </Typography>
                )}
              </Box>
@@ -1128,7 +1209,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
            variant="contained" 
            onClick={() => handleEditProcedure(editDialog.procedure, editingProcedure)}
            disabled={loading}
-           startIcon={loading ? <LinearProgress size={16} /> : <Edit />}
+           startIcon={loading ? <CircularProgress size={16} /> : <Edit />}
          >
            {loading ? 'Updating...' : 'Save Changes'}
          </Button>
@@ -1168,19 +1249,19 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
            color="error"
            onClick={() => handleDeleteProcedure(deleteDialog.procedure)}
            disabled={loading}
-           startIcon={loading ? <LinearProgress size={16} /> : <Delete />}
+           startIcon={loading ? <CircularProgress size={16} /> : <Delete />}
          >
            {loading ? 'Deleting...' : 'Delete Procedure'}
          </Button>
        </DialogActions>
      </Dialog>
 
-     {/* Grant Access Dialog */}
+     {/* ✅ Updated Grant Access Dialog - User ID Based */}
      <Dialog open={accessDialog.open} onClose={() => setAccessDialog({ open: false })}>
        <DialogTitle>
          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
            <PersonAdd />
-           Grant User Access
+           Grant User Access (User ID Based)
            {sharePointAvailable && (
              <Chip label="SharePoint" size="small" color="success" variant="outlined" />
            )}
@@ -1190,13 +1271,25 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
          <Box sx={{ pt: 1 }}>
            <TextField
              fullWidth
-             label="Email Address"
-             type="email"
-             value={newUser.email}
-             onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+             label="User ID"
+             type="text"
+             value={newUser.userId}
+             onChange={(e) => setNewUser({ ...newUser, userId: e.target.value })}
              variant="outlined"
              sx={{ mb: 2 }}
-             placeholder="user@hsbc.com"
+             placeholder="43898931"
+             helperText="Enter the HSBC User ID (numeric)"
+           />
+           <TextField
+             fullWidth
+             label="Display Name"
+             type="text"
+             value={newUser.displayName}
+             onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })}
+             variant="outlined"
+             sx={{ mb: 2 }}
+             placeholder="John Smith"
+             helperText="Enter the user's full name"
            />
            <FormControl fullWidth variant="outlined">
              <InputLabel>Role</InputLabel>
@@ -1213,7 +1306,7 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
            {sharePointAvailable && (
              <Alert severity="info" sx={{ mt: 2 }}>
                <Typography variant="caption">
-                 User will be added to SharePoint UserRoles list
+                 User will be added to SharePoint UserRoles list with User ID: {newUser.userId}
                </Typography>
              </Alert>
            )}
@@ -1226,8 +1319,8 @@ const AdminDashboardPage = ({ user, procedures, isAdmin, onDataRefresh, sharePoi
          <Button 
            variant="contained" 
            onClick={handleGrantAccess}
-           disabled={loading || !newUser.email}
-           startIcon={loading ? <LinearProgress size={16} /> : <PersonAdd />}
+           disabled={loading || !newUser.userId || !newUser.userId.match(/^\d+$/)}
+           startIcon={loading ? <CircularProgress size={16} /> : <PersonAdd />}
          >
            {loading ? 'Granting...' : 'Grant Access'}
          </Button>
