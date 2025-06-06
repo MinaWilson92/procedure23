@@ -1,5 +1,4 @@
-// services/documentAnalysis.js - Pure HSBC AI Analysis Functions
-// ✅ No imports needed - pure JavaScript functions for SharePoint CDN
+// services/documentAnalysis.js - Enhanced HSBC AI Analysis with 85% Threshold & 20-point Penalties
 
 // ============================================================================
 // ENHANCED DOCUMENT ANALYSIS SERVICE FOR HSBC TEMPLATE
@@ -68,7 +67,8 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
       
       console.log('✅ Document Control Table found:', {
         owners: documentControlAnalysis.owners,
-        signOffDates: documentControlAnalysis.signOffDates
+        signOffDates: documentControlAnalysis.signOffDates,
+        departments: documentControlAnalysis.departments
       });
     } else {
       analysis.details.missingElements.push('Document Control Table');
@@ -124,7 +124,7 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
       analysis.details.missingElements.push('Periodic Review Schedule');
       analysis.aiRecommendations.push({
         type: 'periodic_review',
-        priority: 'MEDIUM',
+        priority: 'HIGH',
         message: 'Add an "Approved Periodic Review" section with review frequency (Annually, Bi-annually, etc.)',
         impact: '+15 points',
         category: 'Governance'
@@ -215,7 +215,7 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
     });
 
     // ============================================================================
-    // QUALITY SCORING AND FINAL ANALYSIS
+    // 🎯 ENHANCED PENALTY SYSTEM - 5 CRITICAL DECIDERS WITH 20-POINT PENALTIES
     // ============================================================================
     
     // Build structured status for UI
@@ -242,70 +242,145 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
       }
     };
 
-    // Inject AI Recommendations if critical fields are missing
-    const criticalFields = [
-      { key: 'documentOwners', label: 'Document Owners' },
-      { key: 'signOffDates', label: 'Sign-off Dates' },
-      { key: 'departments', label: 'Departments' },
-      { key: 'riskRating', label: 'Risk Rating' },
-      { key: 'periodicReview', label: 'Periodic Review' }
+    // ✅ 5 CRITICAL DECIDERS - EACH MISSING = -20 POINTS
+    const criticalDeciders = [
+      { 
+        key: 'documentOwners', 
+        label: 'Document Owners', 
+        penalty: 20,
+        found: analysis.details.structuredStatus.documentOwners.found,
+        description: 'Clearly identified document owners in Document Control table'
+      },
+      { 
+        key: 'riskRating', 
+        label: 'Risk Rating', 
+        penalty: 20,
+        found: analysis.details.structuredStatus.riskRating.found,
+        description: 'Risk-based rating section with High/Medium/Low classification'
+      },
+      { 
+        key: 'periodicReview', 
+        label: 'Periodic Review', 
+        penalty: 20,
+        found: analysis.details.structuredStatus.periodicReview.found,
+        description: 'Approved periodic review schedule (Annually, Bi-annually, etc.)'
+      },
+      { 
+        key: 'signOffDates', 
+        label: 'Sign-off Dates', 
+        penalty: 20,
+        found: analysis.details.structuredStatus.signOffDates.found,
+        description: 'Valid sign-off dates in Document Control table'
+      },
+      { 
+        key: 'departments', 
+        label: 'Departments', 
+        penalty: 20,
+        found: analysis.details.structuredStatus.departments.found,
+        description: 'Department information in Document Control table'
+      }
     ];
 
-    criticalFields.forEach(field => {
-      const entry = analysis.details.structuredStatus[field.key];
-      if (!entry?.found) {
+    let totalPenalty = 0;
+    let missedDeciders = [];
+
+    console.log('🎯 Evaluating 5 Critical HSBC Deciders:');
+    
+    criticalDeciders.forEach(decider => {
+      if (!decider.found) {
+        totalPenalty += decider.penalty;
+        missedDeciders.push(decider.label);
+        
+        console.log(`❌ CRITICAL MISS: ${decider.label} (-${decider.penalty} points)`);
+        
         analysis.aiRecommendations.push({
-          type: 'missing_' + field.key.toLowerCase(),
-          priority: 'HIGH',
-          message: `Critical element missing: ${field.label}. Please ensure it is included and clearly labeled in the document.`,
-          impact: '-15 points',
-          category: 'Document Completeness'
+          type: 'critical_' + decider.key.toLowerCase(),
+          priority: 'CRITICAL',
+          message: `CRITICAL DECIDER MISSING: ${decider.label}. ${decider.description}`,
+          impact: `-${decider.penalty} points`,
+          category: 'HSBC Compliance'
         });
+      } else {
+        console.log(`✅ CRITICAL FOUND: ${decider.label} (+0 points, already counted)`);
       }
     });
 
-    // Cap the score at 100
-    analysis.score = Math.min(100, score);
+    // ✅ APPLY PENALTY TO FINAL SCORE
+    const baseScore = Math.min(100, score);
+    const finalScore = Math.max(0, baseScore - totalPenalty);
+    
+    console.log('📊 HSBC Scoring Summary:', {
+      baseStructureScore: baseScore,
+      totalPenalty: totalPenalty,
+      finalScore: finalScore,
+      criticalDecidersMissed: missedDeciders.length,
+      missedDeciders: missedDeciders,
+      passesThreshold: finalScore >= 85 // Updated threshold
+    });
 
-    // Generate comprehensive summary
+    analysis.score = finalScore;
+
+    // ✅ UPDATED SUMMARY WITH CRITICAL DECIDER INFO
     analysis.details.summary = {
-      templateCompliance: analysis.score >= 80 ? 'High' : analysis.score >= 60 ? 'Medium' : 'Low',
+      templateCompliance: analysis.score >= 85 ? 'High' : analysis.score >= 70 ? 'Medium' : 'Low', // Updated thresholds
       documentType: 'HSBC Local Procedure',
       foundElements: analysis.details.foundElements.length,
       missingElements: analysis.details.missingElements.length,
       hasMinimumGovernance: analysis.details.hasDocumentControl && analysis.details.hasOwners,
       hasRiskManagement: analysis.details.hasRiskAssessment,
       hasReviewProcess: analysis.details.hasPeriodicReview,
-      structureScore: Math.round((analysis.details.foundElements.length / (analysis.details.foundElements.length + analysis.details.missingElements.length)) * 100),
+      structureScore: baseScore,
       governanceScore: (analysis.details.hasDocumentControl ? 50 : 0) + (analysis.details.hasRiskAssessment ? 30 : 0) + (analysis.details.hasPeriodicReview ? 20 : 0),
-      recommendations: analysis.aiRecommendations.length
+      recommendations: analysis.aiRecommendations.length,
+      
+      // ✅ CRITICAL DECIDER TRACKING
+      criticalDecidersPassed: criticalDeciders.filter(d => d.found).length,
+      criticalDecidersFailed: criticalDeciders.filter(d => !d.found).length,
+      criticalDeciersTotal: criticalDeciders.length,
+      appliedPenalty: totalPenalty,
+      baseScore: baseScore,
+      missedCriticalDeciders: missedDeciders,
+      minimumThreshold: 85 // Updated minimum threshold
     };
 
-    // Add specific HSBC template recommendations
-    if (analysis.score < 80) {
+    // ✅ UPDATED HSBC TEMPLATE COMPLIANCE MESSAGE
+    if (analysis.score < 85) {
+      const failureMessage = missedDeciders.length > 0 ? 
+        `Document fails HSBC compliance standards (${analysis.score}%). Missing ${missedDeciders.length} critical decider${missedDeciders.length > 1 ? 's' : ''}: ${missedDeciders.join(', ')}. Each missing decider reduces score by 20 points.` :
+        `Document does not meet HSBC template standards (${analysis.score}%). Minimum required: 85%.`;
+        
       analysis.aiRecommendations.push({
-        type: 'hsbc_template_compliance',
-        priority: 'HIGH',
-        message: 'Document does not meet HSBC template standards. Ensure all mandatory sections are included.',
-        impact: 'Compliance Risk',
-        category: 'Template Compliance'
+        type: 'hsbc_compliance_failure',
+        priority: 'CRITICAL',
+        message: failureMessage,
+        impact: 'Upload Blocked',
+        category: 'HSBC Compliance'
+      });
+    } else {
+      analysis.aiRecommendations.push({
+        type: 'hsbc_compliance_success',
+        priority: 'INFO',
+        message: `✅ Document meets HSBC compliance standards (${analysis.score}%). All critical deciders validated.`,
+        impact: 'Upload Approved',
+        category: 'HSBC Compliance'
       });
     }
 
-    // Sort recommendations by priority
-    const priorityOrder = { 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+    // Sort recommendations by priority (CRITICAL > HIGH > MEDIUM > LOW > INFO)
+    const priorityOrder = { 'CRITICAL': 5, 'HIGH': 4, 'MEDIUM': 3, 'LOW': 2, 'INFO': 1 };
     analysis.aiRecommendations.sort((a, b) => {
       return priorityOrder[b.priority] - priorityOrder[a.priority];
     });
 
     console.log('✅ Enhanced HSBC template analysis completed:', {
-      score: analysis.score,
-      foundElements: analysis.details.foundElements.length,
-      missingElements: analysis.details.missingElements.length,
+      finalScore: analysis.score,
+      threshold: '85%',
+      penalty: totalPenalty,
+      criticalDecidersPassed: `${criticalDeciders.filter(d => d.found).length}/5`,
+      uploadApproved: analysis.score >= 85,
       templateCompliance: analysis.details.summary.templateCompliance,
-      ownersFound: analysis.details.owners.length,
-      riskRating: analysis.details.riskRating,
-      reviewFrequency: analysis.details.periodicReview
+      foundElements: analysis.details.foundElements.length,
+      totalRecommendations: analysis.aiRecommendations.length
     });
 
   } catch (err) {
@@ -314,7 +389,7 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
     analysis.score = 0;
     analysis.aiRecommendations.push({
       type: 'analysis_error',
-      priority: 'HIGH',
+      priority: 'CRITICAL',
       message: `Document analysis failed: ${err.message}. Please check the file format and try again.`,
       impact: 'Score: 0',
       category: 'System Error'
@@ -325,7 +400,7 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
 }
 
 // ============================================================================
-// HSBC TEMPLATE SPECIFIC ANALYSIS FUNCTIONS
+// HSBC TEMPLATE SPECIFIC ANALYSIS FUNCTIONS (UNCHANGED)
 // ============================================================================
 
 function analyzeDocumentControlTable(text) {
@@ -370,7 +445,7 @@ function analyzeDocumentControlTable(text) {
     }
 
     // Departments
-    const deptMatch = line.match(/(risk|streamlining|compliance|audit|technology|finance)/i);
+    const deptMatch = line.match(/(risk|streamlining|compliance|audit|technology|finance|operations|legal|hr|human resources)/i);
     if (deptMatch && deptMatch[1]) {
       analysis.departments.push(deptMatch[1]);
     }
@@ -620,4 +695,5 @@ if (typeof window !== 'undefined') {
     analyzeUpdateTriggers,
     isValidOwnerName
   };
+  console.log('✅ Enhanced HSBC Document Analysis Engine loaded successfully with 85% threshold and 5 critical deciders');
 }
