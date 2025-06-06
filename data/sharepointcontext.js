@@ -1,4 +1,4 @@
-// src/SharePointContext.js - FIND REAL EMAIL VERSION
+// src/SharePointContext.js - Using SharePoint User Profile APIs
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
@@ -12,325 +12,295 @@ export const useSharePoint = () => {
   return context;
 };
 
-// ✅ COMPREHENSIVE: Find your REAL email from ALL possible sources
-const findRealUserEmail = () => {
-  if (typeof window === 'undefined') {
-    return { email: 'build@hsbc.com', loginName: 'build\\user', source: 'build' };
-  }
-
-  console.log('🔍 === SEARCHING FOR YOUR REAL EMAIL ===');
-  
-  let findings = {
-    email: null,
-    loginName: null,
-    source: 'not_found'
-  };
-
-  // ✅ Method 1: Check your existing working UserContext cookie
+// ✅ METHOD 1: SharePoint User Profile Service
+const getUserProfileFromSharePoint = async (siteUrl, userId) => {
   try {
-    console.log('🍪 Method 1: Checking existing UserContext cookie...');
-    const cookies = document.cookie;
+    console.log('👤 Method 1: Trying SharePoint User Profile Service...');
     
-    if (cookies.includes('apprunnersession=')) {
-      const value = "; " + cookies;
-      const parts = value.split("; apprunnersession=");
-      
-      if (parts.length === 2) {
-        const decoded = decodeURIComponent(parts.pop().split(";").shift());
-        
-        try {
-          const userData = JSON.parse(decoded);
-          
-          if (userData.email && userData.email.includes('@') && !userData.email.includes('undefined')) {
-            findings.email = userData.email;
-            findings.loginName = userData.loginName || userData.userLoginName || '';
-            findings.source = 'existing_user_context_cookie';
-            
-            console.log('✅ FOUND REAL EMAIL in existing cookie:', findings.email);
-            console.log('✅ FOUND REAL LOGIN in existing cookie:', findings.loginName);
-            return findings;
-          }
-        } catch (parseError) {
-          console.log('⚠️ Could not parse existing cookie');
-        }
-      }
-    }
-  } catch (cookieError) {
-    console.log('⚠️ Existing cookie check failed');
-  }
-
-  // ✅ Method 2: Check ALL browser cookies for email patterns
-  try {
-    console.log('🍪 Method 2: Scanning ALL cookies for email patterns...');
-    const allCookies = document.cookie.split(';');
+    // Get current user profile using SharePoint REST API
+    const profileUrl = `${siteUrl}/_api/SP.UserProfiles.PeopleManager/GetMyProperties`;
     
-    for (const cookie of allCookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name && value) {
-        try {
-          // Try to decode cookie value
-          const decoded = decodeURIComponent(value);
-          
-          // Look for HSBC email patterns
-          const emailMatches = decoded.match(/([a-zA-Z0-9._%+-]+@hsbc\.com)/g);
-          if (emailMatches && emailMatches.length > 0) {
-            // Filter out generic/system emails
-            const realEmails = emailMatches.filter(email => 
-              !email.includes('system') && 
-              !email.includes('service') && 
-              !email.includes('noreply') &&
-              !email.includes('admin') &&
-              email !== 'mina.antoun@hsbc.com' // Exclude the constructed one
-            );
-            
-            if (realEmails.length > 0) {
-              findings.email = realEmails[0];
-              findings.source = `cookie_${name}`;
-              console.log(`✅ FOUND REAL EMAIL in cookie ${name}:`, findings.email);
-              
-              // Try to extract login name from same cookie
-              const loginMatches = decoded.match(/(\\\\[^"'\s]+|[a-zA-Z0-9]+\\\\[a-zA-Z0-9.]+)/g);
-              if (loginMatches && loginMatches.length > 0) {
-                findings.loginName = loginMatches[0];
-                console.log(`✅ FOUND LOGIN NAME in same cookie:`, findings.loginName);
-              }
-              
-              return findings;
-            }
-          }
-        } catch (decodeError) {
-          // Skip this cookie
-        }
-      }
-    }
-  } catch (allCookieError) {
-    console.log('⚠️ All cookies scan failed');
-  }
-
-  // ✅ Method 3: Check localStorage for user info
-  try {
-    console.log('💾 Method 3: Checking localStorage for user data...');
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      
-      if (value && value.includes('@hsbc.com')) {
-        try {
-          // Try parsing as JSON
-          if (value.startsWith('{')) {
-            const parsed = JSON.parse(value);
-            if (parsed.email && parsed.email !== 'mina.antoun@hsbc.com') {
-              findings.email = parsed.email;
-              findings.loginName = parsed.loginName || parsed.userLoginName || '';
-              findings.source = `localStorage_${key}`;
-              console.log(`✅ FOUND REAL EMAIL in localStorage ${key}:`, findings.email);
-              return findings;
-            }
-          }
-          
-          // Look for email patterns in raw value
-          const emailMatch = value.match(/([a-zA-Z0-9._%+-]+@hsbc\.com)/);
-          if (emailMatch && emailMatch[1] !== 'mina.antoun@hsbc.com') {
-            findings.email = emailMatch[1];
-            findings.source = `localStorage_pattern_${key}`;
-            console.log(`✅ FOUND EMAIL PATTERN in localStorage ${key}:`, findings.email);
-            
-            // Don't return yet, keep looking for login name
-          }
-        } catch (parseError) {
-          // Continue searching
-        }
-      }
-    }
-  } catch (lsError) {
-    console.log('⚠️ localStorage check failed');
-  }
-
-  // ✅ Method 4: Check sessionStorage
-  try {
-    console.log('📦 Method 4: Checking sessionStorage for user data...');
-    
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      const value = sessionStorage.getItem(key);
-      
-      if (value && value.includes('@hsbc.com')) {
-        try {
-          if (value.startsWith('{')) {
-            const parsed = JSON.parse(value);
-            if (parsed.email && parsed.email !== 'mina.antoun@hsbc.com') {
-              findings.email = parsed.email;
-              findings.loginName = parsed.loginName || parsed.userLoginName || '';
-              findings.source = `sessionStorage_${key}`;
-              console.log(`✅ FOUND REAL EMAIL in sessionStorage ${key}:`, findings.email);
-              return findings;
-            }
-          }
-        } catch (parseError) {
-          // Continue
-        }
-      }
-    }
-  } catch (ssError) {
-    console.log('⚠️ sessionStorage check failed');
-  }
-
-  // ✅ Method 5: Check page meta tags
-  try {
-    console.log('🏷️ Method 5: Checking page meta tags...');
-    
-    const metaTags = document.querySelectorAll('meta[name*="user"], meta[property*="user"], meta[content*="@hsbc.com"]');
-    metaTags.forEach(meta => {
-      const content = meta.getAttribute('content');
-      if (content && content.includes('@hsbc.com') && content !== 'mina.antoun@hsbc.com') {
-        const emailMatch = content.match(/([a-zA-Z0-9._%+-]+@hsbc\.com)/);
-        if (emailMatch) {
-          findings.email = emailMatch[1];
-          findings.source = 'meta_tag';
-          console.log('✅ FOUND REAL EMAIL in meta tag:', findings.email);
-        }
-      }
+    const response = await fetch(profileUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json; odata=verbose',
+        'Content-Type': 'application/json; odata=verbose'
+      },
+      credentials: 'include'
     });
-  } catch (metaError) {
-    console.log('⚠️ Meta tags check failed');
-  }
 
-  // ✅ Method 6: Check window object properties
-  try {
-    console.log('🪟 Method 6: Checking window properties...');
-    
-    // Look for user-related properties in window
-    const userProps = Object.keys(window).filter(key => 
-      key.toLowerCase().includes('user') || 
-      key.toLowerCase().includes('profile') ||
-      key.toLowerCase().includes('identity') ||
-      key.toLowerCase().includes('auth')
-    );
-    
-    for (const prop of userProps) {
-      try {
-        const value = window[prop];
-        if (value && typeof value === 'object') {
-          const stringified = JSON.stringify(value);
-          if (stringified.includes('@hsbc.com')) {
-            const emailMatch = stringified.match(/([a-zA-Z0-9._%+-]+@hsbc\.com)/);
-            if (emailMatch && emailMatch[1] !== 'mina.antoun@hsbc.com') {
-              findings.email = emailMatch[1];
-              findings.source = `window_property_${prop}`;
-              console.log(`✅ FOUND REAL EMAIL in window.${prop}:`, findings.email);
-              break;
-            }
-          }
-        }
-      } catch (propError) {
-        // Skip this property
-      }
+    if (response.ok) {
+      const data = await response.json();
+      const profile = data.d;
+      
+      console.log('✅ SharePoint User Profile data:', profile);
+      
+      // Extract user properties
+      const getProperty = (key) => {
+        const prop = profile.UserProfileProperties?.results?.find(p => p.Key === key);
+        return prop ? prop.Value : null;
+      };
+      
+      return {
+        userId: userId,
+        displayName: profile.DisplayName || getProperty('PreferredName'),
+        email: profile.Email || getProperty('WorkEmail') || getProperty('SPS-UserPrincipalName'),
+        loginName: profile.AccountName || getProperty('AccountName'),
+        jobTitle: getProperty('Title') || getProperty('SPS-JobTitle'),
+        department: getProperty('Department') || getProperty('SPS-Department'),
+        manager: getProperty('Manager'),
+        officeLocation: getProperty('SPS-Location'),
+        workPhone: getProperty('WorkPhone'),
+        source: 'sharepoint_user_profile_service'
+      };
+    } else {
+      console.warn(`⚠️ User Profile Service failed: ${response.status}`);
+      return null;
     }
-  } catch (windowError) {
-    console.log('⚠️ Window properties check failed');
+  } catch (error) {
+    console.warn('⚠️ SharePoint User Profile Service error:', error);
+    return null;
   }
-
-  // ✅ Method 7: Try to call your existing UserContext API
-  try {
-    console.log('🌐 Method 7: Trying existing UserContext API...');
-    
-    // This is async, so we'll need to handle it differently
-    // For now, we'll try a synchronous approach
-    
-  } catch (apiError) {
-    console.log('⚠️ API check failed');
-  }
-
-  console.log('📋 Final email search results:', findings);
-  return findings;
 };
 
-// ✅ Build-safe SharePoint context with real email integration
+// ✅ METHOD 2: SharePoint Current User Extended Info
+const getCurrentUserExtended = async (siteUrl) => {
+  try {
+    console.log('👤 Method 2: Trying SharePoint Current User Extended...');
+    
+    const userUrl = `${siteUrl}/_api/web/currentuser?$select=Id,Title,Email,LoginName,UserPrincipalName`;
+    
+    const response = await fetch(userUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json; odata=verbose'
+      },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const user = data.d;
+      
+      console.log('✅ SharePoint Current User Extended:', user);
+      
+      return {
+        userId: user.Id,
+        displayName: user.Title,
+        email: user.Email || user.UserPrincipalName,
+        loginName: user.LoginName,
+        userPrincipalName: user.UserPrincipalName,
+        source: 'sharepoint_current_user_extended'
+      };
+    } else {
+      console.warn(`⚠️ Current User Extended failed: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.warn('⚠️ SharePoint Current User Extended error:', error);
+    return null;
+  }
+};
+
+// ✅ METHOD 3: Microsoft Graph API (if available)
+const getUserFromMicrosoftGraph = async () => {
+  try {
+    console.log('👤 Method 3: Trying Microsoft Graph API...');
+    
+    // Try to access Microsoft Graph if available
+    const graphUrl = 'https://graph.microsoft.com/v1.0/me';
+    
+    const response = await fetch(graphUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const user = await response.json();
+      
+      console.log('✅ Microsoft Graph user data:', user);
+      
+      return {
+        userId: user.id,
+        displayName: user.displayName,
+        email: user.mail || user.userPrincipalName,
+        loginName: user.userPrincipalName,
+        jobTitle: user.jobTitle,
+        department: user.department,
+        officeLocation: user.officeLocation,
+        businessPhones: user.businessPhones,
+        source: 'microsoft_graph'
+      };
+    } else {
+      console.warn(`⚠️ Microsoft Graph failed: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.warn('⚠️ Microsoft Graph error:', error);
+    return null;
+  }
+};
+
+// ✅ METHOD 4: Office 365 User Profile API
+const getUserFromOffice365 = async (siteUrl) => {
+  try {
+    console.log('👤 Method 4: Trying Office 365 User Profile...');
+    
+    // Try Office 365 tenant user profile
+    const tenantUrl = siteUrl.split('/sites/')[0]; // Get tenant root
+    const profileUrl = `${tenantUrl}/_api/SP.UserProfiles.PeopleManager/GetMyProperties`;
+    
+    const response = await fetch(profileUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json; odata=verbose'
+      },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const profile = data.d;
+      
+      console.log('✅ Office 365 User Profile:', profile);
+      
+      return {
+        userId: profile.UserProfileProperties?.results?.find(p => p.Key === 'SPS-UserPrincipalName')?.Value,
+        displayName: profile.DisplayName,
+        email: profile.Email,
+        loginName: profile.AccountName,
+        source: 'office365_user_profile'
+      };
+    } else {
+      console.warn(`⚠️ Office 365 User Profile failed: ${response.status}`);
+      return null;
+    }
+  } catch (error) {
+    console.warn('⚠️ Office 365 User Profile error:', error);
+    return null;
+  }
+};
+
+// ✅ METHOD 5: SharePoint Search API for User
+const searchUserProfile = async (siteUrl, userId) => {
+  try {
+    console.log('👤 Method 5: Trying SharePoint Search for user profile...');
+    
+    const searchUrl = `${siteUrl}/_api/search/query?querytext='AccountName:${userId}*'&selectproperties='Title,WorkEmail,AccountName,JobTitle,Department'&sourceid='b09a7990-05ea-4af9-81ef-edfab16c4e31'`;
+    
+    const response = await fetch(searchUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json; odata=verbose'
+      },
+      credentials: 'include'
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      const results = data.d?.query?.PrimaryQueryResult?.RelevantResults?.Table?.Rows?.results;
+      
+      if (results && results.length > 0) {
+        const userRow = results[0];
+        const cells = userRow.Cells.results;
+        
+        const getValue = (key) => {
+          const cell = cells.find(c => c.Key === key);
+          return cell ? cell.Value : null;
+        };
+        
+        console.log('✅ SharePoint Search user profile:', cells);
+        
+        return {
+          userId: userId,
+          displayName: getValue('Title'),
+          email: getValue('WorkEmail'),
+          loginName: getValue('AccountName'),
+          jobTitle: getValue('JobTitle'),
+          department: getValue('Department'),
+          source: 'sharepoint_search'
+        };
+      }
+    } else {
+      console.warn(`⚠️ SharePoint Search failed: ${response.status}`);
+    }
+    return null;
+  } catch (error) {
+    console.warn('⚠️ SharePoint Search error:', error);
+    return null;
+  }
+};
+
+// ✅ COMPREHENSIVE: Try all methods to get real user profile
+const getRealUserProfile = async (siteUrl, userId) => {
+  console.log('🔍 === COMPREHENSIVE USER PROFILE SEARCH ===');
+  console.log('🎯 Target:', { siteUrl, userId });
+  
+  const methods = [
+    () => getUserProfileFromSharePoint(siteUrl, userId),
+    () => getCurrentUserExtended(siteUrl),
+    () => getUserFromMicrosoftGraph(),
+    () => getUserFromOffice365(siteUrl),
+    () => searchUserProfile(siteUrl, userId)
+  ];
+
+  for (let i = 0; i < methods.length; i++) {
+    try {
+      console.log(`🔄 Trying method ${i + 1}/5...`);
+      const result = await methods[i]();
+      
+      if (result && result.email && result.email.includes('@') && !result.email.includes('undefined')) {
+        console.log(`✅ SUCCESS with method ${i + 1}:`, result);
+        return result;
+      } else {
+        console.log(`⚠️ Method ${i + 1} returned incomplete data:`, result);
+      }
+    } catch (error) {
+      console.log(`❌ Method ${i + 1} failed:`, error.message);
+    }
+  }
+
+  console.log('❌ All methods failed to get real user profile');
+  return null;
+};
+
+// ✅ Build-safe SharePoint context
 const getSharePointContext = () => {
   if (typeof window === 'undefined') {
     return {
       webAbsoluteUrl: 'http://localhost:3000',
       userId: 43898931,
       userDisplayName: 'Build User',
-      userEmail: 'build@hsbc.com',
-      userLoginName: 'build\\user',
       isDevelopment: true
     };
   }
 
   try {
-    // ✅ Get real email first
-    const realEmailData = findRealUserEmail();
-    
-    // ✅ Get SharePoint context for user ID and display name
-    let spData = {
-      userId: 43898931,
-      userDisplayName: 'Mina Antoun Wilson Ross',
-      webAbsoluteUrl: window.location.origin,
-      isDevelopment: true
-    };
-
     if (typeof window._spPageContextInfo !== 'undefined' && window._spPageContextInfo) {
-      spData = {
-        webAbsoluteUrl: window._spPageContextInfo.webAbsoluteUrl || window.location.origin,
-        userId: window._spPageContextInfo.userId || 43898931,
-        userDisplayName: window._spPageContextInfo.userDisplayName || 'Mina Antoun Wilson Ross',
+      return {
+        webAbsoluteUrl: window._spPageContextInfo.webAbsoluteUrl,
+        userId: window._spPageContextInfo.userId,
+        userDisplayName: window._spPageContextInfo.userDisplayName,
         isDevelopment: false
       };
-      console.log('✅ Got SharePoint context data:', spData);
+    } else {
+      return {
+        webAbsoluteUrl: window.location.origin,
+        userId: 43898931,
+        userDisplayName: 'Mina Antoun Wilson Ross',
+        isDevelopment: true
+      };
     }
-
-    // ✅ Combine SharePoint data with real email
-    const finalContext = {
-      ...spData,
-      userEmail: realEmailData.email || `${spData.userId}@hsbc.com`,
-      userLoginName: realEmailData.loginName || `dev\\${spData.userId}`,
-      emailSource: realEmailData.source
-    };
-
-    console.log('✅ Final combined context:', finalContext);
-    return finalContext;
-
   } catch (error) {
-    console.error('❌ Error in getSharePointContext:', error);
     return {
       webAbsoluteUrl: window.location.origin,
       userId: 43898931,
       userDisplayName: 'Error User',
-      userEmail: 'error@hsbc.com',
-      userLoginName: 'error\\user',
       isDevelopment: true
     };
-  }
-};
-
-// ✅ Enhanced role determination
-const determineUserRole = async (userId, userEmail, userLoginName) => {
-  try {
-    console.log('🔑 Determining user role for:', { userId, userEmail, userLoginName });
-    
-    const adminUsers = ['43898931', 'admin', 'mina.antoun', 'wilson.ross'];
-    
-    const userIdStr = userId?.toString().toLowerCase() || '';
-    const emailStr = userEmail?.toLowerCase() || '';
-    const loginStr = userLoginName?.toLowerCase() || '';
-    
-    const isAdmin = adminUsers.some(admin => {
-      const adminStr = admin.toLowerCase();
-      return userIdStr === adminStr || 
-             userIdStr.includes(adminStr) ||
-             emailStr.includes(adminStr) ||
-             loginStr.includes(adminStr);
-    });
-    
-    const role = isAdmin ? 'admin' : 'user';
-    console.log(`🔑 Role determination result: ${role}`);
-    return role;
-    
-  } catch (error) {
-    console.warn('⚠️ Error determining user role:', error);
-    return 'user';
   }
 };
 
@@ -367,7 +337,7 @@ const LoadingScreen = ({ message = "Loading HSBC Procedures Hub..." }) => (
         {message}
       </Typography>
       <Typography variant="body2" sx={{ opacity: 0.8, color: '#666' }}>
-        Searching for your real email address...
+        Fetching profile from Microsoft APIs...
       </Typography>
     </Box>
   </Box>
@@ -382,7 +352,7 @@ export const SharePointProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      initializeSharePointAuth();
+      initializeWithAPIs();
     } else {
       setLoading(false);
       setUser({
@@ -395,45 +365,65 @@ export const SharePointProvider = ({ children }) => {
     }
   }, []);
 
-  const initializeSharePointAuth = async () => {
+  const initializeWithAPIs = async () => {
     try {
-      console.log('🔐 Initializing SharePoint auth with REAL email search...');
+      console.log('🔐 Initializing with Microsoft/SharePoint APIs...');
       setLoading(true);
       setError(null);
       
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      // Get basic SharePoint context
       const context = getSharePointContext();
       setSpContext(context);
       
-      const userRole = await determineUserRole(context.userId, context.userEmail, context.userLoginName);
-
+      // Try to get real user profile from APIs
+      let realProfile = null;
+      if (!context.isDevelopment) {
+        realProfile = await getRealUserProfile(context.webAbsoluteUrl, context.userId);
+      }
+      
+      // Create final user object
       const userData = {
-        staffId: context.userId?.toString() || '43898931',
-        displayName: context.userDisplayName || 'Unknown User',
-        email: context.userEmail || 'unknown@hsbc.com', // ✅ This should be your REAL email now
-        role: userRole,
-        adUserId: context.userId?.toString() || '43898931',
-        loginName: context.userLoginName || '', // ✅ This should be your REAL login now
+        staffId: (realProfile?.userId || context.userId)?.toString() || '43898931',
+        displayName: realProfile?.displayName || context.userDisplayName || 'Unknown User',
+        email: realProfile?.email || 'unknown@hsbc.com', // ✅ Real email from API
+        role: 'user', // Will be determined below
+        adUserId: (realProfile?.userId || context.userId)?.toString() || '43898931',
+        loginName: realProfile?.loginName || '',
+        userPrincipalName: realProfile?.userPrincipalName || '',
+        jobTitle: realProfile?.jobTitle || '',
+        department: realProfile?.department || '',
+        officeLocation: realProfile?.officeLocation || '',
+        workPhone: realProfile?.workPhone || '',
         authenticated: true,
-        source: context.emailSource || (context.isDevelopment ? 'development' : 'sharepoint'),
+        source: realProfile?.source || (context.isDevelopment ? 'development' : 'sharepoint_basic'),
         environment: context.isDevelopment ? 'development' : 'sharepoint'
       };
 
+      // Determine role
+      const adminUsers = ['43898931', 'admin', 'mina.antoun', 'wilson.ross'];
+      const isAdmin = adminUsers.some(admin => 
+        userData.staffId?.toLowerCase().includes(admin.toLowerCase()) ||
+        userData.email?.toLowerCase().includes(admin.toLowerCase()) ||
+        userData.loginName?.toLowerCase().includes(admin.toLowerCase())
+      );
+      userData.role = isAdmin ? 'admin' : 'user';
+
       setUser(userData);
       
-      console.log('✅ FINAL USER OBJECT WITH REAL EMAIL:', {
+      console.log('✅ FINAL USER OBJECT FROM APIs:', {
         staffId: userData.staffId,
         displayName: userData.displayName,
-        email: userData.email, // ✅ Should be real!
-        loginName: userData.loginName, // ✅ Should be real!
+        email: userData.email, // ✅ Should be real from API!
+        loginName: userData.loginName,
+        jobTitle: userData.jobTitle,
+        department: userData.department,
         role: userData.role,
         source: userData.source
       });
 
     } catch (err) {
-      console.error('❌ SharePoint authentication error:', err);
-      setError(`Authentication failed: ${err.message}`);
+      console.error('❌ API initialization error:', err);
+      setError(`API authentication failed: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -443,9 +433,9 @@ export const SharePointProvider = ({ children }) => {
     user,
     loading,
     error,
-    refreshUser: () => { if (typeof window !== 'undefined') initializeSharePointAuth(); },
+    refreshUser: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
     logout: () => setUser(null),
-    manualLogin: () => { if (typeof window !== 'undefined') initializeSharePointAuth(); },
+    manualLogin: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
     isAdmin: user?.role === 'admin',
     isAuthenticated: !!user,
     
@@ -458,10 +448,12 @@ export const SharePointProvider = ({ children }) => {
       staffId: user?.staffId,
       adUserId: user?.adUserId,
       displayName: user?.displayName,
-      email: user?.email, // ✅ Real email
+      email: user?.email, // ✅ Real email from API
       role: user?.role,
       authenticated: user?.authenticated,
-      loginName: user?.loginName // ✅ Real login name
+      loginName: user?.loginName,
+      jobTitle: user?.jobTitle,
+      department: user?.department
     }),
     
     authStatus: {
@@ -474,7 +466,7 @@ export const SharePointProvider = ({ children }) => {
   };
 
   if (loading) {
-    return <LoadingScreen message="Searching for your real email..." />;
+    return <LoadingScreen message="Fetching user profile from Microsoft APIs..." />;
   }
 
   return (
