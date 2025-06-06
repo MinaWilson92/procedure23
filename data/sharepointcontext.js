@@ -1,4 +1,4 @@
-// src/SharePointContext.js - Enhanced with SharePoint User Profile Loading
+// src/SharePointContext.js - Build-Safe Enhanced SharePoint Context
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
@@ -13,12 +13,13 @@ export const useSharePoint = () => {
   return context;
 };
 
-// Helper function to safely get SharePoint context
+// ✅ BUILD-SAFE Helper function to get SharePoint context
 const getSharePointContext = () => {
-  if (typeof _spPageContextInfo === 'undefined') {
+  // ✅ Build-safe check for SharePoint context
+  if (typeof window === 'undefined' || typeof window._spPageContextInfo === 'undefined') {
     console.warn('⚠️ SharePoint context not available - using development fallback');
     return {
-      webAbsoluteUrl: window.location.origin,
+      webAbsoluteUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
       userId: 43898931,
       userDisplayName: 'Mina Antoun Wilson Ross',
       userEmail: '43898931@hsbc.com',
@@ -28,17 +29,28 @@ const getSharePointContext = () => {
   }
 
   return {
-    webAbsoluteUrl: _spPageContextInfo.webAbsoluteUrl,
-    userId: _spPageContextInfo.userId,
-    userDisplayName: _spPageContextInfo.userDisplayName,
-    userEmail: _spPageContextInfo.userEmail,
-    userLoginName: _spPageContextInfo.userLoginName,
+    webAbsoluteUrl: window._spPageContextInfo.webAbsoluteUrl,
+    userId: window._spPageContextInfo.userId,
+    userDisplayName: window._spPageContextInfo.userDisplayName,
+    userEmail: window._spPageContextInfo.userEmail,
+    userLoginName: window._spPageContextInfo.userLoginName,
     isDevelopment: false
   };
 };
 
-// ✅ NEW: Enhanced SharePoint User Profile Loader
+// ✅ BUILD-SAFE Enhanced SharePoint User Profile Loader
 const loadEnhancedUserProfile = async (context) => {
+  // ✅ Skip API calls during build time
+  if (typeof window === 'undefined') {
+    return {
+      staffId: '43898931',
+      userId: '43898931',
+      displayName: 'Build User',
+      email: 'build@hsbc.com',
+      source: 'build_time'
+    };
+  }
+
   try {
     console.log('👤 Loading enhanced SharePoint user profile...');
     
@@ -285,7 +297,20 @@ export const SharePointProvider = ({ children }) => {
   const [spContext, setSpContext] = useState(null);
 
   useEffect(() => {
-    initializeSharePointAuth();
+    // ✅ Only initialize in browser environment
+    if (typeof window !== 'undefined') {
+      initializeSharePointAuth();
+    } else {
+      // Build time - set minimal state
+      setLoading(false);
+      setUser({
+        staffId: 'build',
+        displayName: 'Build User',
+        email: 'build@hsbc.com',
+        role: 'user',
+        source: 'build'
+      });
+    }
   }, []);
 
   const initializeSharePointAuth = async () => {
@@ -352,6 +377,11 @@ export const SharePointProvider = ({ children }) => {
 
   const determineUserRole = async (userId) => {
     try {
+      // ✅ Build-safe role determination
+      if (typeof window === 'undefined') {
+        return 'user';
+      }
+
       // Your admin users list - update this with actual admin user IDs
       const adminUsers = [
         '43898931',
@@ -370,9 +400,8 @@ export const SharePointProvider = ({ children }) => {
       
       // ✅ Optional: Check SharePoint UserRoles list (if you have one)
       try {
-        const baseUrl = spContext?.webAbsoluteUrl;
-        if (baseUrl && !spContext?.isDevelopment) {
-          const roleResponse = await fetch(`${baseUrl}/_api/web/lists/getbytitle('UserRoles')/items?$filter=Title eq '${userIdStr}'&$select=UserRole`, {
+        if (spContext?.webAbsoluteUrl && !spContext?.isDevelopment) {
+          const roleResponse = await fetch(`${spContext.webAbsoluteUrl}/_api/web/lists/getbytitle('UserRoles')/items?$filter=Title eq '${userIdStr}'&$select=UserRole`, {
             headers: { 'Accept': 'application/json; odata=verbose' }
           });
           
@@ -401,7 +430,9 @@ export const SharePointProvider = ({ children }) => {
 
   const refreshUser = () => {
     console.log('🔄 Refreshing enhanced SharePoint user context...');
-    initializeSharePointAuth();
+    if (typeof window !== 'undefined') {
+      initializeSharePointAuth();
+    }
   };
 
   const logout = () => {
