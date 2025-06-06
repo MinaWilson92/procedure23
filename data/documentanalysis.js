@@ -1,4 +1,4 @@
-// services/documentAnalysis.js - Enhanced HSBC AI Analysis with 85% Threshold & 20-point Penalties
+// services/documentAnalysis.js - Enhanced HSBC AI Analysis with 85% Threshold & Fixed Owner Extraction
 
 // ============================================================================
 // ENHANCED DOCUMENT ANALYSIS SERVICE FOR HSBC TEMPLATE
@@ -52,7 +52,7 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
 
     console.log('🔍 Starting HSBC template-specific analysis...');
 
-    // 1. DOCUMENT CONTROL TABLE ANALYSIS
+    // 1. DOCUMENT CONTROL TABLE ANALYSIS (ENHANCED)
     const documentControlAnalysis = analyzeDocumentControlTable(text);
     if (documentControlAnalysis.found) {
       analysis.details.hasDocumentControl = true;
@@ -61,6 +61,7 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
       analysis.details.hasSignOffDates = documentControlAnalysis.signOffDates.length > 0;
       analysis.details.signOffDates = documentControlAnalysis.signOffDates;
       analysis.details.departments = documentControlAnalysis.departments;
+      analysis.details.roles = documentControlAnalysis.roles;
       analysis.details.extractedData.documentControlTable = documentControlAnalysis;
       analysis.details.foundElements.push('Document Control Table');
       score += 25; // High weight for document control
@@ -68,7 +69,8 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
       console.log('✅ Document Control Table found:', {
         owners: documentControlAnalysis.owners,
         signOffDates: documentControlAnalysis.signOffDates,
-        departments: documentControlAnalysis.departments
+        departments: documentControlAnalysis.departments,
+        roles: documentControlAnalysis.roles
       });
     } else {
       analysis.details.missingElements.push('Document Control Table');
@@ -400,11 +402,11 @@ async function analyzeDocument(text, mimetype, metadata = {}) {
 }
 
 // ============================================================================
-// HSBC TEMPLATE SPECIFIC ANALYSIS FUNCTIONS (UNCHANGED)
+// 🔧 ENHANCED DOCUMENT CONTROL TABLE ANALYSIS - FIXED FOR HSBC TEMPLATE
 // ============================================================================
 
 function analyzeDocumentControlTable(text) {
-  console.log('🔍 Enhanced parsing of Document Control table...');
+  console.log('🔍 Enhanced parsing of HSBC Document Control table...');
 
   const analysis = {
     found: false,
@@ -415,57 +417,215 @@ function analyzeDocumentControlTable(text) {
     versions: []
   };
 
-  // Try to find the Document Control block (case-insensitive)
-  const controlSectionMatch = text.match(/1\.\s*Document Control([\s\S]{0,1200})/i);
-  if (!controlSectionMatch) return analysis;
+  // ✅ STEP 1: Find Document Control Section (more flexible)
+  const controlSectionPatterns = [
+    /1\.\s*Document Control([\s\S]{0,2000}?)(?=\d+\.|$)/i, // Standard numbering
+    /Document Control([\s\S]{0,2000}?)(?=\d+\.|$)/i,       // Without numbering
+    /Version\s+\d+.*?current.*?version([\s\S]{0,2000}?)(?=\d+\.|$)/i // Version table
+  ];
 
-  analysis.found = true;
-  const block = controlSectionMatch[1];
+  let controlBlock = null;
+  for (const pattern of controlSectionPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      controlBlock = match[1] || match[0];
+      analysis.found = true;
+      break;
+    }
+  }
 
-  // Split lines and parse by keywords
-  const lines = block.split(/\r?\n/);
-  lines.forEach(line => {
-    const lower = line.toLowerCase();
+  if (!controlBlock) {
+    console.log('❌ Document Control section not found');
+    return analysis;
+  }
 
-    // Owners
-    if (lower.includes('owner') && !lower.includes('email')) {
-      const nameMatch = line.match(/owner\/s\s*[:\-]?\s*(.*)/i);
-      if (nameMatch && nameMatch[1]) {
-        const name = nameMatch[1].trim();
-        if (isValidOwnerName(name)) {
-          analysis.owners.push(name);
+  console.log('✅ Document Control section found, parsing table...');
+
+  // ✅ STEP 2: Enhanced Table Parsing for Your Format
+  const lines = controlBlock.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
+  
+  // Look for table structure: Role | Name | Position/Department | Sign-off Date
+  let inTableData = false;
+  let currentRole = '';
+
+  lines.forEach((line, index) => {
+    const lowerLine = line.toLowerCase();
+    
+    // Skip header lines and empty rows
+    if (lowerLine.includes('version') && lowerLine.includes('current')) return;
+    if (lowerLine.includes('role') && lowerLine.includes('name')) {
+      inTableData = true;
+      return;
+    }
+    if (lowerLine.includes('position') && lowerLine.includes('department')) return;
+    if (lowerLine.includes('sign-off')) return;
+
+    // ✅ ENHANCED NAME EXTRACTION - Multiple Strategies
+    
+    // Strategy 1: Table row format (Role | Name | Department | Date)
+    const tableRowMatch = line.match(/^([\w\/]+)\s+([A-Za-z\s]+?)\s+([\w\s]+?)\s+(\d{1,2}\s+\w+\s+\d{4})$/);
+    if (tableRowMatch) {
+      const [, role, name, dept, date] = tableRowMatch;
+      if (isValidOwnerName(name.trim())) {
+        analysis.owners.push(name.trim());
+        analysis.roles.push(role.trim());
+        analysis.departments.push(dept.trim());
+        analysis.signOffDates.push(date.trim());
+        console.log(`✅ Extracted from table row: ${name.trim()} (${role.trim()})`);
+      }
+      return;
+    }
+
+    // Strategy 2: Your exact format - "Owner/s    Mina Nada    Streamlining    01 April 2025"
+    const ownerRowMatch = line.match(/^(Owner\/s|User\/s|Writer\/s|Reviewer\/s|Risk\s+Steward\/s)\s+([A-Za-z\s]+?)\s+([A-Za-z\s]+?)\s+(\d{1,2}\s+\w+\s+\d{4})$/i);
+    if (ownerRowMatch) {
+      const [, role, name, dept, date] = ownerRowMatch;
+      if (isValidOwnerName(name.trim())) {
+        analysis.owners.push(name.trim());
+        analysis.roles.push(role.trim());
+        analysis.departments.push(dept.trim());
+        analysis.signOffDates.push(date.trim());
+        console.log(`✅ Extracted from owner row: ${name.trim()} (${role.trim()})`);
+      }
+      return;
+    }
+
+    // Strategy 3: Role on separate line, then name
+    if (/^(Owner\/s|User\/s|Writer\/s|Reviewer\/s|Risk\s+Steward\/s)$/i.test(line)) {
+      currentRole = line.trim();
+      return;
+    }
+
+    // Strategy 4: If we have a current role, try to extract name from next lines
+    if (currentRole && inTableData) {
+      // Look for name pattern: First Last (with possible middle names)
+      const nameMatch = line.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/);
+      if (nameMatch && isValidOwnerName(nameMatch[1])) {
+        analysis.owners.push(nameMatch[1].trim());
+        analysis.roles.push(currentRole);
+        
+        // Try to extract department and date from the same line
+        const restOfLine = line.replace(nameMatch[1], '').trim();
+        const deptDateMatch = restOfLine.match(/^([A-Za-z\s]+?)\s+(\d{1,2}\s+\w+\s+\d{4})$/);
+        if (deptDateMatch) {
+          analysis.departments.push(deptDateMatch[1].trim());
+          analysis.signOffDates.push(deptDateMatch[2].trim());
         }
+        
+        console.log(`✅ Extracted from role context: ${nameMatch[1].trim()} (${currentRole})`);
+        currentRole = ''; // Reset after use
       }
     }
 
-    // Sign-off Dates
-    const dateMatch = line.match(/(\d{1,2}\s+\w+\s+\d{4})/); // e.g. 01 April 2025
-    if (dateMatch && dateMatch[1]) {
+    // Strategy 5: Extract dates independently
+    const dateMatch = line.match(/(\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/i);
+    if (dateMatch) {
       analysis.signOffDates.push(dateMatch[1]);
     }
 
-    // Departments
-    const deptMatch = line.match(/(risk|streamlining|compliance|audit|technology|finance|operations|legal|hr|human resources)/i);
-    if (deptMatch && deptMatch[1]) {
+    // Strategy 6: Extract departments independently
+    const deptMatch = line.match(/\b(Streamlining|Risk|Compliance|Audit|Technology|Finance|Operations|Legal|HR|Human Resources)\b/i);
+    if (deptMatch) {
       analysis.departments.push(deptMatch[1]);
-    }
-
-    // Roles (look for common label prefix)
-    const roleMatch = line.match(/(owner|user|writer|reviewer|approver)/i);
-    if (roleMatch && roleMatch[1]) {
-      analysis.roles.push(roleMatch[1]);
     }
   });
 
-  // Deduplicate all
-  analysis.owners = [...new Set(analysis.owners)];
+  // ✅ STEP 3: Fallback - Simple text scanning for names
+  if (analysis.owners.length === 0) {
+    console.log('🔄 Using fallback name extraction...');
+    
+    // Look for common name patterns in the entire block
+    const namePatterns = [
+      /Owner\/s[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/gi,
+      /Name[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/gi,
+      /([A-Z][a-z]+\s+[A-Z][a-z]+)(?:\s+(?:Streamlining|Risk|Compliance|Audit))/gi
+    ];
+
+    namePatterns.forEach(pattern => {
+      const matches = controlBlock.matchAll(pattern);
+      for (const match of matches) {
+        const name = match[1].trim();
+        if (isValidOwnerName(name) && !analysis.owners.includes(name)) {
+          analysis.owners.push(name);
+          console.log(`✅ Fallback extracted: ${name}`);
+        }
+      }
+    });
+  }
+
+  // ✅ STEP 4: Clean up and deduplicate
+  analysis.owners = [...new Set(analysis.owners.filter(owner => isValidOwnerName(owner)))];
   analysis.signOffDates = [...new Set(analysis.signOffDates)];
   analysis.roles = [...new Set(analysis.roles)];
   analysis.departments = [...new Set(analysis.departments)];
 
-  console.log('📊 Parsed Document Control Table:', analysis);
+  console.log('📊 Final Document Control Analysis:', {
+    found: analysis.found,
+    owners: analysis.owners,
+    departments: analysis.departments,
+    signOffDates: analysis.signOffDates,
+    roles: analysis.roles
+  });
+
   return analysis;
 }
+
+// ✅ IMPROVED NAME VALIDATION - Less Restrictive
+function isValidOwnerName(name) {
+  if (!name || typeof name !== 'string') return false;
+  
+  const trimmedName = name.trim();
+  
+  // Must be reasonable length
+  if (trimmedName.length < 2 || trimmedName.length > 50) return false;
+  
+  // ✅ RELAXED EXCLUSIONS - Only exclude obvious non-names
+  const excludePatterns = [
+    /^(role|name|owner|position|department|sign-off|date|version|current|table)$/i,
+    /^(streamlining|risk|compliance|audit|technology|finance|operations|legal|hr)$/i,
+    /last\s+updated?\s+date/i,
+    /effective\s+date/i,
+    /^\d+$/,                    // Numbers only
+    /^[^a-zA-Z]*$/,            // No letters at all
+    /^[a-z\s]+$/,              // All lowercase (likely not a name)
+    /table\s+of\s+contents/i,
+    /page\s+\d+/i
+  ];
+  
+  // Check exclusions
+  for (const pattern of excludePatterns) {
+    if (pattern.test(trimmedName)) {
+      return false;
+    }
+  }
+
+  // ✅ POSITIVE NAME VALIDATION - Must look like a name
+  // Should contain at least one letter
+  if (!/[a-zA-Z]/.test(trimmedName)) return false;
+
+  // Should start with a capital letter (typical for names)
+  if (!/^[A-Z]/.test(trimmedName)) return false;
+
+  // For multi-word names, each word should be capitalized
+  const words = trimmedName.split(/\s+/).filter(word => word.length > 0);
+  
+  // Single word names are OK if they're capitalized and reasonable
+  if (words.length === 1) {
+    return words[0].length >= 2 && /^[A-Z][a-z]+$/.test(words[0]);
+  }
+
+  // Multi-word: each word should be properly capitalized
+  const validWords = words.every(word => 
+    /^[A-Z][a-z]*$/.test(word) && word.length >= 1
+  );
+
+  // Should be 2-4 words max (First Middle? Last Suffix?)
+  return validWords && words.length <= 4;
+}
+
+// ============================================================================
+// HSBC TEMPLATE SPECIFIC ANALYSIS FUNCTIONS (UNCHANGED)
+// ============================================================================
 
 function analyzeHSBCRiskAssessment(text) {
   console.log('🔍 Analyzing Risk Assessment...');
