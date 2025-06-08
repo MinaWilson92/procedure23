@@ -1,4 +1,4 @@
-// pages/AdminDashboardPage.js - Complete File with Debugging
+// pages/AdminDashboardPage.js - Complete Fixed Version with Working Buttons
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, Button, Alert,
@@ -27,7 +27,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
   const [userRoles, setUserRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState(null);
-  const [debugInfo, setDebugInfo] = useState(null);
   
   // Dialog states
   const [editDialog, setEditDialog] = useState({ open: false, procedure: null });
@@ -58,12 +57,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       role: user?.role
     });
     
-    if (sharePointAvailable) {
-      // Run debug functions first
-      debugSharePointLists();
-      checkCurrentUserPermissions();
-    }
-    
     loadAuditLog();
     loadUserRoles();
   }, [isAdmin, sharePointAvailable]);
@@ -76,6 +69,48 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       auditLogListUrl: "https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('AuditLog')/items",
       userRolesListUrl: "https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('UserRoles')/items"
     };
+  };
+
+  // 🔧 CENTRALIZED DIGEST HELPER
+  const getFreshRequestDigest = async () => {
+    try {
+      const config = getSharePointConfig();
+      
+      console.log('🔑 Getting fresh request digest...');
+      
+      const digestUrl = `${config.baseUrl}/_api/contextinfo`;
+      const digestResponse = await fetch(digestUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        },
+        credentials: 'include'
+      });
+      
+      if (digestResponse.ok) {
+        const digestData = await digestResponse.json();
+        const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+        console.log('✅ Fresh request digest obtained');
+        return requestDigest;
+      } else {
+        console.error('❌ Failed to get request digest:', digestResponse.status);
+        
+        // Fallback to page digest
+        const digestElement = document.getElementById('__REQUESTDIGEST');
+        const pageDigest = digestElement?.value;
+        
+        if (pageDigest) {
+          console.log('⚠️ Using fallback page digest');
+          return pageDigest;
+        } else {
+          throw new Error(`Cannot get request digest: ${digestResponse.status}`);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error getting request digest:', err);
+      throw new Error('Cannot get authentication token: ' + err.message);
+    }
   };
 
   const getHeaders = (includeDigest = false) => {
@@ -94,14 +129,14 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
     return headers;
   };
 
-  // 🔍 DEBUG FUNCTION 1: Check SharePoint Lists
-  const debugSharePointLists = async () => {
+  // 🔍 DEBUG FUNCTION: Quick SharePoint Debug
+  const runQuickDebug = async () => {
     try {
       const config = getSharePointConfig();
       
-      console.log('🔍 Testing SharePoint list access...');
+      console.log('🔍 === QUICK DEBUG START ===');
       
-      // First, test if we can read any lists at all
+      // Test basic connectivity
       const allListsUrl = `${config.baseUrl}/_api/web/lists?$select=Title,Id,Hidden&$filter=Hidden eq false`;
       
       const response = await fetch(allListsUrl, {
@@ -121,275 +156,45 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
           console.log(`   - ${list.Title} (ID: ${list.Id})`);
         });
         
-        // Check if UserRoles exists
-        const userRolesList = lists.find(list => 
-          list.Title === 'UserRoles' || 
-          list.Title === 'User Roles' ||
-          list.Title === 'UserAccessControl'
-        );
+        // Check specific lists
+        const userRolesList = lists.find(list => list.Title === 'UserRoles');
+        const auditLogList = lists.find(list => list.Title === 'AuditLog');
+        const proceduresList = lists.find(list => list.Title === 'Procedures');
         
-        const debugResult = {
-          listsFound: lists.length,
-          availableLists: lists.map(l => l.Title),
-          userRolesExists: !!userRolesList,
-          userRolesTitle: userRolesList?.Title || 'NOT FOUND'
-        };
+        console.log('📋 Critical Lists Status:');
+        console.log(`   - UserRoles: ${userRolesList ? '✅ Found' : '❌ Missing'}`);
+        console.log(`   - AuditLog: ${auditLogList ? '✅ Found' : '❌ Missing'}`);
+        console.log(`   - Procedures: ${proceduresList ? '✅ Found' : '❌ Missing'}`);
         
-        if (userRolesList) {
-          console.log(`✅ Found UserRoles list: ${userRolesList.Title}`);
-          
-          // Test read access to UserRoles
-          const testReadUrl = `${config.baseUrl}/_api/web/lists/getbytitle('${userRolesList.Title}')/items?$select=Id&$top=1`;
-          
-          const readResponse = await fetch(testReadUrl, {
-            method: 'GET',
-            headers: { 'Accept': 'application/json; odata=verbose' },
-            credentials: 'include'
-          });
-          
-          debugResult.canReadUserRoles = readResponse.ok;
-          debugResult.readStatus = readResponse.status;
-          
-          if (readResponse.ok) {
-            console.log('✅ UserRoles list - READ access: OK');
-          } else {
-            console.log('❌ UserRoles list - READ access: DENIED', readResponse.status);
-          }
-        } else {
-          console.log('❌ UserRoles list NOT FOUND');
-          console.log('📝 Available list names:', lists.map(l => l.Title));
-          debugResult.canReadUserRoles = false;
-          debugResult.readStatus = 'LIST_NOT_FOUND';
+        // Test fresh digest
+        try {
+          const digest = await getFreshRequestDigest();
+          console.log('✅ Fresh digest test: SUCCESS');
+        } catch (digestErr) {
+          console.log('❌ Fresh digest test: FAILED -', digestErr.message);
         }
-        
-        setDebugInfo(debugResult);
-        
-      } else {
-        console.error('❌ Cannot access SharePoint lists:', response.status);
-        setDebugInfo({
-          error: `Cannot access SharePoint lists: ${response.status}`,
-          listsFound: 0,
-          userRolesExists: false
-        });
-      }
-      
-    } catch (err) {
-      console.error('❌ Error debugging SharePoint lists:', err);
-      setDebugInfo({
-        error: err.message,
-        listsFound: 0,
-        userRolesExists: false
-      });
-    }
-  };
-
-  // 🔍 DEBUG FUNCTION 2: Check Current User Permissions
-  const checkCurrentUserPermissions = async () => {
-    try {
-      const config = getSharePointConfig();
-      
-      console.log('👤 Checking current user permissions...');
-      
-      // Get current user info
-      const userInfoUrl = `${config.baseUrl}/_api/web/currentuser`;
-      
-      const response = await fetch(userInfoUrl, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json; odata=verbose' },
-        credentials: 'include'
-      });
-      
-      if (response.ok) {
-        const userData = await response.json();
-        const currentUser = userData.d;
-        
-        console.log('👤 Current SharePoint User Info:');
-        console.log(`   - Login Name: ${currentUser.LoginName}`);
-        console.log(`   - Title: ${currentUser.Title}`);
-        console.log(`   - Email: ${currentUser.Email}`);
-        console.log(`   - User ID: ${currentUser.Id}`);
-        
-        // Check if user is site admin
-        const groupsUrl = `${config.baseUrl}/_api/web/currentuser/groups`;
-        const groupsResponse = await fetch(groupsUrl, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json; odata=verbose' },
-          credentials: 'include'
-        });
-        
-        if (groupsResponse.ok) {
-          const groupsData = await groupsResponse.json();
-          const groups = groupsData.d.results;
-          
-          console.log('👥 User Groups:');
-          groups.forEach(group => {
-            console.log(`   - ${group.Title} (ID: ${group.Id})`);
-          });
-          
-          const isOwner = groups.some(g => g.Title.includes('Owners'));
-          const isMember = groups.some(g => g.Title.includes('Members'));
-          
-          console.log(`🔐 Permission Summary:`);
-          console.log(`   - Is Site Owner: ${isOwner}`);
-          console.log(`   - Is Site Member: ${isMember}`);
-        }
-        
-      } else {
-        console.error('❌ Cannot get current user info:', response.status);
-      }
-      
-    } catch (err) {
-      console.error('❌ Error checking user permissions:', err);
-    }
-  };
-
-  // 🔍 DEBUG FUNCTION 3: Create UserRoles List
-  const createUserRolesList = async () => {
-    try {
-      const config = getSharePointConfig();
-      
-      console.log('📝 Creating UserRoles list...');
-      setLoading(true);
-      
-      // Get request digest first
-      const digestUrl = `${config.baseUrl}/_api/contextinfo`;
-      const digestResponse = await fetch(digestUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose'
-        },
-        credentials: 'include'
-      });
-      
-      if (!digestResponse.ok) {
-        throw new Error(`Cannot get request digest: ${digestResponse.status}`);
-      }
-      
-      const digestData = await digestResponse.json();
-      const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
-      
-      console.log('✅ Got request digest for list creation');
-      
-      // Create the list
-      const listData = {
-        __metadata: { type: 'SP.List' },
-        Title: 'UserRoles',
-        Description: 'User access control and role management for Procedures Hub',
-        BaseTemplate: 100 // Generic List
-      };
-      
-      const createResponse = await fetch(`${config.baseUrl}/_api/web/lists`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose',
-          'X-RequestDigest': requestDigest
-        },
-        credentials: 'include',
-        body: JSON.stringify(listData)
-      });
-      
-      if (createResponse.ok) {
-        const createdList = await createResponse.json();
-        console.log('✅ UserRoles list created successfully:', createdList.d.Id);
-        
-        // Add custom columns
-        await addUserRolesColumns(createdList.d.Id, requestDigest);
         
         setNotification({ 
           type: 'success', 
-          message: 'UserRoles list created successfully in SharePoint' 
+          message: `Debug completed! Found ${lists.length} lists. Check console for details.` 
         });
         
-        // Refresh debug info
-        setTimeout(() => {
-          debugSharePointLists();
-        }, 2000);
-        
       } else {
-        const errorText = await createResponse.text();
-        console.error('❌ Failed to create UserRoles list:', createResponse.status, errorText);
+        console.error('❌ Cannot access SharePoint lists:', response.status);
         setNotification({ 
           type: 'error', 
-          message: `Failed to create UserRoles list: ${createResponse.status}` 
+          message: `Debug failed: Cannot access SharePoint (${response.status})` 
         });
       }
       
+      console.log('🔍 === QUICK DEBUG END ===');
+      
     } catch (err) {
-      console.error('❌ Error creating UserRoles list:', err);
+      console.error('❌ Debug error:', err);
       setNotification({ 
         type: 'error', 
-        message: 'Error creating UserRoles list: ' + err.message 
+        message: 'Debug error: ' + err.message 
       });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper function to add custom columns
-  const addUserRolesColumns = async (listId, requestDigest) => {
-    const config = getSharePointConfig();
-    
-    const columns = [
-      {
-        __metadata: { type: 'SP.Field' },
-        Title: 'DisplayName',
-        FieldTypeKind: 2, // Text
-        Required: false,
-        Description: 'User display name'
-      },
-      {
-        __metadata: { type: 'SP.Field' },
-        Title: 'UserRole',
-        FieldTypeKind: 2, // Text
-        Required: true,
-        Description: 'User role: admin, uploader, or user'
-      },
-      {
-        __metadata: { type: 'SP.Field' },
-        Title: 'Status',
-        FieldTypeKind: 2, // Text
-        Required: false,
-        Description: 'User status: active or inactive'
-      },
-      {
-        __metadata: { type: 'SP.Field' },
-        Title: 'LastLogin',
-        FieldTypeKind: 4, // DateTime
-        Required: false,
-        Description: 'Last login timestamp'
-      },
-      {
-        __metadata: { type: 'SP.Field' },
-        Title: 'GrantedBy',
-        FieldTypeKind: 2, // Text
-        Required: false,
-        Description: 'User ID who granted access'
-      }
-    ];
-    
-    for (const column of columns) {
-      try {
-        const columnResponse = await fetch(`${config.baseUrl}/_api/web/lists('${listId}')/fields`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose',
-            'X-RequestDigest': requestDigest
-          },
-          credentials: 'include',
-          body: JSON.stringify(column)
-        });
-        
-        if (columnResponse.ok) {
-          console.log(`✅ Added column: ${column.Title}`);
-        } else {
-          console.log(`⚠️ Could not add column ${column.Title}: ${columnResponse.status}`);
-        }
-      } catch (err) {
-        console.log(`⚠️ Error adding column ${column.Title}:`, err);
-      }
     }
   };
 
@@ -485,7 +290,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
     }
   };
 
-  // Handle User Access Management - Updated with better error handling
+  // 🔧 FIXED: Handle User Access Management with Fresh Digest
   const handleGrantAccess = async () => {
     try {
       // Validate User ID
@@ -500,37 +305,8 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       if (sharePointAvailable) {
         console.log('👤 Granting access in SharePoint for User ID:', newUser.userId);
         
-        // FIRST: Get a fresh request digest
-        const digestUrl = `${config.baseUrl}/_api/contextinfo`;
-        
-        let requestDigest = '';
-        try {
-          const digestResponse = await fetch(digestUrl, {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json; odata=verbose',
-              'Content-Type': 'application/json; odata=verbose'
-            },
-            credentials: 'include'
-          });
-          
-          if (digestResponse.ok) {
-            const digestData = await digestResponse.json();
-            requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
-            console.log('✅ Got fresh request digest');
-          } else {
-            throw new Error(`Digest request failed: ${digestResponse.status}`);
-          }
-        } catch (digestError) {
-          console.log('⚠️ Could not get fresh digest, using page digest');
-          const digestElement = document.getElementById('__REQUESTDIGEST');
-          requestDigest = digestElement?.value || '';
-        }
-        
-        if (!requestDigest) {
-          setNotification({ type: 'error', message: 'Cannot get authentication token from SharePoint' });
-          return;
-        }
+        // ✅ GET FRESH REQUEST DIGEST FIRST
+        const requestDigest = await getFreshRequestDigest();
         
         // Updated data structure for User ID-based access
         const userData = {
@@ -573,24 +349,10 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
         } else {
           const errorText = await response.text();
           console.error('SharePoint access grant error:', response.status, errorText);
-          
-          // More specific error messages
-          if (response.status === 403) {
-            setNotification({ 
-              type: 'error', 
-              message: `❌ Permission denied. Check if 'UserRoles' list exists and you have write permissions.` 
-            });
-          } else if (response.status === 404) {
-            setNotification({ 
-              type: 'error', 
-              message: `❌ UserRoles list not found. Please create the list first.` 
-            });
-          } else {
-            setNotification({ 
-              type: 'error', 
-              message: `❌ Failed to grant access in SharePoint (${response.status}): ${errorText}` 
-            });
-          }
+          setNotification({ 
+            type: 'error', 
+            message: `❌ Failed to grant access in SharePoint (${response.status}): ${errorText}` 
+          });
         }
       } else {
         // Mock mode
@@ -622,7 +384,123 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
     }
   };
 
-  // Handle Procedure Edit
+  // 🔧 FIXED: Edit User Role with Fresh Digest
+  const handleEditUserRole = async (userRole) => {
+    const newRole = prompt(`Change role for ${userRole.displayName} (current: ${userRole.role})\nEnter: admin, uploader, or user`, userRole.role);
+    
+    if (newRole && ['admin', 'uploader', 'user'].includes(newRole) && newRole !== userRole.role) {
+      try {
+        setLoading(true);
+        const config = getSharePointConfig();
+        
+        if (sharePointAvailable) {
+          console.log('✏️ Updating user role in SharePoint:', userRole.id, 'to', newRole);
+          
+          // ✅ GET FRESH REQUEST DIGEST FIRST
+          const requestDigest = await getFreshRequestDigest();
+          
+          const updateUrl = `${config.userRolesListUrl}(${userRole.id})`;
+          const updateData = {
+            __metadata: { type: 'SP.Data.UserRolesListItem' },
+            UserRole: newRole
+          };
+          
+          const response = await fetch(updateUrl, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json; odata=verbose',
+              'Content-Type': 'application/json; odata=verbose',
+              'X-RequestDigest': requestDigest,
+              'X-HTTP-Method': 'MERGE',
+              'IF-MATCH': '*'
+            },
+            credentials: 'include',
+            body: JSON.stringify(updateData)
+          });
+          
+          if (response.ok || response.status === 204) {
+            console.log('✅ User role updated successfully');
+            setNotification({ 
+              type: 'success', 
+              message: `✅ Role updated to ${newRole} for ${userRole.displayName}` 
+            });
+            loadUserRoles();
+          } else {
+            const errorText = await response.text();
+            console.error('❌ Role update error:', response.status, errorText);
+            setNotification({ 
+              type: 'error', 
+              message: `❌ Failed to update role (${response.status}): ${errorText}` 
+            });
+          }
+        }
+      } catch (err) {
+        console.error('❌ Error updating role:', err);
+        setNotification({ 
+          type: 'error', 
+          message: 'Error updating role: ' + err.message 
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // 🔧 FIXED: Revoke Access with Fresh Digest  
+  const handleRevokeAccess = async (userRole) => {
+    if (window.confirm(`Are you sure you want to revoke access for ${userRole.displayName} (${userRole.userId})?`)) {
+      try {
+        setLoading(true);
+        const config = getSharePointConfig();
+        
+        if (sharePointAvailable) {
+          console.log('🗑️ Revoking access in SharePoint:', userRole.id);
+          
+          // ✅ GET FRESH REQUEST DIGEST FIRST
+          const requestDigest = await getFreshRequestDigest();
+          
+          const deleteUrl = `${config.userRolesListUrl}(${userRole.id})`;
+          
+          const response = await fetch(deleteUrl, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json; odata=verbose',
+              'X-RequestDigest': requestDigest,
+              'X-HTTP-Method': 'DELETE',
+              'IF-MATCH': '*'
+            },
+            credentials: 'include'
+          });
+          
+          if (response.ok || response.status === 204) {
+            console.log('✅ Access revoked successfully');
+            setNotification({ 
+              type: 'success', 
+              message: `✅ Access revoked for ${userRole.displayName}` 
+            });
+            loadUserRoles();
+          } else {
+            const errorText = await response.text();
+            console.error('❌ Revoke access error:', response.status, errorText);
+            setNotification({ 
+              type: 'error', 
+              message: `❌ Failed to revoke access (${response.status}): ${errorText}` 
+            });
+          }
+        }
+      } catch (err) {
+        console.error('❌ Error revoking access:', err);
+        setNotification({ 
+          type: 'error', 
+          message: 'Error revoking access: ' + err.message 
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // 🔧 FIXED: Handle Procedure Edit with Fresh Digest
   const handleEditProcedure = async (procedure, updates) => {
     try {
       setLoading(true);
@@ -630,6 +508,9 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       
       if (sharePointAvailable) {
         console.log('📝 Updating procedure in SharePoint:', procedure.id);
+        
+        // ✅ GET FRESH REQUEST DIGEST FIRST
+        const requestDigest = await getFreshRequestDigest();
         
         const updateUrl = `${config.proceduresListUrl}(${procedure.id})`;
         
@@ -646,10 +527,14 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
         if (updates.lob) updateData.LOB = updates.lob;
         if (updates.procedure_subsection) updateData.ProcedureSubsection = updates.procedure_subsection;
 
+        console.log('📤 Sending UPDATE request with data:', updateData);
+
         const response = await fetch(updateUrl, {
           method: 'POST',
           headers: {
-            ...getHeaders(true),
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest,
             'X-HTTP-Method': 'MERGE',
             'IF-MATCH': '*'
           },
@@ -658,6 +543,8 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
         });
 
         if (response.ok || response.status === 204) {
+          console.log('✅ Procedure updated successfully in SharePoint');
+          
           await logAuditAction('PROCEDURE_UPDATED', procedure.name, {
             procedureId: procedure.id,
             updates: updates,
@@ -668,8 +555,8 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
           onDataRefresh();
         } else {
           const errorText = await response.text();
-          console.error('SharePoint update error:', response.status, errorText);
-          setNotification({ type: 'error', message: `Failed to update procedure in SharePoint (${response.status})` });
+          console.error('❌ SharePoint update error:', response.status, errorText);
+          setNotification({ type: 'error', message: `Failed to update procedure in SharePoint (${response.status}): ${errorText}` });
         }
       } else {
         console.log('📝 Mock procedure update:', updates);
@@ -685,7 +572,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
     }
   };
 
-  // Handle Procedure Delete
+  // 🔧 FIXED: Handle Procedure Delete with Fresh Digest
   const handleDeleteProcedure = async (procedure) => {
     try {
       setLoading(true);
@@ -694,12 +581,19 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       if (sharePointAvailable) {
         console.log('🗑️ Deleting procedure from SharePoint:', procedure.id);
         
+        // ✅ GET FRESH REQUEST DIGEST FIRST
+        const requestDigest = await getFreshRequestDigest();
+        
         const deleteUrl = `${config.proceduresListUrl}(${procedure.id})`;
+        
+        console.log('📤 Sending DELETE request to:', deleteUrl);
         
         const response = await fetch(deleteUrl, {
           method: 'POST',
           headers: {
-            ...getHeaders(true),
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest,
             'X-HTTP-Method': 'DELETE',
             'IF-MATCH': '*'
           },
@@ -707,6 +601,9 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
         });
 
         if (response.ok || response.status === 204) {
+          console.log('✅ Procedure deleted successfully from SharePoint');
+          
+          // Log the audit action
           await logAuditAction('PROCEDURE_DELETED', procedure.name, {
             procedureId: procedure.id,
             deletedBy: user?.staffId,
@@ -718,8 +615,8 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
           loadAuditLog();
         } else {
           const errorText = await response.text();
-          console.error('SharePoint delete error:', response.status, errorText);
-          setNotification({ type: 'error', message: `Failed to delete procedure from SharePoint (${response.status})` });
+          console.error('❌ SharePoint delete error:', response.status, errorText);
+          setNotification({ type: 'error', message: `Failed to delete procedure from SharePoint (${response.status}): ${errorText}` });
         }
       } else {
         console.log('🗑️ Mock procedure delete:', procedure.name);
@@ -735,12 +632,17 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
     }
   };
 
-  // Log Audit Action to SharePoint
+  // 🔧 FIXED: Log Audit Action with Fresh Digest
   const logAuditAction = async (action, procedureName, details) => {
     try {
       const config = getSharePointConfig();
       
       if (sharePointAvailable) {
+        console.log('📝 Logging audit action:', action);
+        
+        // ✅ GET FRESH REQUEST DIGEST FIRST
+        const requestDigest = await getFreshRequestDigest();
+        
         const auditData = {
           __metadata: { type: 'SP.Data.AuditLogListItem' },
           Title: action,
@@ -753,21 +655,29 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
           Status: 'SUCCESS'
         };
 
+        console.log('📤 Sending audit log data:', auditData);
+
         const response = await fetch(config.auditLogListUrl, {
           method: 'POST',
-          headers: getHeaders(true),
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
           credentials: 'include',
           body: JSON.stringify(auditData)
         });
         
         if (response.ok) {
-          console.log('📝 Audit action logged successfully:', action, 'by User ID:', user?.staffId);
+          console.log('✅ Audit action logged successfully:', action, 'by User ID:', user?.staffId);
         } else {
-          console.log('⚠️ Failed to log audit action:', response.status);
+          const errorText = await response.text();
+          console.log('⚠️ Failed to log audit action:', response.status, errorText);
         }
       }
     } catch (err) {
       console.error('❌ Error logging audit action:', err);
+      // Don't throw error here - audit logging failure shouldn't break the main action
     }
   };
 
@@ -807,60 +717,60 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
         procedureName: null,
         timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
         details: { targetUserId: '87654321', targetUserName: 'Sarah Johnson', role: 'user' },
-       status: 'SUCCESS'
-     }
-   ]);
- };
+        status: 'SUCCESS'
+      }
+    ]);
+  };
 
- const loadMockUserRoles = () => {
-   setUserRoles([
-     { 
-       id: 1, 
-       userId: user?.staffId || '43898931',
-       displayName: user?.displayName || 'Admin User',
-       role: 'admin', 
-       lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000), 
-       status: 'active' 
-     },
-     { 
-       id: 2, 
-       userId: '12345678', 
-       displayName: 'John Smith',
-       role: 'user', 
-       lastLogin: new Date(Date.now() - 5 * 60 * 60 * 1000), 
-       status: 'active' 
-     },
-     { 
-       id: 3, 
-       userId: '87654321', 
-       displayName: 'Sarah Johnson',
-       role: 'user', 
-       lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000), 
-       status: 'active' 
-     }
-   ]);
- };
+  const loadMockUserRoles = () => {
+    setUserRoles([
+      { 
+        id: 1, 
+        userId: user?.staffId || '43898931',
+        displayName: user?.displayName || 'Admin User',
+        role: 'admin', 
+        lastLogin: new Date(Date.now() - 2 * 60 * 60 * 1000), 
+        status: 'active' 
+      },
+      { 
+        id: 2, 
+        userId: '12345678', 
+        displayName: 'John Smith',
+        role: 'user', 
+        lastLogin: new Date(Date.now() - 5 * 60 * 60 * 1000), 
+        status: 'active' 
+      },
+      { 
+        id: 3, 
+        userId: '87654321', 
+        displayName: 'Sarah Johnson',
+        role: 'user', 
+        lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000), 
+        status: 'active' 
+      }
+    ]);
+  };
 
- // Helper Functions for UI
- const getStatusColor = (expiry) => {
-   const now = new Date();
-   const expiryDate = new Date(expiry);
-   const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
-   
-   if (daysLeft < 0) return 'error';
-   if (daysLeft <= 30) return 'warning';
-   return 'success';
- };
+  // Helper Functions for UI
+  const getStatusColor = (expiry) => {
+    const now = new Date();
+    const expiryDate = new Date(expiry);
+    const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft < 0) return 'error';
+    if (daysLeft <= 30) return 'warning';
+    return 'success';
+  };
 
- const formatTimeAgo = (timestamp) => {
-   const now = new Date();
-   const diff = Math.floor((now - new Date(timestamp)) / 1000);
-   
-   if (diff < 60) return 'Just now';
-   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-   return `${Math.floor(diff / 86400)}d ago`;
- };
+  const formatTimeAgo = (timestamp) => {
+    const now = new Date();
+    const diff = Math.floor((now - new Date(timestamp)) / 1000);
+    
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
 
  const getActionIcon = (action) => {
    switch (action) {
@@ -941,65 +851,21 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
          Comprehensive administration and management tools
        </Typography>
        
-       {/* SharePoint Status & User Info */}
+       {/* Clean Status Info */}
        <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
          <Chip 
            icon={sharePointAvailable ? <CheckCircle /> : <Warning />}
-           label={sharePointAvailable ? 'SharePoint Connected - Live Data' : 'Demo Mode - Mock Data'}
+           label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
            color={sharePointAvailable ? 'success' : 'warning'}
            variant="outlined"
          />
          <Chip 
-           label={`Admin: ${user?.displayName} (${user?.staffId})`}
+           label={`Admin: ${user?.displayName || user?.staffId}`}
            color="error"
            variant="outlined"
            icon={<Person />}
          />
-         {sharePointAvailable && (
-           <Chip 
-             label="https://teams.global.hsbc/sites/EmployeeEng"
-             size="small"
-             variant="outlined"
-             sx={{ fontSize: '0.7rem' }}
-           />
-         )}
        </Box>
-
-       {/* 🔍 DEBUG INFO DISPLAY */}
-       {debugInfo && (
-         <Alert 
-           severity={debugInfo.userRolesExists ? "success" : "warning"} 
-           sx={{ mt: 2 }}
-           action={
-             !debugInfo.userRolesExists && (
-               <Button 
-                 color="inherit" 
-                 size="small"
-                 onClick={createUserRolesList}
-                 disabled={loading}
-                 startIcon={loading ? <CircularProgress size={16} /> : <Assignment />}
-               >
-                 {loading ? 'Creating...' : 'Create List'}
-               </Button>
-             )
-           }
-         >
-           <Typography variant="body2" fontWeight="bold" gutterBottom>
-             🔍 SharePoint Debug Info:
-           </Typography>
-           <Typography variant="body2" component="div">
-             • Lists Found: {debugInfo.listsFound}<br/>
-             • UserRoles List: {debugInfo.userRolesExists ? `✅ Found (${debugInfo.userRolesTitle})` : '❌ Not Found'}<br/>
-             • Read Access: {debugInfo.canReadUserRoles ? '✅ OK' : `❌ Failed (${debugInfo.readStatus})`}<br/>
-             {debugInfo.error && (
-               <>• Error: {debugInfo.error}<br/></>
-             )}
-             {debugInfo.availableLists && (
-               <>• Available Lists: {debugInfo.availableLists.join(', ')}</>
-             )}
-           </Typography>
-         </Alert>
-       )}
      </Box>
 
      {/* Admin Stats Cards */}
@@ -1120,7 +986,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
                      color: 'white',
                      '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
                    }}
-                   onClick={debugSharePointLists}
+                   onClick={runQuickDebug}
                    disabled={loading}
                  >
                    Run Debug
@@ -1269,6 +1135,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
                                 expiry: procedure.expiry
                               });
                             }}
+                            disabled={loading}
                           >
                             <Edit fontSize="small" />
                           </IconButton>
@@ -1278,6 +1145,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
                             size="small" 
                             color="error"
                             onClick={() => setDeleteDialog({ open: true, procedure })}
+                            disabled={loading}
                           >
                             <Delete fontSize="small" />
                           </IconButton>
@@ -1381,11 +1249,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
               <Typography variant="body2" color="text.secondary">
                 System activities will appear here
               </Typography>
-              {sharePointAvailable && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                  Audit entries are stored in SharePoint AuditLog list
-                </Typography>
-              )}
             </Box>
           )}
         </Box>
@@ -1412,7 +1275,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
                 variant="contained"
                 startIcon={<PersonAdd />}
                 onClick={() => setAccessDialog({ open: true })}
-                disabled={!debugInfo?.userRolesExists}
+                disabled={loading}
               >
                 Grant Access
               </Button>
@@ -1421,20 +1284,12 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
 
           {loading && <LinearProgress sx={{ mb: 2 }} />}
 
-          {/* Access Control Info with Debug Status */}
-          <Alert severity={debugInfo?.userRolesExists ? "info" : "warning"} sx={{ mb: 3 }}>
+          {/* Access Control Info */}
+          <Alert severity="info" sx={{ mb: 3 }}>
             <Typography variant="body2">
-              <strong>Access Control:</strong> User access is managed by User ID (not email). 
-              {debugInfo?.userRolesExists ? 
-                ' UserRoles list is available for managing access.' :
-                ' UserRoles list needs to be created first.'
-              }
+              <strong>Access Control:</strong> User access is managed by User ID. 
+              Add User IDs to grant system access with different role levels.
             </Typography>
-            {debugInfo && !debugInfo.userRolesExists && (
-              <Typography variant="body2" sx={{ mt: 1 }}>
-                <strong>Status:</strong> UserRoles list not found in SharePoint. Click "Create List" above to create it.
-              </Typography>
-            )}
           </Alert>
 
           {/* User Stats */}
@@ -1491,14 +1346,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             User ID: {userRole.userId}
-                            {sharePointAvailable && (
-                              <Chip 
-                                label="SharePoint" 
-                                size="small" 
-                                variant="outlined"
-                                sx={{ ml: 1, fontSize: '0.6rem', height: 16 }}
-                              />
-                            )}
                           </Typography>
                         </Box>
                       </Box>
@@ -1525,12 +1372,21 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
                         <Tooltip title="Edit Role">
-                          <IconButton size="small">
+                          <IconButton 
+                            size="small"
+                            onClick={() => handleEditUserRole(userRole)}
+                            disabled={loading}
+                          >
                             <Edit fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Revoke Access">
-                          <IconButton size="small" color="error">
+                          <IconButton 
+                            size="small" 
+                            color="error"
+                            onClick={() => handleRevokeAccess(userRole)}
+                            disabled={loading}
+                          >
                             <Cancel fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -1551,11 +1407,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
               <Typography variant="body2" color="text.secondary">
                 User access records will appear here
               </Typography>
-              {sharePointAvailable && (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
-                  User roles are stored in SharePoint UserRoles list by User ID
-                </Typography>
-              )}
             </Box>
           )}
         </Box>
@@ -1575,7 +1426,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       </DialogTitle>
       <DialogContent>
         {editDialog.procedure && (
-        <Box sx={{ pt: 1 }}>
+          <Box sx={{ pt: 1 }}>
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
@@ -1674,12 +1525,12 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       </DialogActions>
     </Dialog>
 
-    {/* Grant Access Dialog - Updated for User ID */}
+    {/* Grant Access Dialog */}
     <Dialog open={accessDialog.open} onClose={() => setAccessDialog({ open: false })}>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <PersonAdd />
-          Grant User Access (User ID Based)
+          Grant User Access
           {sharePointAvailable && (
             <Chip label="SharePoint" size="small" color="success" variant="outlined" />
           )}
@@ -1687,15 +1538,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       </DialogTitle>
       <DialogContent>
         <Box sx={{ pt: 1 }}>
-          {/* Debug Info in Dialog */}
-          {debugInfo && !debugInfo.userRolesExists && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                <strong>UserRoles list not found!</strong> Please create the UserRoles list first before granting access.
-              </Typography>
-            </Alert>
-          )}
-          
           <TextField
             fullWidth
             label="User ID"
@@ -1706,7 +1548,6 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
             sx={{ mb: 2 }}
             placeholder="43898931"
             helperText="Enter the HSBC User ID (numeric)"
-            disabled={!debugInfo?.userRolesExists}
           />
           <TextField
             fullWidth
@@ -1718,10 +1559,9 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
             sx={{ mb: 2 }}
             placeholder="John Smith"
             helperText="Enter the user's full name"
-            disabled={!debugInfo?.userRolesExists}
           />
-          <FormControl fullWidth variant="outlined" disabled={!debugInfo?.userRolesExists}>
-            <InputLabel>Role</InputLabel>
+          <FormControl fullWidth variant="outlined">
+              <InputLabel>Role</InputLabel>
             <Select
               value={newUser.role}
               onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
@@ -1733,21 +1573,10 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
             </Select>
           </FormControl>
           
-          {sharePointAvailable && debugInfo?.userRolesExists && (
+          {sharePointAvailable && (
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="caption">
                 User will be added to SharePoint UserRoles list with User ID: {newUser.userId}
-              </Typography>
-            </Alert>
-          )}
-          
-          {debugInfo && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              <Typography variant="caption">
-                <strong>Debug Status:</strong><br/>
-                • SharePoint Lists: {debugInfo.listsFound} found<br/>
-                • UserRoles List: {debugInfo.userRolesExists ? '✅ Available' : '❌ Missing'}<br/>
-                • Read Access: {debugInfo.canReadUserRoles ? '✅ OK' : '❌ Failed'}
               </Typography>
             </Alert>
           )}
@@ -1760,7 +1589,7 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
         <Button 
           variant="contained" 
           onClick={handleGrantAccess}
-          disabled={loading || !newUser.userId || !newUser.userId.match(/^\d+$/) || !debugInfo?.userRolesExists}
+          disabled={loading || !newUser.userId || !newUser.userId.match(/^\d+$/)}
           startIcon={loading ? <CircularProgress size={16} /> : <PersonAdd />}
         >
           {loading ? 'Granting...' : 'Grant Access'}
