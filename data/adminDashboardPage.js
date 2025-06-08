@@ -77,14 +77,18 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
     };
     
     if (includeDigest && typeof document !== 'undefined') {
-      const digestElement = document.getElementById('__REQUESTDIGEST');
-      if (digestElement?.value) {
-        headers['X-RequestDigest'] = digestElement.value;
-      }
+    // Try multiple methods to get digest
+    const digestElement = document.getElementById('__REQUESTDIGEST');
+    if (digestElement?.value) {
+      headers['X-RequestDigest'] = digestElement.value;
+    } else {
+      // Alternative: try to get from form digest endpoint
+      console.log('⚠️ No request digest found in page, using alternative method');
     }
-    
-    return headers;
-  };
+  }
+  
+  return headers;
+};
 
   // 📊 **Load Audit Log from SharePoint AuditLog List**
   const loadAuditLog = async () => {
@@ -305,6 +309,35 @@ const AdminDashboardPage = ({ procedures, onDataRefresh, sharePointAvailable }) 
       
       if (sharePointAvailable) {
         console.log('👤 Granting access in SharePoint for User ID:', newUser.userId);
+
+        const digestUrl = `${config.baseUrl}/_api/contextinfo`;
+      
+      let requestDigest = '';
+      try {
+        const digestResponse = await fetch(digestUrl, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose'
+          },
+          credentials: 'include'
+        });
+        
+        if (digestResponse.ok) {
+          const digestData = await digestResponse.json();
+          requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+          console.log('✅ Got fresh request digest');
+        }
+      } catch (digestError) {
+        console.log('⚠️ Could not get fresh digest, using page digest');
+        const digestElement = document.getElementById('__REQUESTDIGEST');
+        requestDigest = digestElement?.value || '';
+      }
+      
+      if (!requestDigest) {
+        setNotification({ type: 'error', message: 'Cannot get authentication token from SharePoint' });
+        return;
+      }
         
         // ✅ Updated data structure for User ID-based access
         const userData = {
