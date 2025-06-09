@@ -1,4 +1,4 @@
-// components/ProcedureDetailsModal.js - Comprehensive Procedure Details
+// components/ProcedureDetailsModal.js - Updated for Your Exact SharePoint Fields
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button,
@@ -23,68 +23,21 @@ const ProcedureDetailsModal = ({
   const [procedureDetails, setProcedureDetails] = useState(null);
   const [error, setError] = useState(null);
 
-  // 🎯 **ENHANCED SharePoint API Configuration**
+  // 🎯 **CORRECTED: SharePoint API for Individual Procedure with Your Exact Fields**
   const getDetailedProcedureUrl = (id) => {
-    // Comprehensive field selection with expansions for user fields
+    // Using only your exact SharePoint fields
     const selectFields = [
       // Basic Info
       'Id', 'Title', 'Created', 'Modified',
       
-      // Procedure Info
-      'LOB', 'ProcedureSubsection', 'ExpiryDate', 'Status',
-      'RiskRating', 'PeriodicReview', 'QualityScore',
-      'SignOffDate', 'DocumentLink', 'SharePointURL',
-      'OriginalFilename', 'FileSize',
-      
-      // User Fields with Expansion
-      'Author/Title', 'Author/EMail', 'Author/JobTitle', 'Author/Department',
-      'Author/WorkPhone', 'Author/Office', 'Author/Picture',
-      'Editor/Title', 'Editor/EMail', 'Editor/JobTitle', 'Editor/Department',
-      
-      // Custom User Fields with Expansion
-      'PrimaryOwner/Title', 'PrimaryOwner/EMail', 'PrimaryOwner/JobTitle', 'PrimaryOwner/Department',
-      'PrimaryOwner/WorkPhone', 'PrimaryOwner/Office',
-      'SecondaryOwner/Title', 'SecondaryOwner/EMail', 'SecondaryOwner/JobTitle', 'SecondaryOwner/Department',
-      'UploadedBy/Title', 'UploadedBy/EMail', 'UploadedBy/JobTitle', 'UploadedBy/Department',
-      
-      // Manual Fields
-      'PrimaryOwnerEmail', 'SecondaryOwnerEmail', 'PrimaryOwnerManual', 'SecondaryOwnerManual',
-      
-      // Document Analysis
-      'AnalysisDetails', 'AIRecommendations', 'MissingElements',
-      'DocumentOwners', 'ExtractedOwners', 'DepartmentOwners'
+      // Your Exact Procedure Fields
+      'ExpiryDate', 'PrimaryOwner', 'PrimaryOwnerEmail', 'SecondaryOwner', 'SecondaryOwnerEmail',
+      'LOB', 'ProcedureSubsection', 'QualityScore', 'OriginalFilename', 'FileSize',
+      'UploadedBy', 'UploadedAt', 'Status', 'AnalysisDetails', 'AIRecommendations',
+      'RiskRating', 'PeriodicReview', 'DocumentOwners', 'FoundElements', 'DocumentLink', 'SignOffDate'
     ].join(',');
 
-    const expandFields = [
-      'Author', 'Editor', 'PrimaryOwner', 'SecondaryOwner', 'UploadedBy'
-    ].join(',');
-
-    return `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Procedures')/items(${id})?$select=${selectFields}&$expand=${expandFields}`;
-  };
-
-  const getDepartmentInfo = async (department) => {
-    try {
-      if (!department) return null;
-      
-      // Get department details from SharePoint User Profile or custom list
-      const deptUrl = `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Departments')/items?$select=*&$filter=Title eq '${department}'`;
-      
-      const response = await fetch(deptUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json; odata=verbose'
-        },
-        credentials: 'include'
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.d.results[0] || null;
-      }
-    } catch (err) {
-      console.warn('Could not fetch department info:', err);
-    }
-    return null;
+    return `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Procedures')/items(${id})?$select=${selectFields}`;
   };
 
   useEffect(() => {
@@ -121,8 +74,8 @@ const ProcedureDetailsModal = ({
         const data = await response.json();
         console.log('✅ Detailed procedure data:', data.d);
 
-        // Process the detailed data
-        const details = await processDetailedData(data.d);
+        // Process the detailed data using your exact SharePoint fields
+        const details = processDetailedData(data.d);
         setProcedureDetails(details);
 
       } else {
@@ -141,7 +94,7 @@ const ProcedureDetailsModal = ({
     }
   };
 
-  const processDetailedData = async (spItem) => {
+  const processDetailedData = (spItem) => {
     // Parse JSON fields safely
     const safeJsonParse = (jsonString, defaultValue = {}) => {
       try {
@@ -151,25 +104,14 @@ const ProcedureDetailsModal = ({
       }
     };
 
-    // Get department info for all users
-    const departments = [];
-    if (spItem.Author?.Department) departments.push(spItem.Author.Department);
-    if (spItem.PrimaryOwner?.Department) departments.push(spItem.PrimaryOwner.Department);
-    if (spItem.SecondaryOwner?.Department) departments.push(spItem.SecondaryOwner.Department);
-
-    const uniqueDepartments = [...new Set(departments)];
-    const departmentDetails = await Promise.all(
-      uniqueDepartments.map(dept => getDepartmentInfo(dept))
-    );
-
     return {
       // Basic Info
       id: spItem.Id,
       name: spItem.Title,
-      uploadedOn: spItem.Created,
+      uploadedOn: spItem.UploadedAt || spItem.Created,
       modifiedOn: spItem.Modified,
       
-      // Document Info
+      // Document Info using your exact fields
       lob: spItem.LOB,
       subsection: spItem.ProcedureSubsection,
       expiry: spItem.ExpiryDate,
@@ -179,66 +121,28 @@ const ProcedureDetailsModal = ({
       qualityScore: spItem.QualityScore,
       signOffDate: spItem.SignOffDate,
       
-      // File Info
+      // File Info using your exact fields
       documentLink: spItem.DocumentLink,
-      sharePointURL: spItem.SharePointURL,
       originalFilename: spItem.OriginalFilename,
       fileSize: spItem.FileSize,
       
-      // Users from SharePoint (expanded)
-      uploadedBy: spItem.Author ? {
-        name: spItem.Author.Title,
-        email: spItem.Author.EMail,
-        jobTitle: spItem.Author.JobTitle,
-        department: spItem.Author.Department,
-        phone: spItem.Author.WorkPhone,
-        office: spItem.Author.Office,
-        picture: spItem.Author.Picture?.Url
-      } : null,
+      // Users using your exact fields
+      uploadedBy: spItem.UploadedBy || 'Unknown',
+      primaryOwner: spItem.PrimaryOwner,
+      primaryOwnerEmail: spItem.PrimaryOwnerEmail,
+      secondaryOwner: spItem.SecondaryOwner,
+      secondaryOwnerEmail: spItem.SecondaryOwnerEmail,
       
-      lastModifiedBy: spItem.Editor ? {
-        name: spItem.Editor.Title,
-        email: spItem.Editor.EMail,
-        jobTitle: spItem.Editor.JobTitle,
-        department: spItem.Editor.Department
-      } : null,
-      
-      primaryOwnerFromSP: spItem.PrimaryOwner ? {
-        name: spItem.PrimaryOwner.Title,
-        email: spItem.PrimaryOwner.EMail,
-        jobTitle: spItem.PrimaryOwner.JobTitle,
-        department: spItem.PrimaryOwner.Department,
-        phone: spItem.PrimaryOwner.WorkPhone,
-        office: spItem.PrimaryOwner.Office
-      } : null,
-      
-      secondaryOwnerFromSP: spItem.SecondaryOwner ? {
-        name: spItem.SecondaryOwner.Title,
-        email: spItem.SecondaryOwner.EMail,
-        jobTitle: spItem.SecondaryOwner.JobTitle,
-        department: spItem.SecondaryOwner.Department
-      } : null,
-      
-      // Manual User Fields
-      primaryOwnerManual: spItem.PrimaryOwnerManual,
-      primaryOwnerEmailManual: spItem.PrimaryOwnerEmail,
-      secondaryOwnerManual: spItem.SecondaryOwnerManual,
-      secondaryOwnerEmailManual: spItem.SecondaryOwnerEmail,
-      
-      // Document Analysis
+      // Analysis Data using your exact fields
       analysisDetails: safeJsonParse(spItem.AnalysisDetails),
       aiRecommendations: safeJsonParse(spItem.AIRecommendations, []),
-      missingElements: safeJsonParse(spItem.MissingElements, []),
-      documentOwners: safeJsonParse(spItem.DocumentOwners, []),
-      extractedOwners: safeJsonParse(spItem.ExtractedOwners, []),
-      
-      // Department Details
-      departmentDetails: departmentDetails.filter(d => d !== null)
+      foundElements: safeJsonParse(spItem.FoundElements, []),
+      documentOwners: safeJsonParse(spItem.DocumentOwners, [])
     };
   };
 
   const loadMockDetails = () => {
-    // Mock detailed data for demonstration
+    // Mock detailed data matching your SharePoint fields
     setProcedureDetails({
       id: procedureId,
       name: "Risk Assessment Framework - Detailed View",
@@ -253,71 +157,28 @@ const ProcedureDetailsModal = ({
       qualityScore: 92,
       signOffDate: "2024-05-20",
       documentLink: "https://sharepoint.hsbc.com/sites/procedures/documents/risk-framework.pdf",
-      sharePointURL: "https://sharepoint.hsbc.com/sites/procedures",
       originalFilename: "HSBC_Risk_Assessment_Framework_v2.1.pdf",
       fileSize: 2450000,
-      
-      uploadedBy: {
-        name: "John Smith",
-        email: "john.smith@hsbc.com",
-        jobTitle: "Senior Risk Manager",
-        department: "Global Risk Management",
-        phone: "+44 20 7991 8888",
-        office: "London - Canary Wharf"
-      },
-      
-      lastModifiedBy: {
-        name: "Sarah Johnson",
-        email: "sarah.johnson@hsbc.com",
-        jobTitle: "Risk Director",
-        department: "Global Risk Management"
-      },
-      
-      primaryOwnerFromSP: {
-        name: "Michael Chen",
-        email: "michael.chen@hsbc.com",
-        jobTitle: "Head of Credit Risk",
-        department: "Global Risk Management",
-        phone: "+852 2822 1111",
-        office: "Hong Kong - Central"
-      },
-      
-      primaryOwnerManual: "Michael Chen (Head of Credit Risk)",
-      primaryOwnerEmailManual: "michael.chen@hsbc.com",
-      
+      uploadedBy: "John Smith",
+      primaryOwner: "Michael Chen",
+      primaryOwnerEmail: "michael.chen@hsbc.com",
+      secondaryOwner: "Sarah Johnson", 
+      secondaryOwnerEmail: "sarah.johnson@hsbc.com",
       analysisDetails: {
-        score: 92,
-        foundElements: [
-          "Document Control Section",
-          "Risk Assessment Matrix", 
-          "Approval Workflow",
-          "Version Control"
-        ],
-        missingElements: [
-          "Annual Review Date",
-          "Stakeholder Sign-off"
-        ]
+        score: 92
       },
-      
       aiRecommendations: [
         "Add specific annual review scheduling",
-        "Include stakeholder approval matrix",
-        "Update regulatory references to latest standards"
+        "Include stakeholder approval matrix"
       ],
-      
-      extractedOwners: [
+      foundElements: [
+        "Document Control Section",
+        "Risk Assessment Matrix", 
+        "Approval Workflow"
+      ],
+      documentOwners: [
         "Michael Chen - Head of Credit Risk",
-        "Sarah Johnson - Risk Director", 
-        "David Park - Senior Risk Analyst"
-      ],
-      
-      departmentDetails: [
-        {
-          Title: "Global Risk Management",
-          Head: "Sarah Johnson",
-          Location: "London, Hong Kong",
-          ContactEmail: "grm@hsbc.com"
-        }
+        "Sarah Johnson - Risk Director"
       ]
     });
   };
@@ -357,69 +218,6 @@ const ProcedureDetailsModal = ({
       default: return '#9e9e9e';
     }
   };
-
-  const UserCard = ({ user, title, isManual = false }) => (
-    <Card variant="outlined" sx={{ mb: 2 }}>
-      <CardContent sx={{ p: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
-            {user?.name?.[0] || user?.[0] || '?'}
-          </Avatar>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h6" gutterBottom>
-              {title}
-              {isManual && (
-                <Chip label="Manual Entry" size="small" color="info" sx={{ ml: 1 }} />
-              )}
-            </Typography>
-            <Typography variant="body2" fontWeight="bold">
-              {isManual ? user : user?.name}
-            </Typography>
-            {user?.email && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                <Email fontSize="small" color="action" />
-                <Link href={`mailto:${user.email}`} variant="body2">
-                  {user.email}
-                </Link>
-              </Box>
-            )}
-            {user?.jobTitle && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                <Work fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  {user.jobTitle}
-                </Typography>
-              </Box>
-            )}
-            {user?.department && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                <Business fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  {user.department}
-                </Typography>
-              </Box>
-            )}
-            {user?.phone && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                <Phone fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  {user.phone}
-                </Typography>
-              </Box>
-            )}
-            {user?.office && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                <LocationOn fontSize="small" color="action" />
-                <Typography variant="body2" color="text.secondary">
-                  {user.office}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Box>
-      </CardContent>
-    </Card>
-  );
 
   if (!open) return null;
 
@@ -529,7 +327,7 @@ const ProcedureDetailsModal = ({
             <Grid container spacing={3}>
               {/* Left Column - Document Info */}
               <Grid item xs={12} md={6}>
-                {/* Document Details */}
+                {/* Document Details using your exact SharePoint fields */}
                 <Card sx={{ mb: 3 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -594,43 +392,29 @@ const ProcedureDetailsModal = ({
                       )}
                     </List>
 
-                    {/* Document Links */}
-                    {(procedureDetails.documentLink || procedureDetails.sharePointURL) && (
+                    {/* Document Link */}
+                    {procedureDetails.documentLink && (
                       <Box sx={{ mt: 2 }}>
                         <Typography variant="subtitle2" gutterBottom>
-                          Document Links:
+                          Document Link:
                         </Typography>
-                        {procedureDetails.documentLink && (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<LinkIcon />}
-                            href={procedureDetails.documentLink}
-                            target="_blank"
-                            sx={{ mr: 1, mb: 1 }}
-                          >
-                            View Document
-                          </Button>
-                        )}
-                        {procedureDetails.sharePointURL && (
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<Business />}
-                            href={procedureDetails.sharePointURL}
-                            target="_blank"
-                            sx={{ mb: 1 }}
-                          >
-                            SharePoint Site
-                          </Button>
-                        )}
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<LinkIcon />}
+                          href={procedureDetails.documentLink}
+                          target="_blank"
+                          sx={{ mr: 1, mb: 1 }}
+                        >
+                          View Document
+                        </Button>
                       </Box>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Document Analysis */}
-                {procedureDetails.analysisDetails && (
+                {/* AI Analysis using your exact SharePoint fields */}
+                {(procedureDetails.foundElements?.length > 0 || procedureDetails.aiRecommendations?.length > 0) && (
                   <Card sx={{ mb: 3 }}>
                     <CardContent>
                       <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -639,35 +423,17 @@ const ProcedureDetailsModal = ({
                       </Typography>
                       <Divider sx={{ mb: 2 }} />
 
-                      {procedureDetails.analysisDetails.foundElements?.length > 0 && (
+                      {procedureDetails.foundElements?.length > 0 && (
                         <Box sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom color="success.main">
                             ✅ Found Elements:
                           </Typography>
-                          {procedureDetails.analysisDetails.foundElements.map((element, index) => (
+                          {procedureDetails.foundElements.map((element, index) => (
                             <Chip 
                               key={index}
                               label={element}
                               size="small"
                               color="success"
-                              variant="outlined"
-                              sx={{ mr: 0.5, mb: 0.5 }}
-                            />
-                          ))}
-                        </Box>
-                      )}
-
-                      {procedureDetails.analysisDetails.missingElements?.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          <Typography variant="subtitle2" gutterBottom color="warning.main">
-                            ⚠️ Missing Elements:
-                          </Typography>
-                          {procedureDetails.analysisDetails.missingElements.map((element, index) => (
-                            <Chip 
-                              key={index}
-                              label={element}
-                              size="small"
-                              color="warning"
                               variant="outlined"
                               sx={{ mr: 0.5, mb: 0.5 }}
                             />
@@ -700,9 +466,9 @@ const ProcedureDetailsModal = ({
                 )}
               </Grid>
 
-              {/* Right Column - People & Departments */}
+              {/* Right Column - People using your exact SharePoint fields */}
               <Grid item xs={12} md={6}>
-                {/* Procedure Owners */}
+                {/* Procedure Owners using your exact SharePoint fields */}
                 <Card sx={{ mb: 3 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -711,43 +477,67 @@ const ProcedureDetailsModal = ({
                     </Typography>
                     <Divider sx={{ mb: 2 }} />
 
-                    {/* Primary Owner from SharePoint */}
-                    {procedureDetails.primaryOwnerFromSP && (
-                      <UserCard 
-                        user={procedureDetails.primaryOwnerFromSP}
-                        title="Primary Owner (SharePoint User)"
-                      />
+                    {/* Primary Owner */}
+                    {procedureDetails.primaryOwner && (
+                      <Card variant="outlined" sx={{ mb: 2 }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                              {procedureDetails.primaryOwner[0]}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="h6" gutterBottom>
+                                Primary Owner
+                              </Typography>
+                              <Typography variant="body2" fontWeight="bold">
+                                {procedureDetails.primaryOwner}
+                              </Typography>
+                              {procedureDetails.primaryOwnerEmail && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                  <Email fontSize="small" color="action" />
+                                  <Link href={`mailto:${procedureDetails.primaryOwnerEmail}`} variant="body2">
+                                    {procedureDetails.primaryOwnerEmail}
+                                  </Link>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
                     )}
 
-                    {/* Primary Owner Manual Entry */}
-                    {procedureDetails.primaryOwnerManual && (
-                      <UserCard 
-                        user={procedureDetails.primaryOwnerManual}
-                        title="Primary Owner (Manual Entry)"
-                        isManual
-                      />
-                    )}
-
-                    {/* Secondary Owner from SharePoint */}
-                    {procedureDetails.secondaryOwnerFromSP && (
-                      <UserCard 
-                        user={procedureDetails.secondaryOwnerFromSP}
-                        title="Secondary Owner (SharePoint User)"
-                      />
-                    )}
-
-                    {/* Secondary Owner Manual Entry */}
-                    {procedureDetails.secondaryOwnerManual && (
-                      <UserCard 
-                        user={procedureDetails.secondaryOwnerManual}
-                        title="Secondary Owner (Manual Entry)"
-                        isManual
-                      />
+                    {/* Secondary Owner */}
+                    {procedureDetails.secondaryOwner && (
+                      <Card variant="outlined" sx={{ mb: 2 }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Avatar sx={{ mr: 2, bgcolor: 'secondary.main' }}>
+                              {procedureDetails.secondaryOwner[0]}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="h6" gutterBottom>
+                                Secondary Owner
+                              </Typography>
+                              <Typography variant="body2" fontWeight="bold">
+                                {procedureDetails.secondaryOwner}
+                              </Typography>
+                              {procedureDetails.secondaryOwnerEmail && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
+                                  <Email fontSize="small" color="action" />
+                                  <Link href={`mailto:${procedureDetails.secondaryOwnerEmail}`} variant="body2">
+                                    {procedureDetails.secondaryOwnerEmail}
+                                  </Link>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* System Users */}
+                {/* System Information using your exact SharePoint fields */}
                 <Card sx={{ mb: 3 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -758,121 +548,80 @@ const ProcedureDetailsModal = ({
 
                     {/* Uploaded By */}
                     {procedureDetails.uploadedBy && (
-                      <UserCard 
-                        user={procedureDetails.uploadedBy}
-                        title="Uploaded By"
-                      />
-                    )}
-
-                    {/* Last Modified By */}
-                    {procedureDetails.lastModifiedBy && (
-                      <UserCard 
-                        user={procedureDetails.lastModifiedBy}
-                        title="Last Modified By"
-                      />
+                      <Card variant="outlined" sx={{ mb: 2 }}>
+                        <CardContent sx={{ p: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Avatar sx={{ mr: 2, bgcolor: 'info.main' }}>
+                              {procedureDetails.uploadedBy[0]}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="h6" gutterBottom>
+                                Uploaded By
+                              </Typography>
+                              <Typography variant="body2" fontWeight="bold">
+                                {procedureDetails.uploadedBy}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        </CardContent>
+                      </Card>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* Extracted Document Owners */}
-                {procedureDetails.extractedOwners?.length > 0 && (
-                  <Card sx={{ mb: 3 }}>
+                {/* Document Owners using your exact SharePoint fields */}
+                {procedureDetails.documentOwners?.length > 0 && (
+                  <Card>
                     <CardContent>
                       <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Grade color="primary" />
-                        Owners Extracted from Document
+                        Document Owners (Extracted)
                       </Typography>
                       <Divider sx={{ mb: 2 }} />
 
                       <List dense>
-                        {procedureDetails.extractedOwners.map((owner, index) => (
+                        {procedureDetails.documentOwners.map((owner, index) => (
                           <ListItem key={index}>
                             <ListItemIcon>
                               <Person fontSize="small" />
+                            </ListItemIcon>
                             <ListItemText 
-                             primary={owner}
-                             primaryTypographyProps={{ variant: 'body2' }}
-                           />
-                         </ListItem>
-                       ))}
-                     </List>
-                   </CardContent>
-                 </Card>
-               )}
+                              primary={owner}
+                              primaryTypographyProps={{ variant: 'body2' }}
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </CardContent>
+                  </Card>
+                )}
+              </Grid>
+            </Grid>
+          </Box>
+        ) : (
+          <Alert severity="info">
+            No procedure details available.
+          </Alert>
+        )}
+      </DialogContent>
 
-               {/* Department Information */}
-               {procedureDetails.departmentDetails?.length > 0 && (
-                 <Card>
-                   <CardContent>
-                     <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                       <Business color="primary" />
-                       Department Owners
-                     </Typography>
-                     <Divider sx={{ mb: 2 }} />
-
-                     {procedureDetails.departmentDetails.map((dept, index) => (
-                       <Card key={index} variant="outlined" sx={{ mb: 2 }}>
-                         <CardContent sx={{ p: 2 }}>
-                           <Typography variant="h6" gutterBottom>
-                             {dept.Title}
-                           </Typography>
-                           {dept.Head && (
-                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                               <Person fontSize="small" color="action" />
-                               <Typography variant="body2">
-                                 Head: {dept.Head}
-                               </Typography>
-                             </Box>
-                           )}
-                           {dept.Location && (
-                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
-                               <LocationOn fontSize="small" color="action" />
-                               <Typography variant="body2">
-                                 Location: {dept.Location}
-                               </Typography>
-                             </Box>
-                           )}
-                           {dept.ContactEmail && (
-                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                               <Email fontSize="small" color="action" />
-                               <Link href={`mailto:${dept.ContactEmail}`} variant="body2">
-                                 {dept.ContactEmail}
-                               </Link>
-                             </Box>
-                           )}
-                         </CardContent>
-                       </Card>
-                     ))}
-                   </CardContent>
-                 </Card>
-               )}
-             </Grid>
-           </Grid>
-         </Box>
-       ) : (
-         <Alert severity="info">
-           No procedure details available.
-         </Alert>
-       )}
-     </DialogContent>
-
-     <DialogActions sx={{ p: 3 }}>
-       <Button onClick={onClose} variant="outlined">
-         Close
-       </Button>
-       {procedureDetails?.documentLink && (
-         <Button 
-           variant="contained" 
-           startIcon={<CloudDownload />}
-           href={procedureDetails.documentLink}
-           target="_blank"
-         >
-           Download Document
-         </Button>
-       )}
-     </DialogActions>
-   </Dialog>
- );
+      <DialogActions sx={{ p: 3 }}>
+        <Button onClick={onClose} variant="outlined">
+          Close
+        </Button>
+        {procedureDetails?.documentLink && (
+          <Button 
+            variant="contained" 
+            startIcon={<CloudDownload />}
+            href={procedureDetails.documentLink}
+            target="_blank"
+          >
+            Download Document
+          </Button>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
 };
 
 export default ProcedureDetailsModal;
