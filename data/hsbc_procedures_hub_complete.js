@@ -1,4 +1,4 @@
-// components/HSBCProceduresHub.js - Fixed with Simple SharePoint API
+// components/HSBCProceduresHub.js - Fixed with Your Exact SharePoint Fields
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, AppBar, Toolbar, IconButton, Typography,
@@ -32,17 +32,16 @@ const HSBCProceduresHub = () => {
   
   const theme = useTheme();
 
-  // 🎯 **SIMPLIFIED: Basic SharePoint API Configuration - No Complex Expansions**
+  // 🎯 **CORRECTED: SharePoint API Configuration Using Your Exact Fields**
   const getSharePointConfig = () => {
     return {
-      // ✅ FIXED: Simple API call with only basic fields, no expansions
+      // ✅ USING ONLY YOUR EXACT SHAREPOINT FIELDS
       proceduresUrl: 'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'Procedures\')/items?' +
         '$select=Id,Title,Created,Modified,AuthorId,EditorId,' +
-        'LOB,ProcedureSubsection,ExpiryDate,Status,RiskRating,PeriodicReview,QualityScore,SignOffDate,' +
-        'DocumentLink,SharePointURL,OriginalFilename,FileSize,SharePointUploaded,' +
-        'PrimaryOwner,PrimaryOwnerEmail,SecondaryOwner,SecondaryOwnerEmail,' +
-        'PrimaryOwnerManual,SecondaryOwnerManual,PrimaryOwnerEmailManual,SecondaryOwnerEmailManual,' +
-        'AnalysisDetails,AIRecommendations,MissingElements,ExtractedOwners,DocumentOwners&' +
+        'ExpiryDate,PrimaryOwner,PrimaryOwnerEmail,SecondaryOwner,SecondaryOwnerEmail,' +
+        'LOB,ProcedureSubsection,QualityScore,OriginalFilename,FileSize,' +
+        'UploadedBy,UploadedAt,Status,AnalysisDetails,AIRecommendations,' +
+        'RiskRating,PeriodicReview,DocumentOwners,FoundElements,DocumentLink,SignOffDate&' +
         '$orderby=Modified%20desc&' +
         '$top=1000',
       
@@ -74,19 +73,19 @@ const HSBCProceduresHub = () => {
     }
   }, [user, isAuthenticated]);
 
-  // 🎯 **SIMPLIFIED: Load Data with Basic Field Mapping Only**
+  // 🎯 **CORRECTED: Load Data with Your Exact SharePoint Field Mapping**
   const loadInitialData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🚀 Loading simplified data from SharePoint...');
+      console.log('🚀 Loading data from SharePoint with correct fields...');
       const config = getSharePointConfig();
       
-      // 📋 **Load Basic Procedures from SharePoint List**
+      // 📋 **Load Procedures from SharePoint List with Correct Fields**
       try {
-        console.log('📋 Fetching basic procedures from SharePoint...');
-        console.log('Simple API URL:', config.proceduresUrl);
+        console.log('📋 Fetching procedures from SharePoint...');
+        console.log('Correct API URL:', config.proceduresUrl);
         
         const procResponse = await fetch(config.proceduresUrl, {
           method: 'GET',
@@ -98,9 +97,9 @@ const HSBCProceduresHub = () => {
 
         if (procResponse.ok) {
           const procData = await procResponse.json();
-          console.log('📋 Raw basic SharePoint data:', procData);
+          console.log('📋 Raw SharePoint data with correct fields:', procData);
           
-          // 🎯 **SIMPLIFIED FIELD MAPPING - Only Basic Fields**
+          // 🎯 **CORRECTED FIELD MAPPING - Using Your Exact SharePoint Fields**
           const mappedProcedures = procData.d.results.map(item => ({
             // Basic Procedure Information
             id: item.Id,
@@ -109,62 +108,63 @@ const HSBCProceduresHub = () => {
             procedure_subsection: item.ProcedureSubsection || '',
             status: item.Status || 'Active',
             
-            // 📅 **DATES - Basic Date Info**
-            uploaded_on: item.Created || new Date().toISOString(),
-            last_modified_on: item.Modified || item.Created || new Date().toISOString(),
+            // 📅 **DATES - Using Your Exact Date Fields**
+            uploaded_on: item.UploadedAt || item.Created || new Date().toISOString(),
+            last_modified_on: item.Modified || new Date().toISOString(),
             expiry: item.ExpiryDate || new Date().toISOString(),
             sign_off_date: item.SignOffDate || null,
             
-            // 👥 **PROCEDURE OWNERS - Manual and Basic Fields**
-            // Prefer manual entries first, then fall back to basic SharePoint fields
-            primary_owner: item.PrimaryOwnerManual || item.PrimaryOwner || 'Unknown',
-            primary_owner_email: item.PrimaryOwnerEmailManual || item.PrimaryOwnerEmail || '',
-            secondary_owner: item.SecondaryOwnerManual || item.SecondaryOwner || '',
-            secondary_owner_email: item.SecondaryOwnerEmailManual || item.SecondaryOwnerEmail || '',
+            // 👥 **PROCEDURE OWNERS - Using Your Exact Owner Fields**
+            primary_owner: item.PrimaryOwner || 'Unknown',
+            primary_owner_email: item.PrimaryOwnerEmail || '',
+            secondary_owner: item.SecondaryOwner || '',
+            secondary_owner_email: item.SecondaryOwnerEmail || '',
             
-            // 👤 **SYSTEM FIELDS - Using IDs only**
+            // 👤 **UPLOADED BY - Using Your UploadedBy Field**
+            uploaded_by: item.UploadedBy || 'Unknown',
+            uploaded_by_email: '', // Can be enhanced later
+            
+            // 🔄 **SYSTEM FIELDS**
             author_id: item.AuthorId || null,
             editor_id: item.EditorId || null,
-            uploaded_by: 'SharePoint User', // Will be enhanced later
-            last_modified_by: 'SharePoint User', // Will be enhanced later
+            last_modified_by: 'SharePoint User', // Can be enhanced later
             
-            // 🔗 **DOCUMENT URLs AND LINKS**
+            // 🔗 **DOCUMENT LINK - Using Your DocumentLink Field**
             document_link: item.DocumentLink || '',
-            sharepoint_url: item.SharePointURL || '',
-            procedure_url: item.SharePointURL || item.DocumentLink || '',
+            sharepoint_url: item.DocumentLink || '', // Same as document link
+            procedure_url: item.DocumentLink || '',   // Same as document link
             original_filename: item.OriginalFilename || '',
             file_size: item.FileSize || 0,
             
-            // ⚠️ **RISK RATING**
+            // ⚠️ **RISK RATING - Using Your RiskRating Field**
             risk_rating: item.RiskRating || 'Medium',
             
-            // 📊 **PERIODIC REVIEW**  
+            // 📊 **PERIODIC REVIEW - Using Your PeriodicReview Field**  
             periodic_review: item.PeriodicReview || 'Annual',
             
-            // ⭐ **DOCUMENT QUALITY SCORE**
+            // ⭐ **DOCUMENT QUALITY SCORE - Using Your QualityScore Field**
             score: item.QualityScore || 0,
             
-            // 🔍 **AI ANALYSIS DATA - Raw JSON strings**
+            // 🔍 **AI ANALYSIS DATA - Using Your Exact Analysis Fields**
             analysis_details: item.AnalysisDetails,
             ai_recommendations: item.AIRecommendations,
-            missing_elements: item.MissingElements,
-            extracted_owners: item.ExtractedOwners,
+            found_elements: item.FoundElements, // Using your FoundElements field
             document_owners: item.DocumentOwners,
             
             // 🔧 **TECHNICAL FIELDS**
-            sharepoint_uploaded: item.SharePointUploaded || true,
+            sharepoint_uploaded: true, // Since it's in SharePoint
             sharepoint_id: item.Id,
             
             // 📱 **UI HELPER FIELDS**
-            file_link: item.DocumentLink || item.SharePointURL || '',
-            owner_display: item.PrimaryOwnerManual || item.PrimaryOwner || 'Unknown'
+            file_link: item.DocumentLink || '',
+            owner_display: item.PrimaryOwner || 'Unknown'
           }));
           
           setProcedures(mappedProcedures);
           setSharePointAvailable(true);
           
-          console.log('✅ Basic procedures loaded from SharePoint:', mappedProcedures.length);
-          console.log('📊 Sample basic procedure data:', mappedProcedures[0]);
+          console.log('✅ Procedures loaded from SharePoint with correct fields:', mappedProcedures.length);
+          console.log('📊 Sample procedure data:', mappedProcedures[0]);
           
           // Load notifications after procedures are loaded
           setTimeout(() => loadNotifications(mappedProcedures), 500);
@@ -366,9 +366,9 @@ const HSBCProceduresHub = () => {
     }
   };
 
-  // 📝 **Load Mock Data for Demo**
+  // 📝 **Load Mock Data for Demo - Updated with Correct Fields**
   const loadMockData = () => {
-    console.log('📝 Loading basic mock data for demonstration...');
+    console.log('📝 Loading mock data matching SharePoint fields...');
     
     const mockProcedures = [
       {
@@ -377,6 +377,9 @@ const HSBCProceduresHub = () => {
         lob: "IWPB",
         primary_owner: "John Smith",
         primary_owner_email: "john.smith@hsbc.com",
+        secondary_owner: "Sarah Johnson",
+        secondary_owner_email: "sarah.johnson@hsbc.com",
+        uploaded_by: "Michael Chen",
         uploaded_on: "2024-05-15T10:30:00Z",
         last_modified_on: "2024-06-10T14:20:00Z",
         expiry: "2024-07-15", // Expiring soon
@@ -385,7 +388,7 @@ const HSBCProceduresHub = () => {
         periodic_review: "Annual",
         sign_off_date: "2024-05-20T09:00:00Z",
         document_link: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf",
-        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures",
+        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf",
         procedure_url: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf",
         original_filename: "HSBC_Risk_Assessment_Framework_v2.1.pdf",
         file_size: 2450000,
@@ -398,6 +401,7 @@ const HSBCProceduresHub = () => {
         lob: "CIB",
         primary_owner: "Sarah Johnson",
         primary_owner_email: "sarah.johnson@hsbc.com",
+        uploaded_by: "David Park",
         uploaded_on: "2024-04-20T16:45:00Z",
         expiry: "2024-05-20", // Expired
         score: 45, // Low quality
@@ -405,6 +409,8 @@ const HSBCProceduresHub = () => {
         periodic_review: "Semi-Annual",
         sign_off_date: "2024-04-25T11:30:00Z",
         document_link: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf",
+        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf",
+        procedure_url: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf",
         original_filename: "Trading_Compliance_Guidelines_v1.3.pdf",
         file_size: 1800000,
         status: "Active",
@@ -416,6 +422,7 @@ const HSBCProceduresHub = () => {
         lob: "GCOO",
         primary_owner: "Mike Chen",
         primary_owner_email: "mike.chen@hsbc.com",
+        uploaded_by: "Lisa Wang",
         uploaded_on: "2024-03-10T09:15:00Z",
         expiry: "2025-03-15",
         score: 88,
@@ -423,6 +430,8 @@ const HSBCProceduresHub = () => {
         periodic_review: "Annual",
         sign_off_date: "2024-03-15T14:00:00Z",
         document_link: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf",
+        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf",
+        procedure_url: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf",
         original_filename: "Client_Onboarding_Process_v3.0.pdf",
         file_size: 3200000,
         status: "Active",
@@ -503,7 +512,7 @@ const HSBCProceduresHub = () => {
         }}>
           <Toolbar>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-              {/* 🎯 **HBEG Branding** */}
+              {/* HBEG Branding */}
               <Box sx={{
                 width: 60, height: 30,
                 background: 'linear-gradient(135deg, #d40000, #b30000)',
@@ -521,7 +530,7 @@ const HSBCProceduresHub = () => {
                 Procedures Hub
               </Typography>
               <Chip 
-                label="Loading Basic SharePoint Data..."
+                label="Loading SharePoint Data..."
                 size="small"
                 color="info"
                 sx={{ ml: 2, fontSize: '0.7rem', height: 24 }}
@@ -549,7 +558,7 @@ const HSBCProceduresHub = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f6fa' }}>
-      {/* 🎯 **Professional App Bar with HBEG Branding** */}
+      {/* Professional App Bar with HBEG Branding */}
       <AppBar position="fixed" sx={{ 
         zIndex: theme.zIndex.drawer + 1,
         background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)'
@@ -565,7 +574,7 @@ const HSBCProceduresHub = () => {
           </IconButton>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-            {/* 🎯 **HBEG Branding** */}
+            {/* HBEG Branding */}
             <Box sx={{
               width: 60, height: 30,
               background: 'linear-gradient(135deg, #d40000, #b30000)',
@@ -583,7 +592,7 @@ const HSBCProceduresHub = () => {
               Procedures Hub
             </Typography>
             
-            {/* Simple SharePoint Status Indicator */}
+            {/* SharePoint Status Indicator */}
             <Chip 
               icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
               label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
@@ -609,7 +618,7 @@ const HSBCProceduresHub = () => {
 
           {user && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              {/* 🔔 **Notifications Bell** */}
+              {/* Notifications Bell */}
               <IconButton
                 color="inherit"
                 onClick={handleNotificationClick}
@@ -648,7 +657,7 @@ const HSBCProceduresHub = () => {
         </Toolbar>
       </AppBar>
 
-      {/* 🔔 **Notifications Menu** */}
+      {/* Notifications Menu */}
       <Menu
         anchorEl={notificationAnchor}
         open={Boolean(notificationAnchor)}
@@ -749,24 +758,27 @@ const HSBCProceduresHub = () => {
 
       {/* Main Content */}
       <Box component="main" sx={{ 
-        flexGrow: 1, 
-        pt: 8, 
-        minHeight: '100vh'
-      }}>
-        <Container maxWidth="xl" sx={{ py: 3 }}>
-          {/* Basic SharePoint Status Alert */}
-          {!sharePointAvailable && (
-            <Alert 
-              severity="info" 
-              sx={{ mb: 3 }}
-              onClose={() => {}}
-            >
-              <Typography variant="body2">
-                <strong>Demo Mode:</strong> SharePoint connection not available. 
-               Displaying sample data for demonstration purposes.
+       flexGrow: 1, 
+       pt: 8, 
+       minHeight: '100vh'
+     }}>
+       <Container maxWidth="xl" sx={{ py: 3 }}>
+         {/* SharePoint Status Alert */}
+         {!sharePointAvailable && (
+           <Alert 
+             severity="info" 
+             sx={{ mb: 3 }}
+             onClose={() => {}}
+           >
+             <Typography variant="body2">
+               <strong>Demo Mode:</strong> SharePoint connection not available. 
+               Displaying sample data matching your SharePoint list structure.
              </Typography>
              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-               API URL: https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Procedures')/items
+               Your SharePoint fields: {[
+                 'Title', 'ExpiryDate', 'PrimaryOwner', 'PrimaryOwnerEmail', 
+                 'LOB', 'QualityScore', 'RiskRating', 'DocumentLink'
+               ].join(', ')}
              </Typography>
            </Alert>
          )}
@@ -779,10 +791,10 @@ const HSBCProceduresHub = () => {
              onClose={() => {}}
            >
              <Typography variant="body2">
-               <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures with basic field data.
+               <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures using your exact SharePoint list fields.
              </Typography>
              <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-               Using simplified API without complex field expansions for better reliability.
+               Mapped fields: Title, ExpiryDate, PrimaryOwner, LOB, QualityScore, RiskRating, DocumentLink, and more.
              </Typography>
            </Alert>
          )}
