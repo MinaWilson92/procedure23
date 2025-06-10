@@ -24,6 +24,8 @@ import {
 import { motion } from 'framer-motion';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
+import EmailManagement from '../components/EmailManagement';
+
 
 const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const { navigate } = useNavigation();
@@ -2050,87 +2052,12 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
          </Box>
        )}
 
-       {/* Tab 3: ✅ ENHANCED: Email Management with SharePoint API */}
-       {activeTab === 3 && (
-         <Box sx={{ p: 3 }}>
-           <Typography variant="h6" gutterBottom>
-             📧 Email Management (SharePoint API)
-           </Typography>
-           
-           <Alert severity="info" sx={{ mb: 3 }}>
-             <Typography variant="body2">
-               <strong>SharePoint Email Service:</strong> Send emails via SharePoint REST API to authenticated users.
-               Recipients must be valid SharePoint users in the same domain.
-             </Typography>
-           </Alert>
-
-           <Grid container spacing={3}>
-             <Grid item xs={12} md={6}>
-               <Card variant="outlined">
-                 <CardContent>
-                   <Typography variant="h6" gutterBottom>
-                     📤 Send Email
-                   </Typography>
-                   <Button
-                     variant="contained"
-                     startIcon={<Send />}
-                     onClick={() => setEmailDialogOpen(true)}
-                     fullWidth
-                     sx={{ mb: 2 }}
-                   >
-                     Compose Email
-                   </Button>
-                   
-                   <Typography variant="body2" color="text.secondary">
-                     Send notifications to procedure owners, admins, or other stakeholders
-                     using SharePoint's built-in email service.
-                   </Typography>
-                 </CardContent>
-               </Card>
-             </Grid>
-
-             <Grid item xs={12} md={6}>
-               <Card variant="outlined">
-                 <CardContent>
-                   <Typography variant="h6" gutterBottom>
-                     📋 Email Templates
-                   </Typography>
-                   
-                   <List>
-                     <ListItem>
-                       <ListItemIcon>
-                         <Warning color="warning" />
-                       </ListItemIcon>
-                       <ListItemText 
-                         primary="Procedure Expiry Reminder"
-                         secondary="Notify owners of expiring procedures"
-                       />
-                     </ListItem>
-                     <ListItem>
-                       <ListItemIcon>
-                         <CheckCircle color="success" />
-                       </ListItemIcon>
-                       <ListItemText 
-                         primary="Access Granted Notification"
-                         secondary="Welcome new users to the system"
-                       />
-                     </ListItem>
-                     <ListItem>
-                       <ListItemIcon>
-                         <Assessment color="info" />
-                       </ListItemIcon>
-                       <ListItemText 
-                         primary="Quality Score Alert"
-                         secondary="Alert on low quality procedures"
-                       />
-                     </ListItem>
-                   </List>
-                 </CardContent>
-               </Card>
-             </Grid>
-           </Grid>
-         </Box>
-       )}
+              {/* Tab 3: ✅ RESTORED: Your Original EmailManagement Component */}
+        {activeTab === 3 && (
+          <Box sx={{ p: 0 }}>  {/* Remove padding since EmailManagement has its own */}
+            <EmailManagement />
+          </Box>
+        )}
 
        {/* Tab 4: ✅ REVERTED: Audit & Logs (Your original working code) */}
        {activeTab === 4 && (
