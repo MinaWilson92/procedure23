@@ -19,11 +19,14 @@ import { motion } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useSharePoint } from '../SharePointContext';
 import DocumentAnalyzer from '../services/DocumentAnalyzer';
+import EmailNotificationService from '../services/EmailNotificationService';
+
 
 const AdminPanelPage = ({ onDataRefresh }) => {
   const { navigate } = useNavigation();
   const { user, isAdmin } = useSharePoint();
   const [documentAnalyzer] = useState(() => new DocumentAnalyzer());
+  const [emailNotificationService] = useState(() => new EmailNotificationService());
   
   // Form state
   const [formData, setFormData] = useState({
@@ -77,6 +80,60 @@ const AdminPanelPage = ({ onDataRefresh }) => {
       details,
       severity: 'error'
     });
+  };
+
+  // ✅ ENHANCED: Your existing procedure upload handler
+  const handleProcedureUpload = async (procedureData, analysisResult, fileUploadResult) => {
+    try {
+      setLoading(true);
+      
+      // 1. Your existing SharePoint procedure creation code
+      const createResult = await sharePointService.createProcedure(
+        procedureData, 
+        analysisResult, 
+        fileUploadResult
+      );
+      
+      if (createResult.success) {
+        console.log('✅ Procedure created successfully in SharePoint');
+        
+        // 2. ✅ NEW: Trigger email notification after successful upload
+        try {
+          await emailNotificationService.triggerProcedureUploadNotification(
+            procedureData, 
+            analysisResult
+          );
+          
+          setNotification({ 
+            type: 'success', 
+            message: `✅ Procedure "${procedureData.name}" uploaded successfully - Notification emails sent to configured recipients` 
+          });
+          
+        } catch (emailError) {
+          console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
+          setNotification({ 
+            type: 'warning', 
+            message: `✅ Procedure uploaded successfully, but email notification failed: ${emailError.message}` 
+          });
+        }
+        
+        // 3. Your existing success handling
+        onDataRefresh(); // Refresh the procedures list
+        resetForm(); // Reset the upload form
+        
+      } else {
+        throw new Error(createResult.message || 'Failed to create procedure');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error uploading procedure:', error);
+      setNotification({ 
+        type: 'error', 
+        message: 'Failed to upload procedure: ' + error.message 
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ✅ NEW: Show Success Dialog - Prominent success notification
@@ -1085,27 +1142,27 @@ const AdminPanelPage = ({ onDataRefresh }) => {
                     </CardContent>
                   </Card>
 
-                  {/* Upload Button */}
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleReset}
-                      startIcon={<Refresh />}
-                      disabled={loading}
-                    >
-                      Reset Form
-                    </Button>
-                    <Button
-                      variant="contained"
-                      onClick={handleUploadToSharePoint}
-                      disabled={loading || !documentAnalysis.accepted}
-                      startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                      size="large"
-                      sx={{ minWidth: 200 }}
-                    >
-                      {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
-                    </Button>
-                  </Box>
+           {/* Upload Button */}
+<Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+  <Button
+    variant="outlined"
+    onClick={handleReset}
+    startIcon={<Refresh />}
+    disabled={loading}
+  >
+    Reset Form
+  </Button>
+  <Button
+    variant="contained"
+    onClick={handleUploadToSharePoint}
+    disabled={loading || !documentAnalysis.accepted}
+    startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+    size="large"
+    sx={{ minWidth: 200 }}
+  >
+    {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
+  </Button>
+</Box>
 
                   {!documentAnalysis.accepted && (
                     <Alert severity="warning" sx={{ mt: 2 }}>
