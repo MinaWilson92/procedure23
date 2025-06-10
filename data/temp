@@ -44,5 +44,607 @@ DocumentLink: sharePointPath ? `${sharePointPaths.baseSite}/${sharePointPath}/${
     templateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown'
   }),
   AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations && analysisResult.aiRecommendations.slice(0, 3)) || []),
-  DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || [])
-};
+  DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.Perfect! I’ll make sure the notification system is **highly configurable** with tailored CC/BCC lists for each email type and proper recipient targeting. Let me continue with the enhanced phases:
+
+## 📧 **Phase 3: Enhanced Admin Dashboard with Email Management**
+
+### **Advanced Email Configuration Service**
+
+```javascript
+// services/EmailConfigurationService.js
+class EmailConfigurationService {
+  constructor(baseUrl) {
+    this.baseUrl = baseUrl;
+  }
+
+  // Get email configuration for specific notification type
+  async getEmailConfig(notificationType) {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items?$filter=NotificationType eq '${notificationType}'&$top=1`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.d.results.length > 0) {
+          const config = data.d.results[0];
+          return {
+            notificationType: config.NotificationType,
+            enabled: config.Enabled,
+            ccList: this.parseEmailList(config.CCList),
+            bccList: this.parseEmailList(config.BCCList),
+            lobSpecificCC: JSON.parse(config.LOBSpecificCC || '{}'),
+            lobSpecificBCC: JSON.parse(config.LOBSpecificBCC || '{}'),
+            template: config.Template,
+            priority: config.Priority || 'Normal',
+            sendToOwners: config.SendToOwners !== false, // Default true
+            sendToSecondaryOwners: config.SendToSecondaryOwners !== false, // Default true
+            additionalRecipients: this.parseEmailList(config.AdditionalRecipients),
+            lastUpdated: config.Modified,
+            updatedBy: config.Editor?.Title
+          };
+        }
+      }
+    } catch (error) {
+      console.warn(`Could not load config for ${notificationType}, using defaults`);
+    }
+
+    return this.getDefaultConfig(notificationType);
+  }
+
+  getDefaultConfig(notificationType) {
+    const defaultConfigs = {
+      'procedure-uploaded': {
+        notificationType: 'procedure-uploaded',
+        enabled: true,
+        ccList: ['procedures-admin@hsbc.com'],
+        bccList: [],
+        lobSpecificCC: {
+          'IWPB': ['iwpb-procedures@hsbc.com'],
+          'CIB': ['cib-procedures@hsbc.com'], 
+          'GCOO': ['gcoo-procedures@hsbc.com'],
+          'GRM': ['grm-procedures@hsbc.com'],
+          'GF': ['gf-procedures@hsbc.com'],
+          'GTRB': ['gtrb-procedures@hsbc.com']
+        },
+        lobSpecificBCC: {},
+        sendToOwners: true,
+        sendToSecondaryOwners: true,
+        additionalRecipients: [],
+        priority: 'Normal'
+      },
+      'procedure-deleted': {
+        notificationType: 'procedure-deleted',
+        enabled: true,
+        ccList: ['procedures-admin@hsbc.com', 'audit@hsbc.com'],
+        bccList: ['compliance@hsbc.com'],
+        lobSpecificCC: {
+          'IWPB': ['iwpb-procedures@hsbc.com'],
+          'CIB': ['cib-procedures@hsbc.com'],
+          'GCOO': ['gcoo-procedures@hsbc.com']
+        },
+        lobSpecificBCC: {},
+        sendToOwners: true,
+        sendToSecondaryOwners: false, // Different for deletions
+        additionalRecipients: [],
+        priority: 'High'
+      },
+      'expiry-30-days': {
+        notificationType: 'expiry-30-days',
+        enabled: true,
+        ccList: ['procedures-admin@hsbc.com'],
+        bccList: [],
+        lobSpecificCC: {
+          'IWPB': ['iwpb-manager@hsbc.com'],
+          'CIB': ['cib-manager@hsbc.com'],
+          'GCOO': ['gcoo-manager@hsbc.com']
+        },
+        lobSpecificBCC: {},
+        sendToOwners: true,
+        sendToSecondaryOwners: true,
+        additionalRecipients: [],
+        priority: 'Normal'
+      },
+      'expiry-10-days': {
+        notificationType: 'expiry-10-days',
+        enabled: true,
+        ccList: ['procedures-admin@hsbc.com'],
+        bccList: [],
+        lobSpecificCC: {
+          'IWPB': ['iwpb-manager@hsbc.com'],
+          'CIB': ['cib-manager@hsbc.com'],
+          'GCOO': ['gcoo-manager@hsbc.com']
+        },
+        lobSpecificBCC: {},
+        sendToOwners: true,
+        sendToSecondaryOwners: true,
+        additionalRecipients: [],
+        priority: 'High'
+      },
+      'expiry-urgent': {
+        notificationType: 'expiry-urgent',
+        enabled: true,
+        ccList: ['procedures-admin@hsbc.com', 'compliance@hsbc.com'],
+        bccList: ['audit@hsbc.com'],
+        lobSpecificCC: {
+          'IWPB': ['iwpb-manager@hsbc.com', 'iwpb-director@hsbc.com'],
+          'CIB': ['cib-manager@hsbc.com', 'cib-director@hsbc.com'],
+          'GCOO': ['gcoo-manager@hsbc.com', 'gcoo-director@hsbc.com']
+        },
+        lobSpecificBCC: {
+          'IWPB': ['iwpb-audit@hsbc.com'],
+          'CIB': ['cib-audit@hsbc.com'],
+          'GCOO': ['gcoo-audit@hsbc.com']
+        },
+        sendToOwners: true,
+        sendToSecondaryOwners: true,
+        additionalRecipients: [],
+        priority: 'High'
+      }
+    };
+
+    return defaultConfigs[notificationType] || defaultConfigs['procedure-uploaded'];
+  }
+
+  parseEmailList(emailString) {
+    if (!emailString) return [];
+    return emailString.split(',').map(email => email.trim()).filter(email => email);
+  }
+
+  // Save email configuration
+  async saveEmailConfig(config) {
+    try {
+      const digestResponse = await fetch(`${this.baseUrl}/_api/contextinfo`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json; odata=verbose' }
+      });
+      
+      const digestData = await digestResponse.json();
+      const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+
+      const configData = {
+        __metadata: { type: 'SP.Data.EmailConfigurationsListItem' },
+        Title: config.notificationType,
+        NotificationType: config.notificationType,
+        Enabled: config.enabled,
+        CCList: config.ccList.join(', '),
+        BCCList: config.bccList.join(', '),
+        LOBSpecificCC: JSON.stringify(config.lobSpecificCC),
+        LOBSpecificBCC: JSON.stringify(config.lobSpecificBCC),
+        SendToOwners: config.sendToOwners,
+        SendToSecondaryOwners: config.sendToSecondaryOwners,
+        AdditionalRecipients: config.additionalRecipients.join(', '),
+        Priority: config.priority,
+        Template: config.template
+      };
+
+      // Check if config exists
+      const existingResponse = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items?$filter=NotificationType eq '${config.notificationType}'&$select=Id`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        }
+      );
+
+      let response;
+      if (existingResponse.ok) {
+        const existingData = await existingResponse.json();
+        if (existingData.d.results.length > 0) {
+          // Update existing
+          const itemId = existingData.d.results[0].Id;
+          response = await fetch(
+            `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items(${itemId})`,
+            {
+              method: 'MERGE',
+              headers: {
+                'Accept': 'application/json; odata=verbose',
+                'Content-Type': 'application/json; odata=verbose',
+                'X-RequestDigest': requestDigest,
+                'IF-MATCH': '*'
+              },
+              body: JSON.stringify(configData)
+            }
+          );
+        }
+      }
+      
+      if (!response) {
+        // Create new
+        response = await fetch(
+          `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json; odata=verbose',
+              'Content-Type': 'application/json; odata=verbose',
+              'X-RequestDigest': requestDigest
+            },
+            body: JSON.stringify(configData)
+          }
+        );
+      }
+
+      return response.ok;
+
+    } catch (error) {
+      console.error('Error saving email configuration:', error);
+      return false;
+    }
+  }
+}
+
+export default EmailConfigurationService;
+```
+
+### **Enhanced Email Notification Service (Updated)**
+
+```javascript
+// services/EmailNotificationService.js - Enhanced Version
+class EmailNotificationService {
+  constructor() {
+    this.baseUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+    this.requestDigest = null;
+    this.isInitialized = false;
+    this.configService = new EmailConfigurationService(this.baseUrl);
+  }
+
+  // Enhanced procedure upload notification with configurable recipients
+  async sendProcedureUploadedNotification(procedure, uploadedBy = null) {
+    try {
+      console.log(`📧 Sending upload notification for procedure: ${procedure.name}`);
+      
+      // Get email configuration for this notification type
+      const config = await this.configService.getEmailConfig('procedure-uploaded');
+      
+      if (!config.enabled) {
+        console.log('📧 Procedure upload notifications are disabled');
+        return { success: true, message: 'Notifications disabled' };
+      }
+
+      // Build recipient list based on configuration
+      const recipients = this.buildRecipientList(procedure, config);
+      const ccList = this.buildCCList(procedure, config);
+      const bccList = this.buildBCCList(procedure, config);
+
+      console.log(`📧 Recipients: ${recipients.join(', ')}`);
+      console.log(`📧 CC: ${ccList.join(', ')}`);
+      console.log(`📧 BCC: ${bccList.join(', ')}`);
+
+      // Get template and populate
+      const template = await this.getTemplate('procedure-uploaded', config.template);
+      const emailBody = this.populateTemplate(template, {
+        procedureName: procedure.name,
+        procedureId: procedure.id,
+        uploadedBy: uploadedBy || procedure.uploaded_by || 'System',
+        lob: procedure.lob,
+        qualityScore: procedure.score || 'Not assessed',
+        uploadDate: new Date().toLocaleDateString(),
+        procedureUrl: `${this.baseUrl}/Lists/Procedures/DispForm.aspx?ID=${procedure.id}`,
+        primaryOwner: procedure.primary_owner,
+        secondaryOwner: procedure.secondary_owner || 'Not assigned'
+      });
+
+      // Send email
+      const result = await this.sendEmail({
+        to: recipients,
+        cc: ccList,
+        bcc: bccList,
+        subject: `📄 New Procedure Uploaded: ${procedure.name}`,
+        body: emailBody,
+        priority: config.priority
+      });
+
+      // Log the notification
+      await this.logNotification({
+        type: 'procedure-uploaded',
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        recipients: recipients,
+        ccList: ccList,
+        bccList: bccList,
+        success: result.success
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error sending procedure upload notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Enhanced procedure deletion notification
+  async sendProcedureDeletedNotification(procedure, deletedBy = null) {
+    try {
+      console.log(`📧 Sending deletion notification for procedure: ${procedure.name}`);
+      
+      const config = await this.configService.getEmailConfig('procedure-deleted');
+      
+      if (!config.enabled) {
+        console.log('📧 Procedure deletion notifications are disabled');
+        return { success: true, message: 'Notifications disabled' };
+      }
+
+      const recipients = this.buildRecipientList(procedure, config);
+      const ccList = this.buildCCList(procedure, config);
+      const bccList = this.buildBCCList(procedure, config);
+
+      const template = await this.getTemplate('procedure-deleted', config.template);
+      const emailBody = this.populateTemplate(template, {
+        procedureName: procedure.name,
+        procedureId: procedure.id,
+        deletedBy: deletedBy || 'System Administrator',
+        lob: procedure.lob,
+        deleteDate: new Date().toLocaleDateString(),
+        deleteTime: new Date().toLocaleTimeString(),
+        primaryOwner: procedure.primary_owner,
+        secondaryOwner: procedure.secondary_owner || 'Not assigned',
+        reason: 'Administrative action'
+      });
+
+      const result = await this.sendEmail({
+        to: recipients,
+        cc: ccList,
+        bcc: bccList,
+        subject: `🗑️ Procedure Deleted: ${procedure.name}`,
+        body: emailBody,
+        priority: config.priority
+      });
+
+      await this.logNotification({
+        type: 'procedure-deleted',
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        recipients: recipients,
+        ccList: ccList,
+        bccList: bccList,
+        success: result.success
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error sending procedure deletion notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Enhanced expiry warning with different configs per timeframe
+  async sendExpiryWarningNotification(procedure, daysUntilExpiry) {
+    try {
+      // Determine notification type based on days until expiry
+      let notificationType;
+      if (daysUntilExpiry >= 30) {
+        notificationType = 'expiry-30-days';
+      } else if (daysUntilExpiry >= 10) {
+        notificationType = 'expiry-10-days';
+      } else {
+        notificationType = 'expiry-urgent';
+      }
+
+      console.log(`📧 Sending ${notificationType} notification for procedure: ${procedure.name}`);
+      
+      const config = await this.configService.getEmailConfig(notificationType);
+      
+      if (!config.enabled) {
+        console.log(`📧 ${notificationType} notifications are disabled`);
+        return { success: true, message: 'Notifications disabled' };
+      }
+
+      const recipients = this.buildRecipientList(procedure, config);
+      const ccList = this.buildCCList(procedure, config);
+      const bccList = this.buildBCCList(procedure, config);
+
+      const urgencyLevel = this.getUrgencyLevel(daysUntilExpiry);
+      const template = await this.getTemplate(`expiry-warning-${urgencyLevel}`, config.template);
+      
+      const emailBody = this.populateTemplate(template, {
+        procedureName: procedure.name,
+        procedureId: procedure.id,
+        daysUntilExpiry: daysUntilExpiry,
+        expiryDate: new Date(procedure.expiry).toLocaleDateString(),
+        primaryOwner: procedure.primary_owner,
+        secondaryOwner: procedure.secondary_owner || 'Not assigned',
+        lob: procedure.lob,
+        urgencyLevel: urgencyLevel,
+        procedureUrl: `${this.baseUrl}/Lists/Procedures/DispForm.aspx?ID=${procedure.id}`,
+        actionRequired: daysUntilExpiry <= 5 ? 'IMMEDIATE ACTION REQUIRED' : 'Please review and update',
+        priorityLevel: config.priority
+      });
+
+      const subjectPrefix = daysUntilExpiry <= 0 ? '🚨 EXPIRED' : 
+                           daysUntilExpiry <= 5 ? '⚠️ URGENT' : '📅';
+
+      const result = await this.sendEmail({
+        to: recipients,
+        cc: ccList,
+        bcc: bccList,
+        subject: `${subjectPrefix} Procedure Expiry: ${procedure.name} (${daysUntilExpiry} days)`,
+        body: emailBody,
+        priority: config.priority
+      });
+
+      await this.logNotification({
+        type: notificationType,
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        daysUntilExpiry: daysUntilExpiry,
+        recipients: recipients,
+        ccList: ccList,
+        bccList: bccList,
+        success: result.success
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error sending expiry warning notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Build recipient list based on configuration
+  buildRecipientList(procedure, config) {
+    const recipients = [];
+
+    // Add primary owner if configured
+    if (config.sendToOwners && procedure.primary_owner_email) {
+      recipients.push(procedure.primary_owner_email);
+    }
+
+    // Add secondary owner if configured
+    if (config.sendToSecondaryOwners && procedure.secondary_owner_email) {
+      recipients.push(procedure.secondary_owner_email);
+    }
+
+    // Add additional recipients from config
+    if (config.additionalRecipients) {
+      recipients.push(...config.additionalRecipients);
+    }
+
+    return [...new Set(recipients)]; // Remove duplicates
+  }
+
+  // Build CC list with LOB-specific CCs
+  buildCCList(procedure, config) {
+    const ccList = [];
+
+    // Add global CC list
+    if (config.ccList) {
+      ccList.push(...config.ccList);
+    }
+
+    // Add LOB-specific CC list
+    if (config.lobSpecificCC && config.lobSpecificCC[procedure.lob]) {
+      ccList.push(...config.lobSpecificCC[procedure.lob]);
+    }
+
+    return [...new Set(ccList)]; // Remove duplicates
+  }
+
+  // Build BCC list with LOB-specific BCCs
+  buildBCCList(procedure, config) {
+    const bccList = [];
+
+    // Add global BCC list
+    if (config.bccList) {
+      bccList.push(...config.bccList);
+    }
+
+    // Add LOB-specific BCC list
+    if (config.lobSpecificBCC && config.lobSpecificBCC[procedure.lob]) {
+      bccList.push(...config.lobSpecificBCC[procedure.lob]);
+    }
+
+    return [...new Set(bccList)]; // Remove duplicates
+  }
+
+  // Enhanced email sending with priority support
+  async sendEmail(emailOptions) {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    try {
+      const emailPayload = {
+        properties: {
+          __metadata: { type: 'SP.Utilities.EmailProperties' },
+          To: { results: emailOptions.to },
+          CC: emailOptions.cc && emailOptions.cc.length > 0 ? { results: emailOptions.cc } : { results: [] },
+          BCC: emailOptions.bcc && emailOptions.bcc.length > 0 ? { results: emailOptions.bcc } : { results: [] },
+          Subject: emailOptions.subject,
+          Body: emailOptions.body,
+          From: emailOptions.from || 'noreply@hsbc.com'
+        }
+      };
+
+      // Add priority if specified
+      if (emailOptions.priority && emailOptions.priority !== 'Normal') {
+        emailPayload.properties.Priority = emailOptions.priority;
+      }
+
+      const response = await fetch(`${this.baseUrl}/_api/SP.Utilities.Utility.SendEmail`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': this.requestDigest
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (response.ok) {
+        console.log('✅ Email sent successfully via SharePoint');
+        return { 
+          success: true, 
+          timestamp: new Date().toISOString(),
+          recipients: emailOptions.to.length,
+          cc: emailOptions.cc?.length || 0,
+          bcc: emailOptions.bcc?.length || 0
+        };
+      } else {
+        throw new Error(`Email send failed: ${response.status}`);
+      }
+
+    } catch (error) {
+      console.error('❌ Email send error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Log notification for audit trail
+  async logNotification(notificationData) {
+    try {
+      const logEntry = {
+        __metadata: { type: 'SP.Data.EmailNotificationLogListItem' },
+        Title: `${notificationData.type}: ${notificationData.procedureName}`,
+        NotificationType: notificationData.type,
+        ProcedureId: notificationData.procedureId,
+        ProcedureName: notificationData.procedureName,
+        Recipients: notificationData.recipients.join('; '),
+        CCList: notificationData.ccList.join('; '),
+        BCCList: notificationData.bccList.join('; '),
+        SentAt: new Date().toISOString(),
+        Success: notificationData.success,
+        DaysUntilExpiry: notificationData.daysUntilExpiry || null
+      };
+
+      await fetch(`${this.baseUrl}/_api/web/lists/getbytitle('EmailNotificationLog')/items`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': this.requestDigest
+        },
+        body: JSON.stringify(logEntry)
+      });
+
+    } catch (error) {
+      console.warn('Could not log notification:', error);
+    }
+  }
+
+  // Rest of the methods (initialize, getTemplate, populateTemplate, etc.) remain the same...
+}
+
+export default EmailNotificationService;
+```
+
+This enhanced system now provides:
+
+✅ **Configurable Recipients**: Primary + Secondary owners + Admin-defined lists  
+✅ **Tailored CC/BCC**: Different lists for each email type and LOB  
+✅ **Flexible Configuration**: Each notification type has its own settings  
+✅ **Audit Trail**: Complete logging of all sent notifications  
+✅ **Priority Support**: High/Normal priority emails
+
+Would you like me to continue with **Phase 4: The React Admin Interface** for managing all these email configurations? 🚀​​​​​​​​​​​​​​​​
+
+
+
+
+
+
