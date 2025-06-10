@@ -1,16 +1,17 @@
-// components/email/ConfigureRecipients.js - Complete Fixed Version
+// components/email/ConfigureRecipients.js - Enhanced LOB-Based Design
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid,
   TextField, IconButton, Alert, Chip, Paper, Divider,
   Switch, FormControlLabel, Dialog, DialogTitle, DialogContent,
   DialogActions, List, ListItem, ListItemText, ListItemSecondaryAction,
-  Checkbox, CircularProgress, FormControl, InputLabel, Select, MenuItem
+  Checkbox, CircularProgress, Accordion, AccordionSummary, AccordionDetails,
+  Tabs, Tab, Avatar
 } from '@mui/material';
 import {
-  Add, Delete, Email, Save, Refresh, PersonAdd,
-  Group, AdminPanelSettings, Business,
-  CheckCircle, Cancel, Send
+  Add, Delete, Email, Save, Refresh, PersonAdd, ExpandMore,
+  Group, AdminPanelSettings, Business, CheckCircle, Cancel, Send,
+  Notifications, Settings, Edit
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import EmailService from '../../services/EmailService';
@@ -18,47 +19,181 @@ import EmailService from '../../services/EmailService';
 const ConfigureRecipients = () => {
   // State management
   const [config, setConfig] = useState({
-    globalCCList: [],
-    adminList: [],
-    lobHeadsList: [],
-    customGroupsList: [],
-    testEmail: 'minaantoun@hsbc.com'
+    testEmail: 'minaantoun@hsbc.com',
+    lobConfigs: {
+      'IWPB': {
+        'new-procedure-uploaded': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'procedure-expiring': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'procedure-expired': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'low-quality-score': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        }
+      },
+      'CIB': {
+        'new-procedure-uploaded': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'procedure-expiring': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'procedure-expired': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'low-quality-score': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        }
+      },
+      'GCOO': {
+        'new-procedure-uploaded': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'procedure-expiring': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'procedure-expired': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        },
+        'low-quality-score': {
+          globalHeads: [],
+          admins: [],
+          procedureOwners: true
+        }
+      }
+    },
+    accessManagement: {
+      'user-access-granted': {
+        newUserNotification: true,
+        adminNotification: true,
+        customRecipients: []
+      },
+      'user-access-revoked': {
+        userNotification: true,
+        adminNotification: true,
+        customRecipients: []
+      },
+      'user-role-updated': {
+        userNotification: true,
+        adminNotification: true,
+        customRecipients: []
+      }
+    }
   });
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [message, setMessage] = useState(null);
+  const [activeTab, setActiveTab] = useState(0);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [dialogType, setDialogType] = useState('');
-  const [newEmail, setNewEmail] = useState({ 
-    email: '', 
-    name: '', 
-    lob: 'All', 
-    escalationType: 'new-procedure-uploaded',
-    recipientRole: 'General'
-  });
+  const [dialogConfig, setDialogConfig] = useState({ lob: '', template: '', type: '' });
+  const [newEmail, setNewEmail] = useState({ email: '', name: '' });
+  const [defaultAdmins, setDefaultAdmins] = useState([]);
   const [availableOwners, setAvailableOwners] = useState([]);
-  const [selectedOwners, setSelectedOwners] = useState([]);
   const [loadingOwners, setLoadingOwners] = useState(false);
 
-  // Your SharePoint list choices
-  const lobChoices = ['All', 'IWPB', 'CIB', 'GCOO'];
-  const escalationTypes = [
-    'new-procedure-uploaded',
-    'procedure-expiring', 
-    'procedure-expired',
-    'low-quality-score',
-    'system-maintenance',
-    'broadcast-announcement'
-  ];
-  const recipientRoles = ['General', 'Manager', 'Head', 'Director', 'VP'];
+  // LOB Configuration
+  const lobConfig = {
+    'IWPB': {
+      name: 'International Wealth and Premier Banking',
+      color: '#1976d2',
+      icon: '🏦'
+    },
+    'CIB': {
+      name: 'Commercial and Institutional Banking',
+      color: '#388e3c',
+      icon: '🏢'
+    },
+    'GCOO': {
+      name: 'Group Chief Operating Officer',
+      color: '#f57c00',
+      icon: '⚙️'
+    }
+  };
+
+  // Template Configuration
+  const templateConfig = {
+    'new-procedure-uploaded': {
+      name: 'New Procedure Updates',
+      description: 'Automatic email sent when a new procedure is uploaded',
+      icon: '📤',
+      color: 'primary'
+    },
+    'procedure-expiring': {
+      name: 'Procedure Expiring Soon',
+      description: 'Automatic email sent when procedures are expiring',
+      icon: '⏰',
+      color: 'warning'
+    },
+    'procedure-expired': {
+      name: 'Procedure Expired',
+      description: 'Automatic email sent when procedures have expired',
+      icon: '🚨',
+      color: 'error'
+    },
+    'low-quality-score': {
+      name: 'Low Quality Score Alert',
+      description: 'Automatic email sent for low quality procedures',
+      icon: '📊',
+      color: 'info'
+    }
+  };
+
+  // Access Management Configuration
+  const accessTemplateConfig = {
+    'user-access-granted': {
+      name: 'User Access Granted',
+      description: 'Email sent when new user access is granted',
+      icon: '✅',
+      color: 'success'
+    },
+    'user-access-revoked': {
+      name: 'User Access Revoked',
+      description: 'Email sent when user access is revoked',
+      icon: '❌',
+      color: 'error'
+    },
+    'user-role-updated': {
+      name: 'User Role Updated',
+      description: 'Email sent when user role is changed',
+      icon: '🔄',
+      color: 'info'
+    }
+  };
 
   // Initialize email service
   const [emailService] = useState(() => new EmailService());
 
   useEffect(() => {
     loadEmailConfig();
+    loadDefaultAdmins();
   }, []);
 
   const loadEmailConfig = async () => {
@@ -66,11 +201,14 @@ const ConfigureRecipients = () => {
       setLoading(true);
       setMessage(null);
 
-      console.log('🔄 Loading email configuration...');
+      console.log('🔄 Loading enhanced email configuration...');
       const emailConfig = await emailService.getEmailConfig();
       
-      setConfig(emailConfig);
-      console.log('✅ Email configuration loaded:', emailConfig);
+      // Transform flat config to LOB-based structure
+      const enhancedConfig = transformToLOBConfig(emailConfig);
+      setConfig(enhancedConfig);
+      
+      console.log('✅ Enhanced email configuration loaded:', enhancedConfig);
       
     } catch (error) {
       console.error('❌ Error loading email config:', error);
@@ -80,23 +218,91 @@ const ConfigureRecipients = () => {
     }
   };
 
-  const loadProcedureOwners = async () => {
+  const loadDefaultAdmins = async () => {
     try {
-      setLoadingOwners(true);
-      console.log('👥 Loading procedure owners from SharePoint...');
-
-      const owners = await emailService.getProcedureOwners();
-      setAvailableOwners(owners);
+      console.log('👑 Loading default admin users...');
       
-      console.log('✅ Procedure owners loaded:', owners.length);
-      setMessage({ type: 'success', text: `Loaded ${owners.length} procedure owners from SharePoint` });
+      // Load from UserRoles list where role = admin
+      const response = await fetch(
+        `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('UserRoles')/items?$filter=UserRole eq 'admin' and Status eq 'active'&$select=*`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' },
+          credentials: 'include'
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const admins = data.d.results.map(item => ({
+          id: item.Id,
+          email: `${item.Title}@hsbc.com`,
+          name: item.DisplayName || `User ${item.Title}`,
+          staffId: item.Title,
+          role: item.UserRole,
+          isDefault: true
+        }));
+        
+        setDefaultAdmins(admins);
+        console.log('✅ Default admins loaded:', admins.length);
+      } else {
+        console.log('⚠️ Could not load admin users, using fallback');
+        setDefaultAdmins([
+          {
+            id: 'default-1',
+            email: 'minaantoun@hsbc.com',
+            name: 'Mina Antoun',
+            staffId: '43898931',
+            role: 'admin',
+            isDefault: true
+          }
+        ]);
+      }
       
     } catch (error) {
-      console.error('❌ Error loading procedure owners:', error);
-      setMessage({ type: 'error', text: 'Failed to load procedure owners: ' + error.message });
-    } finally {
-      setLoadingOwners(false);
+      console.error('❌ Error loading default admins:', error);
+      setDefaultAdmins([]);
     }
+  };
+
+  const transformToLOBConfig = (flatConfig) => {
+    // Transform flat SharePoint config to LOB-based structure
+    const enhanced = { ...config };
+    
+    // Set test email
+    enhanced.testEmail = flatConfig.testEmail || 'minaantoun@hsbc.com';
+    
+    // Process LOB-specific configurations
+    flatConfig.globalCCList?.forEach(item => {
+      if (item.lob && item.escalationType && enhanced.lobConfigs[item.lob] && enhanced.lobConfigs[item.lob][item.escalationType]) {
+        if (item.recipientRole === 'Head' || item.recipientRole === 'Director') {
+          enhanced.lobConfigs[item.lob][item.escalationType].globalHeads.push({
+            id: item.id,
+            email: item.email,
+            name: item.name,
+            active: item.active
+          });
+        }
+      }
+    });
+
+    // Process admin configurations
+    flatConfig.adminList?.forEach(item => {
+      Object.keys(enhanced.lobConfigs).forEach(lob => {
+        Object.keys(enhanced.lobConfigs[lob]).forEach(template => {
+          if (!enhanced.lobConfigs[lob][template].admins) {
+            enhanced.lobConfigs[lob][template].admins = [];
+          }
+          enhanced.lobConfigs[lob][template].admins.push({
+            id: item.id,
+            email: item.email,
+            name: item.name,
+            active: item.active
+          });
+        });
+      });
+    });
+
+    return enhanced;
   };
 
   const saveConfiguration = async () => {
@@ -104,27 +310,20 @@ const ConfigureRecipients = () => {
       setSaving(true);
       setMessage(null);
 
-      console.log('💾 Saving email configuration to SharePoint...', config);
+      console.log('💾 Saving enhanced email configuration...');
       
-      // Validate configuration
-      if (config.globalCCList.length === 0 && config.adminList.length === 0 && config.lobHeadsList.length === 0) {
-        setMessage({ 
-          type: 'warning', 
-          text: 'Please add at least one email address to any recipient list' 
-        });
-        return;
-      }
-
-      const result = await emailService.saveEmailConfig(config);
+      // Transform LOB-based config back to flat structure
+      const flatConfig = transformFromLOBConfig(config);
+      
+      const result = await emailService.saveEmailConfig(flatConfig);
       
       if (result.success) {
-        console.log('✅ Email configuration saved successfully to SharePoint');
+        console.log('✅ Enhanced email configuration saved successfully');
         setMessage({ 
           type: 'success', 
           text: `Configuration saved successfully: ${result.message}` 
         });
         
-        // Reload to confirm save
         setTimeout(() => {
           loadEmailConfig();
         }, 1000);
@@ -147,616 +346,869 @@ const ConfigureRecipients = () => {
     }
   };
 
+  const transformFromLOBConfig = (lobConfig) => {
+    const flatConfig = {
+      globalCCList: [],
+      adminList: [],
+      lobHeadsList: [],
+      customGroupsList: [],
+      testEmail: lobConfig.testEmail
+    };
+
+    // Transform LOB configs back to flat structure
+    Object.keys(lobConfig.lobConfigs).forEach(lob => {
+      Object.keys(lobConfig.lobConfigs[lob]).forEach(template => {
+        const templateConfig = lobConfig.lobConfigs[lob][template];
+        
+        // Add global heads
+        templateConfig.globalHeads?.forEach(head => {
+          flatConfig.globalCCList.push({
+            ...head,
+            lob: lob,
+            escalationType: template,
+            recipientRole: 'Head'
+          });
+        });
+
+        // Add admins
+        templateConfig.admins?.forEach(admin => {
+          flatConfig.adminList.push({
+            ...admin,
+            lob: lob,
+            escalationType: template,
+            recipientRole: 'Manager'
+          });
+        });
+      });
+    });
+
+    return flatConfig;
+  };
+
   const sendTestEmail = async () => {
     try {
       setSendingTest(true);
       setMessage(null);
 
-      console.log('📧 Sending test email via SharePoint...');
+      console.log('📧 Sending test email...');
       
       const result = await emailService.sendTestEmail(config);
       
       if (result.success) {
-        setMessage({ 
-          type: 'success', 
-          text: result.message 
-        });
+        setMessage({ type: 'success', text: result.message });
       } else {
-        setMessage({ 
-          type: 'error', 
-          text: result.message 
-        });
+        setMessage({ type: 'error', text: result.message });
       }
       
     } catch (error) {
       console.error('❌ Error sending test email:', error);
-      setMessage({ 
-        type: 'error', 
-        text: 'Error sending test email: ' + error.message 
-      });
+      setMessage({ type: 'error', text: 'Error sending test email: ' + error.message });
     } finally {
       setSendingTest(false);
     }
   };
 
-  const handleAddEmail = (type) => {
-    setDialogType(type);
-    setNewEmail({ 
-      email: '', 
-      name: '', 
-      lob: 'All', 
-      escalationType: 'new-procedure-uploaded',
-      recipientRole: type === 'admin' ? 'Manager' : type === 'lobHeads' ? 'Head' : 'General'
-    });
-
-    if (type === 'procedureOwners') {
-      loadProcedureOwners();
-    }
-
+  const handleAddRecipient = (lob, template, type) => {
+    setDialogConfig({ lob, template, type });
+    setNewEmail({ email: '', name: '' });
     setShowAddDialog(true);
   };
 
-  const handleSaveNewEmail = () => {
-    if (dialogType === 'procedureOwners') {
-      // Add selected procedure owners
-      const newOwners = selectedOwners.map(owner => ({
-        id: Date.now() + Math.random(),
-        email: owner.email,
-        name: owner.name,
-        active: true,
-        lob: owner.lob || 'All',
-        escalationType: 'new-procedure-uploaded',
-        recipientRole: 'General',
-        type: owner.type,
-        procedures: owner.procedures
-      }));
-
-      const listKey = 'customGroupsList'; // Add procedure owners to custom groups
-      setConfig(prev => ({
-        ...prev,
-        [listKey]: [...prev[listKey], ...newOwners]
-      }));
-      
-      setSelectedOwners([]);
-    } else {
-      // Add manual email
-      if (newEmail.email && newEmail.email.includes('@')) {
-        const listKey = dialogType === 'globalCC' ? 'globalCCList' : 
-                       dialogType === 'admin' ? 'adminList' : 
-                       dialogType === 'lobHeads' ? 'lobHeadsList' : 'customGroupsList';
-        
-        setConfig(prev => ({
-          ...prev,
-          [listKey]: [...prev[listKey], {
-            id: Date.now() + Math.random(),
-            email: newEmail.email.trim(),
-            name: newEmail.name.trim() || newEmail.email.trim(),
-            active: true,
-            lob: newEmail.lob,
-            escalationType: newEmail.escalationType,
-            recipientRole: newEmail.recipientRole
-          }]
-        }));
-      }
+  const handleSaveNewRecipient = () => {
+    if (!newEmail.email || !newEmail.email.includes('@')) {
+      setMessage({ type: 'error', text: 'Please enter a valid email address' });
+      return;
     }
 
+    const { lob, template, type } = dialogConfig;
+    const newRecipient = {
+      id: Date.now() + Math.random(),
+      email: newEmail.email.trim(),
+      name: newEmail.name.trim() || newEmail.email.trim(),
+      active: true
+    };
+
+    setConfig(prev => ({
+      ...prev,
+      lobConfigs: {
+        ...prev.lobConfigs,
+        [lob]: {
+          ...prev.lobConfigs[lob],
+          [template]: {
+            ...prev.lobConfigs[lob][template],
+            [type]: [...(prev.lobConfigs[lob][template][type] || []), newRecipient]
+          }
+        }
+      }
+    }));
+
     setShowAddDialog(false);
-    setNewEmail({ 
-      email: '', 
-      name: '', 
-      lob: 'All', 
-      escalationType: 'new-procedure-uploaded',
-      recipientRole: 'General'
-    });
+    setNewEmail({ email: '', name: '' });
   };
 
-  const handleRemoveEmail = (listType, emailId) => {
-    const listKey = listType === 'globalCC' ? 'globalCCList' :
-                   listType === 'admin' ? 'adminList' : 
-                   listType === 'lobHeads' ? 'lobHeadsList' : 'customGroupsList';
-
+  const handleRemoveRecipient = (lob, template, type, recipientId) => {
     setConfig(prev => ({
       ...prev,
-      [listKey]: prev[listKey].filter(item => item.id !== emailId)
+      lobConfigs: {
+        ...prev.lobConfigs,
+        [lob]: {
+          ...prev.lobConfigs[lob],
+          [template]: {
+            ...prev.lobConfigs[lob][template],
+            [type]: prev.lobConfigs[lob][template][type].filter(r => r.id !== recipientId)
+          }
+        }
+      }
     }));
   };
 
-  const handleToggleActive = (listType, emailId) => {
-    const listKey = listType === 'globalCC' ? 'globalCCList' :
-                   listType === 'admin' ? 'adminList' : 
-                   listType === 'lobHeads' ? 'lobHeadsList' : 'customGroupsList';
-
+  const handleToggleRecipient = (lob, template, type, recipientId) => {
     setConfig(prev => ({
       ...prev,
-      [listKey]: prev[listKey].map(item => 
-        item.id === emailId ? { ...item, active: !item.active } : item
-      )
+      lobConfigs: {
+        ...prev.lobConfigs,
+        [lob]: {
+          ...prev.lobConfigs[lob],
+          [template]: {
+            ...prev.lobConfigs[lob][template],
+            [type]: prev.lobConfigs[lob][template][type].map(r => 
+              r.id === recipientId ? { ...r, active: !r.active } : r
+            )
+          }
+        }
+      }
     }));
   };
 
-  const handleTestEmailChange = (event) => {
+  const handleToggleProcedureOwners = (lob, template) => {
     setConfig(prev => ({
       ...prev,
-      testEmail: event.target.value
+      lobConfigs: {
+        ...prev.lobConfigs,
+        [lob]: {
+          ...prev.lobConfigs[lob],
+          [template]: {
+            ...prev.lobConfigs[lob][template],
+            procedureOwners: !prev.lobConfigs[lob][template].procedureOwners
+          }
+        }
+      }
     }));
   };
 
-  // Render email list component
-  const renderEmailList = (title, listKey, listType, color, icon) => {
-    const list = config[listKey] || [];
-    
+  const handleToggleAccessNotification = (template, type) => {
+    setConfig(prev => ({
+      ...prev,
+      accessManagement: {
+        ...prev.accessManagement,
+        [template]: {
+          ...prev.accessManagement[template],
+          [type]: !prev.accessManagement[template][type]
+        }
+      }
+    }));
+  };
+
+  // Render LOB Template Configuration
+  const renderLOBTemplate = (lob, templateKey, templateConf) => {
+    const lobConf = lobConfig[lob];
+    const templateData = config.lobConfigs[lob][templateKey];
+
     return (
-      <Card sx={{ height: '100%' }}>
+      <Card key={templateKey} sx={{ mb: 2, border: `2px solid ${lobConf.color}20` }}>
         <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {icon}
-              {title}
-            </Typography>
-            <Button
-              size="small"
-              startIcon={<Add />}
-              onClick={() => handleAddEmail(listType)}
-              variant="outlined"
-              color={color}
-            >
-              Add
-            </Button>
-          </Box>
-          
-          <Typography variant="body2" color="text.secondary" gutterBottom>
-            {title === 'Global CC List' && 'These emails will be CC\'d on all procedure notifications'}
-            {title === 'Administrator List' && 'System administrators who receive all critical notifications'}
-            {title === 'LOB Heads List' && 'Line of Business heads for escalation notifications'}
-            {title === 'Custom Groups' && 'Custom recipient groups and procedure owners'}
-          </Typography>
-          
-          <Divider sx={{ my: 2 }} />
-          
-          {list.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
-              {icon && React.cloneElement(icon, { sx: { fontSize: 48, opacity: 0.3, mb: 1 } })}
-              <Typography variant="body2">
-                No {title.toLowerCase()} configured
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Typography variant="h4">{templateConf.icon}</Typography>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" fontWeight="bold" color={lobConf.color}>
+                {templateConf.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {templateConf.description}
               </Typography>
             </Box>
-          ) : (
-            <List dense>
-              {list.map((recipient) => (
-                <ListItem key={recipient.id} sx={{ px: 0 }}>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                        {recipient.name}
-                        {recipient.lob && recipient.lob !== 'All' && (
-                          <Chip 
-                            label={recipient.lob} 
-                            size="small" 
-                            color="primary"
-                            sx={{ fontSize: '0.6rem', height: 16 }}
+          </Box>
+
+          <Grid container spacing={3}>
+            {/* LOB Global Heads */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, bgcolor: `${lobConf.color}10`, border: `1px solid ${lobConf.color}30` }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color={lobConf.color}>
+                    {lob} Global Heads
+                  </Typography>
+                  <Button
+                    size="small"
+                    startIcon={<Add />}
+                    onClick={() => handleAddRecipient(lob, templateKey, 'globalHeads')}
+                    variant="outlined"
+                    sx={{ borderColor: lobConf.color, color: lobConf.color }}
+                  >
+                    Add
+                  </Button>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  User can define emails within this list
+                </Typography>
+
+                {templateData.globalHeads?.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+                    <Group sx={{ fontSize: 32, opacity: 0.3, mb: 1 }} />
+                    <Typography variant="body2">No global heads configured</Typography>
+                  </Box>
+                ) : (
+                  <List dense>
+                    {templateData.globalHeads?.map((head) => (
+                      <ListItem key={head.id} sx={{ px: 0 }}>
+                        <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: lobConf.color }}>
+                          {head.name[0]}
+                        </Avatar>
+                        <ListItemText
+                          primary={head.name}
+                          secondary={head.email}
+                          sx={{ opacity: head.active ? 1 : 0.5 }}
+                        />
+                        <ListItemSecondaryAction>
+                          <Switch
+                            size="small"
+                            checked={head.active}
+                            onChange={() => handleToggleRecipient(lob, templateKey, 'globalHeads', head.id)}
                           />
-                        )}
-                        {recipient.recipientRole && recipient.recipientRole !== 'General' && (
-                          <Chip 
-                            label={recipient.recipientRole} 
-                            size="small" 
-                            color="secondary"
-                            sx={{ fontSize: '0.6rem', height: 16 }}
-                          />
-                        )}
-                        {recipient.type && (
-                          <Chip 
-                            label={recipient.type} 
-                            size="small" 
-                            color="info"
-                            sx={{ fontSize: '0.6rem', height: 16 }}
-                          />
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="body2">{recipient.email}</Typography>
-                        {recipient.escalationType && (
-                          <Typography variant="caption" color="text.secondary">
-                            Escalation: {recipient.escalationType}
-                          </Typography>
-                        )}
-                        {recipient.procedures && (
-                          <Typography variant="caption" color="text.secondary" display="block">
-                            {recipient.procedures.length} procedure(s)
-                          </Typography>
-                        )}
-                      </Box>
-                    }
-                    sx={{ 
-                      opacity: recipient.active ? 1 : 0.5,
-                      textDecoration: recipient.active ? 'none' : 'line-through'
-                    }}
-                  />
-                  <ListItemSecondaryAction>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Switch
-                        size="small"
-                        checked={recipient.active}
-                        onChange={() => handleToggleActive(listType, recipient.id)}
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleRemoveRecipient(lob, templateKey, 'globalHeads', head.id)}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </ListItemSecondaryAction>
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Paper>
+            </Grid>
+
+            {/* Admins */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, bgcolor: '#f4433610', border: '1px solid #f4433630' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="error.main">
+                    Admins
+                  </Typography>
+                  <Button
+                    size="small"
+                    startIcon={<Add />}
+                    onClick={() => handleAddRecipient(lob, templateKey, 'admins')}
+                    variant="outlined"
+                    color="error"
+                  >
+                    Add
+                  </Button>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Default admin users (can remove or amend)
+                </Typography>
+
+                {/* Show default admins + custom ones */}
+                <List dense>
+                  {defaultAdmins.map((admin) => (
+                    <ListItem key={`default-${admin.id}`} sx={{ px: 0 }}>
+                      <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: 'error.main' }}>
+                        {admin.name[0]}
+                      </Avatar>
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {admin.name}
+                            <Chip label="Default" size="small" color="error" sx={{ height: 16, fontSize: '0.6rem' }} />
+                          </Box>
+                        }
+                        secondary={admin.email}
                       />
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleRemoveEmail(listType, recipient.id)}
-                      >
-                        <Delete fontSize="small" />
-                      </IconButton>
-                    </Box>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
-        <CircularProgress size={60} />
-        <Typography variant="h6" sx={{ ml: 2 }}>
-          Loading email configuration from SharePoint...
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
-          <Typography variant="h5" fontWeight="bold" gutterBottom>
-            📧 Configure Email Recipients
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Manage global recipients, administrators, LOB heads, and custom groups for email notifications
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={loadEmailConfig}
-            disabled={loading}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={saving ? <CircularProgress size={20} /> : <Save />}
-            onClick={saveConfiguration}
-            disabled={saving}
-            color="primary"
-          >
-            {saving ? 'Saving...' : 'Save Configuration'}
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Status Message */}
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Alert 
-            severity={message.type} 
-            sx={{ mb: 3 }}
-            onClose={() => setMessage(null)}
-          >
-            {message.text}
-          </Alert>
-        </motion.div>
-      )}
-
-      {/* Test Email Configuration */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Send color="primary" />
-                  Test Email Configuration
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  startIcon={sendingTest ? <CircularProgress size={20} /> : <Send />}
-                  onClick={sendTestEmail}
-                  disabled={sendingTest}
-                >
-                  {sendingTest ? 'Sending...' : 'Send Test Email'}
-                </Button>
-              </Box>
-              
-              <TextField
-                fullWidth
-                label="Test Email Address"
-                value={config.testEmail}
-                onChange={handleTestEmailChange}
-                placeholder="Enter email for testing"
-                helperText="This email will receive test notifications to verify SharePoint email integration"
-                sx={{ mb: 2 }}
-              />
-              
-              <Alert severity="info">
-                <Typography variant="body2">
-                  The test email feature sends a sample notification to verify the SharePoint email system is working correctly.
-                  Test emails are sent to the configured address above.
-                </Typography>
-              </Alert>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Email Lists Grid */}
-      <Grid container spacing={3}>
-        {/* Global CC List */}
-        <Grid item xs={12} md={6} lg={3}>
-          {renderEmailList(
-            'Global CC List', 
-            'globalCCList', 
-            'globalCC', 
-            'primary', 
-            <Email color="primary" />
-          )}
-        </Grid>
-
-        {/* Admin List */}
-        <Grid item xs={12} md={6} lg={3}>
-          {renderEmailList(
-            'Administrator List', 
-            'adminList', 
-            'admin', 
-            'error', 
-            <AdminPanelSettings color="error" />
-          )}
-        </Grid>
-
-        {/* LOB Heads List */}
-        <Grid item xs={12} md={6} lg={3}>
-          {renderEmailList(
-            'LOB Heads List', 
-            'lobHeadsList', 
-            'lobHeads', 
-            'warning', 
-            <Group color="warning" />
-          )}
-        </Grid>
-
-        {/* Custom Groups */}
-        <Grid item xs={12} md={6} lg={3}>
-          {renderEmailList(
-            'Custom Groups', 
-            'customGroupsList', 
-            'procedureOwners', 
-            'success', 
-            <Business color="success" />
-          )}
-        </Grid>
-      </Grid>
-
-      {/* Summary Statistics */}
-      <Card sx={{ mt: 3 }}>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            📊 Recipients Summary
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={3}>
-              <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-                <Typography variant="h4" fontWeight="bold">
-                  {(config.globalCCList || []).filter(r => r.active).length}
-                </Typography>
-                <Typography variant="body2">
-                  Global CC Recipients
-                </Typography>
+                      <ListItemSecondaryAction>
+                        <Switch
+                          size="small"
+                          checked={true}
+                          disabled
+                        />
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                  
+                  {templateData.admins?.map((admin) => (
+                    <ListItem key={admin.id} sx={{ px: 0 }}>
+                      <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: 'error.main' }}>
+                        {admin.name[0]}
+                      </Avatar>
+                      <ListItemText
+                        primary={admin.name}
+                        secondary={admin.email}
+                        sx={{ opacity: admin.active ? 1 : 0.5 }}
+                      />
+                      <ListItemSecondaryAction>
+                        <Switch
+                          size="small"
+                          checked={admin.active}
+                          onChange={() => handleToggleRecipient(lob, templateKey, 'admins', admin.id)}
+                        />
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleRemoveRecipient(lob, templateKey, 'admins', admin.id)}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
               </Paper>
             </Grid>
-            <Grid item xs={12} sm={3}>
-              <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'error.main', color: 'error.contrastText' }}>
-                <Typography variant="h4" fontWeight="bold">
-                  {(config.adminList || []).filter(r => r.active).length}
+
+            {/* Procedure Owners */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, bgcolor: '#4caf5010', border: '1px solid #4caf5030' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="success.main">
+                    Primary & Secondary Owners
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={templateData.procedureOwners}
+                        onChange={() => handleToggleProcedureOwners(lob, templateKey)}
+                        color="success"
+                      />
+                    }
+                    label=""
+                  />
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Auto loaded from procedures list of newly uploaded procedure
                 </Typography>
-                <Typography variant="body2">
-                  Active Administrators
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.main', color: 'warning.contrastText' }}>
-                <Typography variant="h4" fontWeight="bold">
-                  {(config.lobHeadsList || []).filter(r => r.active).length}
-                </Typography>
-                <Typography variant="body2">
-                  LOB Heads
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} sm={3}>
-              <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.main', color: 'success.contrastText' }}>
-                <Typography variant="h4" fontWeight="bold">
-                  {((config.globalCCList || []).filter(r => r.active).length + 
-                    (config.adminList || []).filter(r => r.active).length + 
-                    (config.lobHeadsList || []).filter(r => r.active).length +
-                    (config.customGroupsList || []).filter(r => r.active).length)}
-                </Typography>
-                <Typography variant="body2">
-                  Total Active Recipients
-                </Typography>
+
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 3, 
+                  color: templateData.procedureOwners ? 'success.main' : 'text.disabled'
+                }}>
+                  <Business sx={{ fontSize: 48, mb: 1 }} />
+                  <Typography variant="body2" fontWeight="bold">
+                    {templateData.procedureOwners ? 'Enabled' : 'Disabled'}
+                  </Typography>
+                  <Typography variant="caption" display="block">
+                    {templateData.procedureOwners 
+                      ? 'Procedure owners will receive notifications automatically' 
+                      : 'Procedure owners will not receive notifications'
+                    }
+                  </Typography>
+                </Box>
               </Paper>
             </Grid>
           </Grid>
         </CardContent>
       </Card>
+    );
+  };
 
-      {/* Add Email Dialog */}
-      <Dialog 
-        open={showAddDialog} 
-        onClose={() => setShowAddDialog(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {dialogType === 'globalCC' && '📧 Add Global CC Recipient'}
-          {dialogType === 'admin' && '👨‍💼 Add Administrator'}
-          {dialogType === 'lobHeads' && '👔 Add LOB Head'}
-          {dialogType === 'procedureOwners' && '👥 Add Procedure Owners'}
-        </DialogTitle>
-        
-        <DialogContent>
-          {dialogType === 'procedureOwners' ? (
-            <Box>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="body1">
-                  Select procedure owners from SharePoint to add to the recipients list:
-                </Typography>
-                <Button
-                  startIcon={loadingOwners ? <CircularProgress size={20} /> : <Refresh />}
-                  onClick={loadProcedureOwners}
-                  disabled={loadingOwners}
-                  size="small"
-                >
-                  {loadingOwners ? 'Loading...' : 'Refresh'}
-                </Button>
-              </Box>
-              
-              {loadingOwners ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                  <CircularProgress />
+  // Render Access Management Template
+  const renderAccessTemplate = (templateKey, templateConf) => {
+    const templateData = config.accessManagement[templateKey];
+
+    return (
+      <Card key={templateKey} sx={{ mb: 2, border: `2px solid ${templateConf.color === 'success' ? '#4caf50' : templateConf.color === 'error' ? '#f44336' : '#2196f3'}20` }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Typography variant="h4">{templateConf.icon}</Typography>
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="h6" fontWeight="bold" color={`${templateConf.color}.main`}>
+                {templateConf.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {templateConf.description}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Grid container spacing={3}>
+            {/* New User Notification */}
+            {templateKey === 'user-access-granted' && (
+              <Grid item xs={12} md={4}>
+                <Paper sx={{ p: 2, bgcolor: '#4caf5010', border: '1px solid #4caf5030' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" color="success.main">
+                      New User Notification
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={templateData.newUserNotification}
+                          onChange={() => handleToggleAccessNotification(templateKey, 'newUserNotification')}
+                          color="success"
+                        />
+                      }
+                      label=""
+                    />
+                  </Box>
+                  
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Send welcome email to newly granted user
+                  </Typography>
+
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    py: 2, 
+                    color: templateData.newUserNotification ? 'success.main' : 'text.disabled'
+                  }}>
+                    <Email sx={{ fontSize: 32, mb: 1 }} />
+                    <Typography variant="body2">
+                      {templateData.newUserNotification ? 'Enabled' : 'Disabled'}
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
+
+            {/* User Notification (for revoked/updated) */}
+            {(templateKey === 'user-access-revoked' || templateKey === 'user-role-updated') && (
+              <Grid item xs={12} md={4}>
+                <Paper sx={{ p: 2, bgcolor: '#ff980010', border: '1px solid #ff980030' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold" color="warning.main">
+                      User Notification
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={templateData.userNotification}
+                          onChange={() => handleToggleAccessNotification(templateKey, 'userNotification')}
+                          color="warning"
+                        />
+                      }
+                      label=""
+                    />
+                  </Box>
+                  
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Notify user of access changes
+                  </Typography>
+
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    py: 2, 
+                    color: templateData.userNotification ? 'warning.main' : 'text.disabled'
+                  }}>
+                    <Notifications sx={{ fontSize: 32, mb: 1 }} />
+                    <Typography variant="body2">
+                      {templateData.userNotification ? 'Enabled' : 'Disabled'}
+                    </Typography>
+                  </Box>
+                </Paper>
+              </Grid>
+            )}
+
+            {/* Admin Notification */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, bgcolor: '#f4433610', border: '1px solid #f4433630' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="error.main">
+                    Admin Notification
+                  </Typography>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={templateData.adminNotification}
+                        onChange={() => handleToggleAccessNotification(templateKey, 'adminNotification')}
+                        color="error"
+                      />
+                    }
+                    label=""
+                  />
                 </Box>
-              ) : (
-                <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                  {availableOwners.length === 0 ? (
-                    <Alert severity="info">
-                      No procedure owners found. Make sure procedures have been uploaded with owner information in SharePoint.
-                    </Alert>
-                  ) : (
-                    <List>
-                      {availableOwners.map((owner) => (
-                        <ListItem key={owner.id} dense>
-                          <Checkbox
-                            checked={selectedOwners.some(s => s.email === owner.email)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedOwners(prev => [...prev, owner]);
-                              } else {
-                                setSelectedOwners(prev => prev.filter(s => s.email !== owner.email));
-                              }
-                            }}
-                          />
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                {owner.name}
-                                <Chip 
-                                  label={owner.type} 
-                                  size="small" 
-                                  color={owner.type === 'Primary Owner' ? 'primary' : 'secondary'}
-                                />
-                                <Chip 
-                                  label={owner.lob} 
-                                  size="small" 
-                                  color="info"
-                                />
-                              </Box>
-                            }
-                            secondary={
-                              <Box>
-                                <Typography variant="body2">{owner.email}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {owner.procedures.length} procedure(s): {owner.procedures.slice(0, 2).join(', ')}
-                                  {owner.procedures.length > 2 && '...'}
-                               </Typography>
-                             </Box>
-                           }
-                         />
-                       </ListItem>
-                     ))}
-                   </List>
-                 )}
+                
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Notify admins of access management changes
+                </Typography>
+
+                <Box sx={{ 
+                  textAlign: 'center', 
+                  py: 2, 
+                  color: templateData.adminNotification ? 'error.main' : 'text.disabled'
+                }}>
+                  <AdminPanelSettings sx={{ fontSize: 32, mb: 1 }} />
+                  <Typography variant="body2">
+                    {templateData.adminNotification ? 'Enabled' : 'Disabled'}
+                  </Typography>
+                </Box>
+              </Paper>
+            </Grid>
+
+            {/* Custom Recipients */}
+            <Grid item xs={12} md={4}>
+              <Paper sx={{ p: 2, bgcolor: '#21969610', border: '1px solid #21969630' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle1" fontWeight="bold" color="info.main">
+                   Custom Recipients
+                 </Typography>
+                 <Button
+                   size="small"
+                   startIcon={<Add />}
+                   onClick={() => {
+                     setDialogConfig({ lob: 'access', template: templateKey, type: 'customRecipients' });
+                     setNewEmail({ email: '', name: '' });
+                     setShowAddDialog(true);
+                   }}
+                   variant="outlined"
+                   color="info"
+                 >
+                   Add
+                 </Button>
                </Box>
-             )}
+               
+               <Typography variant="body2" color="text.secondary" gutterBottom>
+                 Additional recipients for access management notifications
+               </Typography>
+
+               {templateData.customRecipients?.length === 0 ? (
+                 <Box sx={{ textAlign: 'center', py: 2, color: 'text.secondary' }}>
+                   <Group sx={{ fontSize: 32, opacity: 0.3, mb: 1 }} />
+                   <Typography variant="body2">No custom recipients</Typography>
+                 </Box>
+               ) : (
+                 <List dense>
+                   {templateData.customRecipients?.map((recipient) => (
+                     <ListItem key={recipient.id} sx={{ px: 0 }}>
+                       <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: 'info.main' }}>
+                         {recipient.name[0]}
+                       </Avatar>
+                       <ListItemText
+                         primary={recipient.name}
+                         secondary={recipient.email}
+                         sx={{ opacity: recipient.active ? 1 : 0.5 }}
+                       />
+                       <ListItemSecondaryAction>
+                         <Switch
+                           size="small"
+                           checked={recipient.active}
+                           onChange={() => {
+                             setConfig(prev => ({
+                               ...prev,
+                               accessManagement: {
+                                 ...prev.accessManagement,
+                                 [templateKey]: {
+                                   ...prev.accessManagement[templateKey],
+                                   customRecipients: prev.accessManagement[templateKey].customRecipients.map(r => 
+                                     r.id === recipient.id ? { ...r, active: !r.active } : r
+                                   )
+                                 }
+                               }
+                             }));
+                           }}
+                         />
+                         <IconButton
+                           size="small"
+                           color="error"
+                           onClick={() => {
+                             setConfig(prev => ({
+                               ...prev,
+                               accessManagement: {
+                                 ...prev.accessManagement,
+                                 [templateKey]: {
+                                   ...prev.accessManagement[templateKey],
+                                   customRecipients: prev.accessManagement[templateKey].customRecipients.filter(r => r.id !== recipient.id)
+                                 }
+                               }
+                             }));
+                           }}
+                         >
+                           <Delete fontSize="small" />
+                         </IconButton>
+                       </ListItemSecondaryAction>
+                     </ListItem>
+                   ))}
+                 </List>
+               )}
+             </Paper>
+           </Grid>
+         </Grid>
+       </CardContent>
+     </Card>
+   );
+ };
+
+ if (loading) {
+   return (
+     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+       <CircularProgress size={60} />
+       <Typography variant="h6" sx={{ ml: 2 }}>
+         Loading enhanced email configuration from SharePoint...
+       </Typography>
+     </Box>
+   );
+ }
+
+ return (
+   <Box>
+     {/* Header */}
+     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+       <Box>
+         <Typography variant="h5" fontWeight="bold" gutterBottom>
+           📧 Configure Recipients
+         </Typography>
+         <Typography variant="body2" color="text.secondary">
+           Configure email recipients by Line of Business and notification templates
+         </Typography>
+       </Box>
+       <Box sx={{ display: 'flex', gap: 2 }}>
+         <Button
+           variant="outlined"
+           startIcon={<Refresh />}
+           onClick={loadEmailConfig}
+           disabled={loading}
+         >
+           Refresh
+         </Button>
+         <Button
+           variant="contained"
+           startIcon={saving ? <CircularProgress size={20} /> : <Save />}
+           onClick={saveConfiguration}
+           disabled={saving}
+           color="primary"
+         >
+           {saving ? 'Saving...' : 'Save Configuration'}
+         </Button>
+       </Box>
+     </Box>
+
+     {/* Status Message */}
+     {message && (
+       <motion.div
+         initial={{ opacity: 0, y: -20 }}
+         animate={{ opacity: 1, y: 0 }}
+         transition={{ duration: 0.3 }}
+       >
+         <Alert 
+           severity={message.type} 
+           sx={{ mb: 3 }}
+           onClose={() => setMessage(null)}
+         >
+           {message.text}
+         </Alert>
+       </motion.div>
+     )}
+
+     {/* Test Email Configuration */}
+     <Grid container spacing={3} sx={{ mb: 4 }}>
+       <Grid item xs={12}>
+         <Card>
+           <CardContent>
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+               <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                 <Send color="primary" />
+                 Test Email Configuration
+               </Typography>
+               <Button
+                 variant="contained"
+                 color="secondary"
+                 startIcon={sendingTest ? <CircularProgress size={20} /> : <Send />}
+                 onClick={sendTestEmail}
+                 disabled={sendingTest}
+               >
+                 {sendingTest ? 'Sending...' : 'Send Test Email'}
+               </Button>
+             </Box>
              
-             {selectedOwners.length > 0 && (
-               <Alert severity="success" sx={{ mt: 2 }}>
-                 Selected {selectedOwners.length} owner(s) to add to recipients list.
-               </Alert>
-             )}
-           </Box>
-         ) : (
-           <Box>
              <TextField
                fullWidth
-               label="Email Address"
-               value={newEmail.email}
-               onChange={(e) => setNewEmail(prev => ({ ...prev, email: e.target.value }))}
-               placeholder="user@hsbc.com"
-               type="email"
-               sx={{ mb: 2 }}
-               required
-             />
-             <TextField
-               fullWidth
-               label="Display Name"
-               value={newEmail.name}
-               onChange={(e) => setNewEmail(prev => ({ ...prev, name: e.target.value }))}
-               placeholder="John Smith"
+               label="Test Email Address"
+               value={config.testEmail}
+               onChange={(e) => setConfig(prev => ({ ...prev, testEmail: e.target.value }))}
+               placeholder="Enter email for testing"
+               helperText="This email will receive test notifications to verify SharePoint email integration"
                sx={{ mb: 2 }}
              />
-             <FormControl fullWidth sx={{ mb: 2 }}>
-               <InputLabel>Line of Business</InputLabel>
-               <Select
-                 value={newEmail.lob}
-                 onChange={(e) => setNewEmail(prev => ({ ...prev, lob: e.target.value }))}
-                 label="Line of Business"
-               >
-                 {lobChoices.map((lob) => (
-                   <MenuItem key={lob} value={lob}>{lob}</MenuItem>
-                 ))}
-               </Select>
-             </FormControl>
-             <FormControl fullWidth sx={{ mb: 2 }}>
-               <InputLabel>Escalation Type</InputLabel>
-               <Select
-                 value={newEmail.escalationType}
-                 onChange={(e) => setNewEmail(prev => ({ ...prev, escalationType: e.target.value }))}
-                 label="Escalation Type"
-               >
-                 {escalationTypes.map((type) => (
-                   <MenuItem key={type} value={type}>
-                     {type.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                   </MenuItem>
-                 ))}
-               </Select>
-             </FormControl>
-             <FormControl fullWidth>
-               <InputLabel>Recipient Role</InputLabel>
-               <Select
-                 value={newEmail.recipientRole}
-                 onChange={(e) => setNewEmail(prev => ({ ...prev, recipientRole: e.target.value }))}
-                 label="Recipient Role"
-               >
-                 {recipientRoles.map((role) => (
-                   <MenuItem key={role} value={role}>{role}</MenuItem>
-                 ))}
-               </Select>
-             </FormControl>
-           </Box>
+             
+             <Alert severity="info">
+               <Typography variant="body2">
+                 The test email feature sends a sample notification to verify the SharePoint email system is working correctly.
+               </Typography>
+             </Alert>
+           </CardContent>
+         </Card>
+       </Grid>
+     </Grid>
+
+     {/* Main Configuration Tabs */}
+     <Paper sx={{ mb: 3 }}>
+       <Tabs 
+         value={activeTab} 
+         onChange={(e, newValue) => setActiveTab(newValue)}
+         variant="fullWidth"
+         sx={{ borderBottom: 1, borderColor: 'divider' }}
+       >
+         <Tab 
+           label="Procedure Templates" 
+           icon={<Business />}
+           sx={{ minHeight: 60 }}
+         />
+         <Tab 
+           label="Access Management" 
+           icon={<AdminPanelSettings />}
+           sx={{ minHeight: 60 }}
+         />
+       </Tabs>
+     </Paper>
+
+     {/* Tab Content */}
+     {activeTab === 0 && (
+       <Box>
+         <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+           📋 Procedure Templates Configuration
+         </Typography>
+         <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
+           Configure recipients for procedure-related notifications by Line of Business. 
+           For template design changes, use the <strong>Custom Templates</strong> section.
+         </Typography>
+
+         {/* LOB Accordions */}
+         {Object.keys(lobConfig).map((lob) => (
+           <Accordion key={lob} defaultExpanded sx={{ mb: 2 }}>
+             <AccordionSummary expandIcon={<ExpandMore />}>
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                 <Typography variant="h4">{lobConfig[lob].icon}</Typography>
+                 <Box>
+                   <Typography variant="h6" fontWeight="bold" color={lobConfig[lob].color}>
+                     {lob} Templates
+                   </Typography>
+                   <Typography variant="body2" color="text.secondary">
+                     {lobConfig[lob].name}
+                   </Typography>
+                 </Box>
+               </Box>
+             </AccordionSummary>
+             <AccordionDetails>
+               {Object.keys(templateConfig).map((templateKey) => 
+                 renderLOBTemplate(lob, templateKey, templateConfig[templateKey])
+               )}
+             </AccordionDetails>
+           </Accordion>
+         ))}
+       </Box>
+     )}
+
+     {activeTab === 1 && (
+       <Box>
+         <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+           👥 Access Management Templates
+         </Typography>
+         <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
+           Configure notifications for user access management changes. These emails are sent when users are added, 
+           removed, or their roles are updated through the access rights management system.
+         </Typography>
+
+         {Object.keys(accessTemplateConfig).map((templateKey) => 
+           renderAccessTemplate(templateKey, accessTemplateConfig[templateKey])
          )}
+       </Box>
+     )}
+
+     {/* Summary Statistics */}
+     <Card sx={{ mt: 4 }}>
+       <CardContent>
+         <Typography variant="h6" gutterBottom>
+           📊 Configuration Summary
+         </Typography>
+         <Grid container spacing={2}>
+           <Grid item xs={12} sm={3}>
+             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.main', color: 'primary.contrastText' }}>
+               <Typography variant="h4" fontWeight="bold">
+                 {Object.keys(lobConfig).length}
+               </Typography>
+               <Typography variant="body2">
+                 Lines of Business
+               </Typography>
+             </Paper>
+           </Grid>
+           <Grid item xs={12} sm={3}>
+             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.main', color: 'info.contrastText' }}>
+               <Typography variant="h4" fontWeight="bold">
+                 {Object.keys(templateConfig).length}
+               </Typography>
+               <Typography variant="body2">
+                 Procedure Templates
+               </Typography>
+             </Paper>
+           </Grid>
+           <Grid item xs={12} sm={3}>
+             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.main', color: 'warning.contrastText' }}>
+               <Typography variant="h4" fontWeight="bold">
+                 {Object.keys(accessTemplateConfig).length}
+               </Typography>
+               <Typography variant="body2">
+                 Access Templates
+               </Typography>
+             </Paper>
+           </Grid>
+           <Grid item xs={12} sm={3}>
+             <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.main', color: 'success.contrastText' }}>
+               <Typography variant="h4" fontWeight="bold">
+                 {defaultAdmins.length}
+               </Typography>
+               <Typography variant="body2">
+                 Default Admins
+               </Typography>
+             </Paper>
+           </Grid>
+         </Grid>
+       </CardContent>
+     </Card>
+
+     {/* Add Recipient Dialog */}
+     <Dialog 
+       open={showAddDialog} 
+       onClose={() => setShowAddDialog(false)}
+       maxWidth="sm"
+       fullWidth
+     >
+       <DialogTitle>
+         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+           <PersonAdd />
+           Add Recipient
+           {dialogConfig.lob !== 'access' && (
+             <Chip 
+               label={dialogConfig.lob} 
+               size="small" 
+               sx={{ backgroundColor: lobConfig[dialogConfig.lob]?.color + '20' }}
+             />
+           )}
+         </Box>
+       </DialogTitle>
+       
+       <DialogContent>
+         <Box sx={{ pt: 1 }}>
+           <TextField
+             fullWidth
+             label="Email Address"
+             value={newEmail.email}
+             onChange={(e) => setNewEmail(prev => ({ ...prev, email: e.target.value }))}
+             placeholder="user@hsbc.com"
+             type="email"
+             sx={{ mb: 2 }}
+             required
+           />
+           <TextField
+             fullWidth
+             label="Display Name"
+             value={newEmail.name}
+             onChange={(e) => setNewEmail(prev => ({ ...prev, name: e.target.value }))}
+             placeholder="John Smith"
+             helperText="Leave blank to use email address as name"
+           />
+         </Box>
        </DialogContent>
        
        <DialogActions>
@@ -767,19 +1219,39 @@ const ConfigureRecipients = () => {
            Cancel
          </Button>
          <Button 
-           onClick={handleSaveNewEmail}
+           onClick={() => {
+             if (dialogConfig.lob === 'access') {
+               // Handle access management recipients
+               const { template, type } = dialogConfig;
+               const newRecipient = {
+                 id: Date.now() + Math.random(),
+                 email: newEmail.email.trim(),
+                 name: newEmail.name.trim() || newEmail.email.trim(),
+                 active: true
+               };
+
+               setConfig(prev => ({
+                 ...prev,
+                 accessManagement: {
+                   ...prev.accessManagement,
+                   [template]: {
+                     ...prev.accessManagement[template],
+                     [type]: [...(prev.accessManagement[template][type] || []), newRecipient]
+                   }
+                 }
+               }));
+             } else {
+               // Handle LOB recipients
+               handleSaveNewRecipient();
+             }
+             setShowAddDialog(false);
+             setNewEmail({ email: '', name: '' });
+           }}
            variant="contained"
            startIcon={<CheckCircle />}
-           disabled={
-             dialogType === 'procedureOwners' ? 
-             selectedOwners.length === 0 : 
-             !newEmail.email || !newEmail.email.includes('@')
-           }
+           disabled={!newEmail.email || !newEmail.email.includes('@')}
          >
-           {dialogType === 'procedureOwners' ? 
-             `Add ${selectedOwners.length} Owner(s)` : 
-             'Add Recipient'
-           }
+           Add Recipient
          </Button>
        </DialogActions>
      </Dialog>
