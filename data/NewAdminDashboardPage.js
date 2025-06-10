@@ -45,8 +45,6 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const [error, setError] = useState(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState('30');
   const [notification, setNotification] = useState(null);
-  const [emailNotificationService] = useState(() => new EmailNotificationService());
-
   
   // Email Management State
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -68,6 +66,21 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     email: '',
     role: 'user'
   });
+
+  const [emailNotificationService] = useState(() => new EmailNotificationService());
+
+  useEffect(() => {
+    // Start automated email monitoring when admin dashboard loads
+    if (sharePointAvailable && isAdmin) {
+      emailNotificationService.startEmailMonitoring();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      emailNotificationService.stopEmailMonitoring();
+    };
+  }, [sharePointAvailable, isAdmin]);
+  
   const [editingProcedure, setEditingProcedure] = useState({});
   const [userLoading, setUserLoading] = useState(false);
 
