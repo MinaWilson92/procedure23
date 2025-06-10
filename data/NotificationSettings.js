@@ -1,30 +1,27 @@
-// components/email/NotificationSettings.js - Enhanced with System Maintenance Templates
+// components/email/NotificationSettings.js - Complete Fixed Version
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid,
   Switch, FormControlLabel, Alert, Chip, Divider,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Select, MenuItem, FormControl, InputLabel,
-  CircularProgress, List, ListItem, ListItemText, ListItemSecondaryAction,
-  Accordion, AccordionSummary, AccordionDetails, Tabs, Tab, Paper
+  TextField, CircularProgress, List, ListItem, ListItemText,
+  ListItemSecondaryAction, IconButton
 } from '@mui/material';
 import {
-  Settings, Edit, Save, Cancel, ExpandMore, Email,
-  Notifications, Description, Preview, Refresh, Add,
-  CheckCircle, Warning, Info, Build, Announcement
+  Settings, Edit, Save, Cancel, Notifications, Email,
+  CheckCircle, Warning, Refresh, Preview
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import EmailService from '../../services/EmailService';
 
 const NotificationSettings = () => {
   // State management
-  const [activeTab, setActiveTab] = useState(0);
   const [templates, setTemplates] = useState([]);
-  const [systemTemplates, setSystemTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [editDialog, setEditDialog] = useState(false);
+  const [previewDialog, setPreviewDialog] = useState(false);
   const [currentTemplate, setCurrentTemplate] = useState(null);
   const [templateForm, setTemplateForm] = useState({
     type: '',
@@ -35,59 +32,53 @@ const NotificationSettings = () => {
     isActive: true
   });
 
-  // Enhanced template types with system maintenance
+  // Template types configuration matching your SharePoint structure
   const templateTypes = [
     {
       type: 'new-procedure-uploaded',
       name: 'New Procedure Uploaded',
       description: 'Sent when a new procedure is uploaded to the system',
       icon: '📤',
-      color: 'primary',
-      category: 'procedure'
+      color: 'primary'
     },
     {
       type: 'procedure-expiring',
       name: 'Procedure Expiring Soon',
       description: 'Sent when a procedure is approaching its expiry date',
       icon: '⏰',
-      color: 'warning',
-      category: 'procedure'
+      color: 'warning'
     },
     {
       type: 'procedure-expired',
       name: 'Procedure Expired',
       description: 'Sent when a procedure has expired',
       icon: '🚨',
-      color: 'error',
-      category: 'procedure'
+      color: 'error'
     },
     {
       type: 'low-quality-score',
       name: 'Low Quality Score Alert',
       description: 'Sent when a procedure has a low quality score',
       icon: '📊',
-      color: 'info',
-      category: 'procedure'
+      color: 'info'
     },
     {
       type: 'system-maintenance',
       name: 'System Maintenance',
-      description: 'Notifications for scheduled and emergency maintenance',
+      description: 'Sent during system maintenance or updates',
       icon: '🔧',
-      color: 'secondary',
-      category: 'system'
+      color: 'secondary'
     },
     {
       type: 'broadcast-announcement',
       name: 'Broadcast Announcement',
-      description: 'General announcements and communications',
+      description: 'Sent for general announcements to all users',
       icon: '📢',
-      color: 'success',
-      category: 'system'
+      color: 'success'
     }
   ];
 
-  // Available template variables for each type
+  // Available template variables
   const templateVariables = {
     'new-procedure-uploaded': [
       '{{procedureName}}', '{{ownerName}}', '{{uploadDate}}', '{{qualityScore}}', '{{lob}}'
@@ -102,10 +93,10 @@ const NotificationSettings = () => {
       '{{procedureName}}', '{{ownerName}}', '{{qualityScore}}', '{{recommendations}}', '{{lob}}'
     ],
     'system-maintenance': [
-      '{{maintenanceDate}}', '{{startTime}}', '{{endTime}}', '{{duration}}', '{{impact}}', '{{emergencyReason}}', '{{expectedDuration}}'
+      '{{maintenanceDate}}', '{{duration}}', '{{affectedSystems}}', '{{contactInfo}}'
     ],
     'broadcast-announcement': [
-      '{{announcementTitle}}', '{{announcementDate}}', '{{senderName}}', '{{priority}}', '{{actionRequired}}'
+      '{{announcementTitle}}', '{{announcementBody}}', '{{effectiveDate}}', '{{contactInfo}}'
     ]
   };
 
@@ -114,7 +105,6 @@ const NotificationSettings = () => {
 
   useEffect(() => {
     loadEmailTemplates();
-    loadSystemMaintenanceTemplates();
   }, []);
 
   const loadEmailTemplates = async () => {
@@ -122,7 +112,7 @@ const NotificationSettings = () => {
       setLoading(true);
       setMessage(null);
 
-      console.log('📧 Loading email templates...');
+      console.log('📧 Loading email templates from SharePoint...');
       const emailTemplates = await emailService.getEmailTemplates();
       
       // Ensure all template types are represented
@@ -168,103 +158,110 @@ const NotificationSettings = () => {
     }
   };
 
-  const loadSystemMaintenanceTemplates = async () => {
-    try {
-      console.log('🔧 Loading system maintenance templates...');
-      const maintenanceTemplates = emailService.getSystemMaintenanceTemplates();
-      setSystemTemplates(maintenanceTemplates);
-      console.log('✅ System maintenance templates loaded:', maintenanceTemplates.length);
-    } catch (error) {
-      console.error('❌ Error loading system maintenance templates:', error);
-    }
-  };
-
   const getDefaultSubject = (type) => {
     const subjects = {
       'new-procedure-uploaded': 'New Procedure Uploaded: {{procedureName}}',
       'procedure-expiring': 'Procedure Expiring Soon: {{procedureName}}',
-      'procedure-expired': 'Procedure Expired: {{procedureName}}',
-      'low-quality-score': 'Low Quality Score Alert: {{procedureName}}',
-      'system-maintenance': 'HSBC Procedures Hub - System Maintenance: {{maintenanceDate}}',
-      'broadcast-announcement': 'HSBC Procedures Hub - {{announcementTitle}}'
+      'procedure-expired': 'URGENT: Procedure Expired - {{procedureName}}',
+      'low-quality-score': 'Quality Alert: {{procedureName}} - Score {{qualityScore}}%',
+      'system-maintenance': 'System Maintenance Scheduled: {{maintenanceDate}}',
+      'broadcast-announcement': 'Important Announcement: {{announcementTitle}}'
     };
     return subjects[type] || 'HSBC Procedures Hub Notification';
   };
 
   const getDefaultHtmlContent = (type) => {
-    const contents = {
-      'system-maintenance': `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #ff9800, #f57c00); padding: 20px; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">System Maintenance Notice</p>
-          </div>
-          <div style="padding: 30px; background: #fff3e0;">
-            <h2 style="color: #e65100; margin-top: 0;">🔧 System Maintenance</h2>
-            <p style="color: #666; line-height: 1.6;">
-              The HSBC Procedures Hub will undergo maintenance during the following time:
-            </p>
-            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800; margin: 20px 0;">
-              <h3 style="margin: 0 0 10px 0; color: #e65100;">Maintenance Details</h3>
-              <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> {{maintenanceDate}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Start Time:</strong> {{startTime}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>End Time:</strong> {{endTime}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Duration:</strong> {{duration}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Impact:</strong> {{impact}}</p>
-            </div>
-            <p style="color: #666; font-size: 14px; margin-top: 30px;">
-              We apologize for any inconvenience. The system will be back online after the maintenance window.
-            </p>
-          </div>
+    const baseTemplate = (title, bgColor, content) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, ${bgColor}, ${bgColor}); padding: 20px; color: white;">
+          <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">${title}</p>
         </div>
-      `,
-      'broadcast-announcement': `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #4caf50, #388e3c); padding: 20px; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Important Announcement</p>
-          </div>
-          <div style="padding: 30px; background: #f9f9f9;">
-            <h2 style="color: #333; margin-top: 0;">📢 {{announcementTitle}}</h2>
-            <p style="color: #666; line-height: 1.6;">
-              We have an important announcement regarding the HSBC Procedures Hub:
-            </p>
-            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0;">
-              <h3 style="margin: 0 0 10px 0; color: #388e3c;">Announcement Details</h3>
-              <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> {{announcementDate}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>From:</strong> {{senderName}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Priority:</strong> {{priority}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Action Required:</strong> {{actionRequired}}</p>
-            </div>
-            <p style="color: #666; font-size: 14px; margin-top: 30px;">
-              Thank you for your attention to this announcement.
-            </p>
-          </div>
+        <div style="padding: 30px; background: #f9f9f9;">
+          ${content}
+          <p style="color: #666; font-size: 14px; margin-top: 30px;">
+            This email was sent automatically by the HSBC Procedures Hub via SharePoint.
+          </p>
         </div>
-      `
-    };
-    
-    // Return existing content for other types or default for new ones
-    return contents[type] || this.getExistingDefaultContent(type);
-  };
+      </div>
+    `;
 
-  const getExistingDefaultContent = (type) => {
-    // Keep existing content for procedure-related templates
-    const existingContents = {
-      'new-procedure-uploaded': `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"> <div style="background: linear-gradient(135deg, #d40000, #b30000); padding: 20px; color: white;"> <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1> <p style="margin: 5px 0 0 0; opacity: 0.9;">New Procedure Notification</p> </div> <div style="padding: 30px; background: #f9f9f9;"> <h2 style="color: #333; margin-top: 0;">📤 New Procedure Uploaded</h2> <p style="color: #666; line-height: 1.6;"> A new procedure has been uploaded to the HSBC Procedures Hub: </p> <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #d40000; margin: 20px 0;"> <h3 style="margin: 0 0 10px 0; color: #d40000;">{{procedureName}}</h3> <p style="margin: 5px 0; color: #666;"><strong>Owner:</strong> {{ownerName}}</p> <p style="margin: 5px 0; color: #666;"><strong>Upload Date:</strong> {{uploadDate}}</p> <p style="margin: 5px 0; color: #666;"><strong>Quality Score:</strong> {{qualityScore}}%</p> <p style="margin: 5px 0; color: #666;"><strong>Line of Business:</strong> {{lob}}</p> </div> <p style="color: #666; font-size: 14px; margin-top: 30px;"> This email was sent automatically by the HSBC Procedures Hub system. </p> </div> </div>`
+    const contents = {
+      'new-procedure-uploaded': baseTemplate('New Procedure Notification', '#d40000', `
+        <h2 style="color: #333; margin-top: 0;">📤 New Procedure Uploaded</h2>
+        <p style="color: #666; line-height: 1.6;">A new procedure has been uploaded to the HSBC Procedures Hub:</p>
+        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #d40000; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #d40000;">{{procedureName}}</h3>
+          <p style="margin: 5px 0; color: #666;"><strong>Owner:</strong> {{ownerName}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Upload Date:</strong> {{uploadDate}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Quality Score:</strong> {{qualityScore}}%</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Line of Business:</strong> {{lob}}</p>
+        </div>
+      `),
+      'procedure-expiring': baseTemplate('Expiry Warning', '#ff9800', `
+        <h2 style="color: #e65100; margin-top: 0;">⏰ Procedure Expiring Soon</h2>
+        <p style="color: #666; line-height: 1.6;">The following procedure is approaching its expiry date:</p>
+        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #e65100;">{{procedureName}}</h3>
+          <p style="margin: 5px 0; color: #666;"><strong>Owner:</strong> {{ownerName}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Expiry Date:</strong> {{expiryDate}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Days Remaining:</strong> {{daysLeft}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Line of Business:</strong> {{lob}}</p>
+        </div>
+      `),
+      'procedure-expired': baseTemplate('Urgent Action Required', '#f44336', `
+        <h2 style="color: #c62828; margin-top: 0;">🚨 Procedure Expired</h2>
+        <p style="color: #666; line-height: 1.6;">The following procedure has expired and requires immediate attention:</p>
+        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #c62828;">{{procedureName}}</h3>
+          <p style="margin: 5px 0; color: #666;"><strong>Owner:</strong> {{ownerName}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Expired Date:</strong> {{expiredDate}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Days Overdue:</strong> {{daysOverdue}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Line of Business:</strong> {{lob}}</p>
+        </div>
+      `),
+      'low-quality-score': baseTemplate('Quality Alert', '#2196f3', `
+        <h2 style="color: #1565c0; margin-top: 0;">📊 Low Quality Score Alert</h2>
+        <p style="color: #666; line-height: 1.6;">The following procedure has received a low quality score:</p>
+        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #2196f3; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #1565c0;">{{procedureName}}</h3>
+          <p style="margin: 5px 0; color: #666;"><strong>Owner:</strong> {{ownerName}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Quality Score:</strong> {{qualityScore}}%</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Line of Business:</strong> {{lob}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Recommendations:</strong> {{recommendations}}</p>
+        </div>
+      `),
+      'system-maintenance': baseTemplate('System Maintenance', '#9c27b0', `
+        <h2 style="color: #7b1fa2; margin-top: 0;">🔧 System Maintenance Scheduled</h2>
+        <p style="color: #666; line-height: 1.6;">The HSBC Procedures Hub will undergo scheduled maintenance:</p>
+        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #9c27b0; margin: 20px 0;">
+          <p style="margin: 5px 0; color: #666;"><strong>Maintenance Date:</strong> {{maintenanceDate}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Duration:</strong> {{duration}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Affected Systems:</strong> {{affectedSystems}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Contact:</strong> {{contactInfo}}</p>
+        </div>
+      `),
+      'broadcast-announcement': baseTemplate('Important Announcement', '#4caf50', `
+        <h2 style="color: #388e3c; margin-top: 0;">📢 Important Announcement</h2>
+        <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0;">
+          <h3 style="margin: 0 0 10px 0; color: #388e3c;">{{announcementTitle}}</h3>
+          <p style="margin: 10px 0; color: #666; line-height: 1.6;">{{announcementBody}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Effective Date:</strong> {{effectiveDate}}</p>
+          <p style="margin: 5px 0; color: #666;"><strong>Contact:</strong> {{contactInfo}}</p>
+        </div>
+      `)
     };
-    
-    return existingContents[type] || '<p>Default notification content</p>';
+    return contents[type] || '<p>Default notification content</p>';
   };
 
   const getDefaultTextContent = (type) => {
     const contents = {
       'new-procedure-uploaded': 'New procedure uploaded: {{procedureName}} by {{ownerName}} on {{uploadDate}}. Quality Score: {{qualityScore}}%',
       'procedure-expiring': 'Procedure {{procedureName}} expires on {{expiryDate}} ({{daysLeft}} days remaining). Owner: {{ownerName}}',
-      'procedure-expired': 'Procedure {{procedureName}} expired on {{expiredDate}} ({{daysOverdue}} days overdue). Owner: {{ownerName}}',
-      'low-quality-score': 'Procedure {{procedureName}} has a low quality score of {{qualityScore}}%. Recommendations: {{recommendations}}',
-      'system-maintenance': 'HSBC Procedures Hub maintenance scheduled for {{maintenanceDate}} from {{startTime}} to {{endTime}}. {{impact}}',
-      'broadcast-announcement': 'HSBC Procedures Hub Announcement: {{announcementTitle}} on {{announcementDate}}. {{actionRequired}}'
+      'procedure-expired': 'URGENT: Procedure {{procedureName}} expired on {{expiredDate}} ({{daysOverdue}} days overdue). Owner: {{ownerName}}',
+      'low-quality-score': 'Quality Alert: Procedure {{procedureName}} has a low quality score of {{qualityScore}}%. Recommendations: {{recommendations}}',
+      'system-maintenance': 'System maintenance scheduled for {{maintenanceDate}}. Duration: {{duration}}. Affected: {{affectedSystems}}',
+      'broadcast-announcement': 'Announcement: {{announcementTitle}}. {{announcementBody}}. Effective: {{effectiveDate}}'
     };
     return contents[type] || 'Default notification text';
   };
@@ -273,7 +270,6 @@ const NotificationSettings = () => {
     try {
       console.log('✏️ Editing template:', templateType);
 
-      // Get the specific template from SharePoint
       const template = await emailService.getEmailTemplate(templateType);
       
       setCurrentTemplate(template);
@@ -298,7 +294,7 @@ const NotificationSettings = () => {
       setSaving(true);
       setMessage(null);
 
-      console.log('💾 Saving template:', templateForm.type);
+      console.log('💾 Saving template to SharePoint:', templateForm.type);
       
       const templateToSave = {
         ...templateForm,
@@ -308,8 +304,8 @@ const NotificationSettings = () => {
       const result = await emailService.saveEmailTemplate(templateToSave);
       
       if (result.success) {
-        console.log('✅ Template saved successfully');
-        setMessage({ type: 'success', text: 'Template saved successfully' });
+        console.log('✅ Template saved successfully to SharePoint');
+        setMessage({ type: 'success', text: 'Template saved successfully to SharePoint' });
         setEditDialog(false);
         
         // Reload templates
@@ -331,10 +327,8 @@ const NotificationSettings = () => {
     try {
       console.log('🔄 Toggling template:', templateType, isActive);
 
-      // Get current template
       const template = await emailService.getEmailTemplate(templateType);
       
-      // Update active status
       const updatedTemplate = {
         ...template,
         isActive: isActive
@@ -343,7 +337,6 @@ const NotificationSettings = () => {
       const result = await emailService.saveEmailTemplate(updatedTemplate);
       
       if (result.success) {
-        // Update local state
         setTemplates(prev => prev.map(t => 
           t.type === templateType ? { ...t, isActive: isActive } : t
         ));
@@ -361,6 +354,11 @@ const NotificationSettings = () => {
     }
   };
 
+  const handlePreviewTemplate = (template) => {
+    setCurrentTemplate(template);
+    setPreviewDialog(true);
+  };
+
   const insertVariable = (variable) => {
     const textarea = document.getElementById('htmlContent');
     if (textarea) {
@@ -375,7 +373,6 @@ const NotificationSettings = () => {
         htmlContent: before + variable + after
       }));
       
-      // Set cursor position after insertion
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + variable.length;
         textarea.focus();
@@ -383,16 +380,12 @@ const NotificationSettings = () => {
     }
   };
 
-  const getCategoryTemplates = (category) => {
-    return templates.filter(t => t.category === category);
-  };
-
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
         <CircularProgress size={60} />
         <Typography variant="h6" sx={{ ml: 2 }}>
-          Loading notification settings...
+          Loading notification settings from SharePoint...
         </Typography>
       </Box>
     );
@@ -407,7 +400,7 @@ const NotificationSettings = () => {
             🔔 Notification Settings
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Configure email templates for procedures, system maintenance, and announcements
+            Configure email templates and notification preferences for different events
           </Typography>
         </Box>
         <Button
@@ -437,350 +430,179 @@ const NotificationSettings = () => {
         </motion.div>
       )}
 
-      {/* Navigation Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-          <Tab 
-            label="Procedure Templates" 
-            icon={<Description />}
-            iconPosition="start"
-          />
-          <Tab 
-            label="System Templates" 
-            icon={<Build />}
-            iconPosition="start"
-          />
-        </Tabs>
-      </Paper>
-
-      {/* Tab 0: Procedure Templates */}
-      {activeTab === 0 && (
-        <Box>
-          <Grid container spacing={3}>
-            {getCategoryTemplates('procedure').map((template) => (
-              <Grid item xs={12} md={6} key={template.type}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Card sx={{ 
-                    height: '100%',
-                    border: template.isActive ? `2px solid ${template.color === 'primary' ? '#1976d2' : template.color === 'warning' ? '#ff9800' : template.color === 'error' ? '#f44336' : '#2196f3'}` : '2px solid #e0e0e0',
-                    opacity: template.isActive ? 1 : 0.7
-                  }}>
-                    <CardContent>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <span style={{ fontSize: '1.5rem' }}>{template.icon}</span>
-                            {template.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            {template.description}
-                          </Typography>
-                          <Chip 
-                            label={template.type}
-                            size="small"
-                            color={template.color}
-                            variant="outlined"
-                            sx={{ mb: 2 }}
-                          />
-                        </Box>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              checked={template.isActive}
-                              onChange={(e) => handleToggleTemplate(template.type, e.target.checked)}
-                              color="primary"
-                            />
-                          }
-                          label=""
-                          sx={{ ml: 1 }}
+      {/* Template Cards */}
+      <Grid container spacing={3}>
+        {templates.map((template) => (
+          <Grid item xs={12} md={6} key={template.type}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card sx={{ 
+                height: '100%',
+                border: template.isActive ? `2px solid ${
+                  template.color === 'primary' ? '#1976d2' : 
+                  template.color === 'warning' ? '#ff9800' : 
+                  template.color === 'error' ? '#f44336' : 
+                  template.color === 'info' ? '#2196f3' :
+                  template.color === 'secondary' ? '#9c27b0' :
+                  template.color === 'success' ? '#4caf50' : '#1976d2'
+                }` : '2px solid #e0e0e0',
+                opacity: template.isActive ? 1 : 0.7
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <span style={{ fontSize: '1.5rem' }}>{template.icon}</span>
+                        {template.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {template.description}
+                      </Typography>
+                      <Chip 
+                        label={template.type}
+                        size="small"
+                        color={template.color}
+                        variant="outlined"
+                        sx={{ mb: 2 }}
+                      />
+                    </Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={template.isActive}
+                          onChange={(e) => handleToggleTemplate(template.type, e.target.checked)}
+                          color="primary"
                         />
-                      </Box>
+                      }
+                      label=""
+                      sx={{ ml: 1 }}
+                    />
+                  </Box>
 
-                      <Divider sx={{ my: 2 }} />
+                  <Divider sx={{ my: 2 }} />
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>
-                          Subject:
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ 
-                          fontStyle: 'italic',
-                          bgcolor: 'grey.50',
-                          p: 1,
-                          borderRadius: 1,
-                          fontSize: '0.8rem'
-                        }}>
-                          {template.subject || 'No subject configured'}
-                        </Typography>
-                      </Box>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      Subject:
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontStyle: 'italic',
+                      bgcolor: 'grey.50',
+                      p: 1,
+                      borderRadius: 1,
+                      fontSize: '0.8rem'
+                    }}>
+                      {template.subject || 'No subject configured'}
+                    </Typography>
+                  </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="body2" fontWeight="bold" gutterBottom>
-                          Status:
-                        </Typography>
-                        <Chip 
-                          label={template.isActive ? 'Active' : 'Disabled'}
-size="small"
-                         color={template.isActive ? 'success' : 'default'}
-                         icon={template.isActive ? <CheckCircle /> : <Cancel />}
-                       />
-                     </Box>
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="body2" fontWeight="bold" gutterBottom>
+                      Status:
+                    </Typography>
+                    <Chip 
+                      label={template.isActive ? 'Active' : 'Disabled'}
+                      size="small"
+                      color={template.isActive ? 'success' : 'default'}
+                      icon={template.isActive ? <CheckCircle /> : <Warning />}
+                    />
+                  </Box>
 
-                     <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
-                       <Button
-                         variant="outlined"
-                         startIcon={<Edit />}
-                         onClick={() => handleEditTemplate(template.type)}
-                         size="small"
-                         fullWidth
-                       >
-                         Edit Template
-                       </Button>
-                     </Box>
-                   </CardContent>
-                 </Card>
-               </motion.div>
-             </Grid>
-           ))}
-         </Grid>
-       </Box>
-     )}
+                  <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Preview />}
+                      onClick={() => handlePreviewTemplate(template)}
+                      size="small"
+                      sx={{ flex: 1 }}
+                    >
+                      Preview
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      startIcon={<Edit />}
+                      onClick={() => handleEditTemplate(template.type)}
+                      size="small"
+                      sx={{ flex: 1 }}
+                    >
+                      Edit
+                    </Button>
+                  </Box>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        ))}
+      </Grid>
 
-     {/* Tab 1: System Templates */}
-     {activeTab === 1 && (
-       <Box>
-         <Alert severity="info" sx={{ mb: 3 }}>
-           <Typography variant="body2">
-             <strong>System Templates:</strong> These templates are used for system maintenance notifications and broadcast announcements. 
-             Customize them to match your organization's communication standards.
-           </Typography>
-         </Alert>
+      {/* Summary Statistics */}
+      <Card sx={{ mt: 3 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            📊 Notification Summary
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.main', color: 'white', borderRadius: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {templates.filter(t => t.isActive).length}
+                </Typography>
+                <Typography variant="body2">
+                  Active Templates
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'warning.main', color: 'white', borderRadius: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {templates.filter(t => !t.isActive).length}
+                </Typography>
+                <Typography variant="body2">
+                  Disabled Templates
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {templates.length}
+                </Typography>
+                <Typography variant="body2">
+                  Total Templates
+                </Typography>
+              </Box>
+            </Grid>
+            <Grid item xs={6} sm={3}>
+              <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'info.main', color: 'white', borderRadius: 2 }}>
+                <Typography variant="h4" fontWeight="bold">
+                  {templates.filter(t => t.id !== null).length}
+                </Typography>
+                <Typography variant="body2">
+                  Customized Templates
+                </Typography>
+              </Box>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
-         <Grid container spacing={3}>
-           {getCategoryTemplates('system').map((template) => (
-             <Grid item xs={12} md={6} key={template.type}>
-               <motion.div
-                 initial={{ opacity: 0, y: 20 }}
-                 animate={{ opacity: 1, y: 0 }}
-                 transition={{ duration: 0.3 }}
-               >
-                 <Card sx={{ 
-                   height: '100%',
-                   border: template.isActive ? `2px solid ${template.color === 'secondary' ? '#9c27b0' : '#4caf50'}` : '2px solid #e0e0e0',
-                   opacity: template.isActive ? 1 : 0.7
-                 }}>
-                   <CardContent>
-                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                       <Box sx={{ flex: 1 }}>
-                         <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                           <span style={{ fontSize: '1.5rem' }}>{template.icon}</span>
-                           {template.name}
-                         </Typography>
-                         <Typography variant="body2" color="text.secondary" gutterBottom>
-                           {template.description}
-                         </Typography>
-                         <Chip 
-                           label={template.category === 'system' ? 'System Template' : 'Procedure Template'}
-                           size="small"
-                           color={template.color}
-                           variant="outlined"
-                           sx={{ mb: 2 }}
-                         />
-                       </Box>
-                       <FormControlLabel
-                         control={
-                           <Switch
-                             checked={template.isActive}
-                             onChange={(e) => handleToggleTemplate(template.type, e.target.checked)}
-                             color="primary"
-                           />
-                         }
-                         label=""
-                         sx={{ ml: 1 }}
-                       />
-                     </Box>
-
-                     <Divider sx={{ my: 2 }} />
-
-                     <Box sx={{ mb: 2 }}>
-                       <Typography variant="body2" fontWeight="bold" gutterBottom>
-                         Subject:
-                       </Typography>
-                       <Typography variant="body2" color="text.secondary" sx={{ 
-                         fontStyle: 'italic',
-                         bgcolor: 'grey.50',
-                         p: 1,
-                         borderRadius: 1,
-                         fontSize: '0.8rem'
-                       }}>
-                         {template.subject || 'No subject configured'}
-                       </Typography>
-                     </Box>
-
-                     <Box sx={{ mb: 2 }}>
-                       <Typography variant="body2" fontWeight="bold" gutterBottom>
-                         Available Variables:
-                       </Typography>
-                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                         {templateVariables[template.type]?.slice(0, 3).map((variable) => (
-                           <Chip
-                             key={variable}
-                             label={variable}
-                             size="small"
-                             variant="outlined"
-                             sx={{ fontSize: '0.6rem', height: 20 }}
-                           />
-                         ))}
-                         {templateVariables[template.type]?.length > 3 && (
-                           <Chip
-                             label={`+${templateVariables[template.type].length - 3} more`}
-                             size="small"
-                             variant="outlined"
-                             sx={{ fontSize: '0.6rem', height: 20 }}
-                           />
-                         )}
-                       </Box>
-                     </Box>
-
-                     <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
-                       <Button
-                         variant="outlined"
-                         startIcon={<Edit />}
-                         onClick={() => handleEditTemplate(template.type)}
-                         size="small"
-                         fullWidth
-                       >
-                         Edit Template
-                       </Button>
-                     </Box>
-                   </CardContent>
-                 </Card>
-               </motion.div>
-             </Grid>
-           ))}
-         </Grid>
-
-         {/* System Maintenance Quick Templates */}
-         <Card sx={{ mt: 4 }}>
-           <CardContent>
-             <Typography variant="h6" gutterBottom>
-               🔧 System Maintenance Quick Templates
-             </Typography>
-             <Typography variant="body2" color="text.secondary" gutterBottom>
-               Pre-configured templates for common maintenance scenarios
-             </Typography>
-
-             <Grid container spacing={2} sx={{ mt: 2 }}>
-               {systemTemplates.map((template, index) => (
-                 <Grid item xs={12} md={6} key={template.id}>
-                   <Card variant="outlined" sx={{ 
-                     cursor: 'pointer',
-                     '&:hover': { bgcolor: 'grey.50' }
-                   }}
-                   onClick={() => {
-                     setTemplateForm({
-                       type: 'system-maintenance',
-                       name: template.name,
-                       subject: template.subject,
-                       htmlContent: template.htmlContent,
-                       textContent: template.textContent,
-                       isActive: true
-                     });
-                     setCurrentTemplate(null);
-                     setEditDialog(true);
-                   }}>
-                     <CardContent sx={{ p: 2 }}>
-                       <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                         {template.name}
-                       </Typography>
-                       <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
-                         {template.subject}
-                       </Typography>
-                       <Chip 
-                         label="Use Template"
-                         size="small"
-                         color="secondary"
-                         sx={{ mt: 1 }}
-                       />
-                     </CardContent>
-                   </Card>
-                 </Grid>
-               ))}
-             </Grid>
-           </CardContent>
-         </Card>
-       </Box>
-     )}
-
-     {/* Summary Statistics */}
-     <Card sx={{ mt: 3 }}>
-       <CardContent>
-         <Typography variant="h6" gutterBottom>
-           📊 Template Summary
-         </Typography>
-         <Grid container spacing={2}>
-           <Grid item xs={6} sm={3}>
-             <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.main', color: 'white', borderRadius: 2 }}>
-               <Typography variant="h4" fontWeight="bold">
-                 {templates.filter(t => t.isActive).length}
-               </Typography>
-               <Typography variant="body2">
-                 Active Templates
-               </Typography>
-             </Box>
-           </Grid>
-           <Grid item xs={6} sm={3}>
-             <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'warning.main', color: 'white', borderRadius: 2 }}>
-               <Typography variant="h4" fontWeight="bold">
-                 {templates.filter(t => !t.isActive).length}
-               </Typography>
-               <Typography variant="body2">
-                 Disabled Templates
-               </Typography>
-             </Box>
-           </Grid>
-           <Grid item xs={6} sm={3}>
-             <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 2 }}>
-               <Typography variant="h4" fontWeight="bold">
-                 {getCategoryTemplates('procedure').length}
-               </Typography>
-               <Typography variant="body2">
-                 Procedure Templates
-               </Typography>
-             </Box>
-           </Grid>
-           <Grid item xs={6} sm={3}>
-             <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'secondary.main', color: 'white', borderRadius: 2 }}>
-               <Typography variant="h4" fontWeight="bold">
-                 {getCategoryTemplates('system').length}
-               </Typography>
-               <Typography variant="body2">
-                 System Templates
-               </Typography>
-             </Box>
-           </Grid>
-         </Grid>
-       </CardContent>
-     </Card>
-
-     {/* Edit Template Dialog */}
-     <Dialog 
-       open={editDialog} 
-       onClose={() => setEditDialog(false)}
-       maxWidth="lg"
-       fullWidth
-     >
-       <DialogTitle>
-         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-           <Description color="primary" />
-           Edit Email Template: {templateForm.name}
-         </Box>
-       </DialogTitle>
-       
-       <DialogContent>
+      {/* Edit Template Dialog */}
+      <Dialog 
+        open={editDialog} 
+        onClose={() => setEditDialog(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Email color="primary" />
+            Edit Email Template: {templateForm.name}
+          </Box>
+        </DialogTitle>
+<DialogContent>
          <Grid container spacing={3}>
            {/* Template Form */}
            <Grid item xs={12} md={8}>
@@ -791,6 +613,8 @@ size="small"
                  value={templateForm.name}
                  onChange={(e) => setTemplateForm(prev => ({ ...prev, name: e.target.value }))}
                  sx={{ mb: 2 }}
+                 disabled
+                 helperText="Template name is auto-generated based on type"
                />
                
                <TextField
@@ -800,6 +624,7 @@ size="small"
                  onChange={(e) => setTemplateForm(prev => ({ ...prev, subject: e.target.value }))}
                  sx={{ mb: 2 }}
                  helperText="Use variables like {{procedureName}} for dynamic content"
+                 required
                />
                
                <TextField
@@ -812,6 +637,7 @@ size="small"
                  id="htmlContent"
                  sx={{ mb: 2 }}
                  helperText="HTML content for rich email formatting"
+                 required
                />
                
                <TextField
@@ -884,19 +710,37 @@ size="small"
                    }} />
                  </Box>
 
-                 {/* Template Category Info */}
-                 {templateForm.type && (
-                   <Box sx={{ mt: 2 }}>
-                     <Typography variant="body2" fontWeight="bold" gutterBottom>
-                       Template Category:
-                     </Typography>
-                     <Chip 
-                       label={templateTypes.find(t => t.type === templateForm.type)?.category === 'system' ? 'System Template' : 'Procedure Template'}
-                       size="small"
-                       color={templateTypes.find(t => t.type === templateForm.type)?.category === 'system' ? 'secondary' : 'primary'}
+                 <Divider sx={{ my: 2 }} />
+                 
+                 <Typography variant="body2" fontWeight="bold" gutterBottom>
+                   💡 Template Tips:
+                 </Typography>
+                 <List dense>
+                   <ListItem sx={{ px: 0, py: 0.5 }}>
+                     <ListItemText 
+                       primary="Use HSBC colors"
+                       secondary="#d40000 for primary branding"
+                       primaryTypographyProps={{ fontSize: '0.8rem' }}
+                       secondaryTypographyProps={{ fontSize: '0.7rem' }}
                      />
-                   </Box>
-                 )}
+                   </ListItem>
+                   <ListItem sx={{ px: 0, py: 0.5 }}>
+                     <ListItemText 
+                       primary="Keep it responsive"
+                       secondary="max-width: 600px for email clients"
+                       primaryTypographyProps={{ fontSize: '0.8rem' }}
+                       secondaryTypographyProps={{ fontSize: '0.7rem' }}
+                     />
+                   </ListItem>
+                   <ListItem sx={{ px: 0, py: 0.5 }}>
+                     <ListItemText 
+                       primary="Test thoroughly"
+                       secondary="Preview in different email clients"
+                       primaryTypographyProps={{ fontSize: '0.8rem' }}
+                       secondaryTypographyProps={{ fontSize: '0.7rem' }}
+                     />
+                   </ListItem>
+                 </List>
                </CardContent>
              </Card>
            </Grid>
@@ -916,7 +760,95 @@ size="small"
            startIcon={saving ? <CircularProgress size={20} /> : <Save />}
            disabled={saving || !templateForm.subject || !templateForm.htmlContent}
          >
-           {saving ? 'Saving...' : 'Save Template'}
+           {saving ? 'Saving to SharePoint...' : 'Save Template'}
+         </Button>
+       </DialogActions>
+     </Dialog>
+
+     {/* Preview Dialog */}
+     <Dialog 
+       open={previewDialog} 
+       onClose={() => setPreviewDialog(false)}
+       maxWidth="md"
+       fullWidth
+     >
+       <DialogTitle>
+         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+           <Preview color="primary" />
+           Template Preview: {currentTemplate?.name}
+           <Chip 
+             label={currentTemplate?.isActive ? 'Active' : 'Disabled'}
+             size="small"
+             color={currentTemplate?.isActive ? 'success' : 'default'}
+             sx={{ ml: 1 }}
+           />
+         </Box>
+       </DialogTitle>
+       
+       <DialogContent>
+         <Box sx={{ mb: 2 }}>
+           <Typography variant="body1" fontWeight="bold">
+             Subject: {currentTemplate?.subject}
+           </Typography>
+           <Typography variant="body2" color="text.secondary">
+             Type: {currentTemplate?.type} | Template ID: {currentTemplate?.id || 'New'}
+           </Typography>
+         </Box>
+         
+         <Divider sx={{ my: 2 }} />
+         
+         <Box sx={{ 
+           border: '1px solid #e0e0e0', 
+           borderRadius: 1,
+           overflow: 'hidden',
+           mb: 2
+         }}>
+           <div dangerouslySetInnerHTML={{ __html: currentTemplate?.htmlContent }} />
+         </Box>
+         
+         <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+           <Typography variant="body2" fontWeight="bold" gutterBottom>
+             Plain Text Version:
+           </Typography>
+           <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+             {currentTemplate?.textContent || 'No plain text version available'}
+           </Typography>
+         </Box>
+
+         {/* Template Variables for this type */}
+         {currentTemplate?.type && templateVariables[currentTemplate.type] && (
+           <Box sx={{ mt: 2 }}>
+             <Typography variant="body2" fontWeight="bold" gutterBottom>
+               Available Variables for {currentTemplate.name}:
+             </Typography>
+             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+               {templateVariables[currentTemplate.type].map((variable) => (
+                 <Chip
+                   key={variable}
+                   label={variable}
+                   size="small"
+                   variant="outlined"
+                   color="primary"
+                 />
+               ))}
+             </Box>
+           </Box>
+         )}
+       </DialogContent>
+       
+       <DialogActions>
+         <Button onClick={() => setPreviewDialog(false)}>
+           Close
+         </Button>
+         <Button 
+           variant="outlined"
+           startIcon={<Edit />}
+           onClick={() => {
+             setPreviewDialog(false);
+             handleEditTemplate(currentTemplate.type);
+           }}
+         >
+           Edit Template
          </Button>
        </DialogActions>
      </Dialog>
