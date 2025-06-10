@@ -1,4 +1,4 @@
-// services/EmailService.js - Fixed to use SharePoint Email API
+// services/EmailService.js - Enhanced Version with Admin Dashboard Integration
 import SharePointService from './SharePointService';
 
 class EmailService {
@@ -10,10 +10,53 @@ class EmailService {
   }
 
   // ===================================================================
-  // EMAIL CONFIGURATION MANAGEMENT
+  // ENHANCED: Better Request Digest Management
   // ===================================================================
 
-  // GET email configuration from SharePoint
+  // Get fresh request digest (same as admin dashboard)
+  async getFreshRequestDigest() {
+    try {
+      console.log('🔑 Getting fresh request digest...');
+      
+      const digestUrl = `${this.baseUrl}/_api/contextinfo`;
+      const digestResponse = await fetch(digestUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        },
+        credentials: 'include'
+      });
+      
+      if (digestResponse.ok) {
+        const digestData = await digestResponse.json();
+        const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+        console.log('✅ Fresh request digest obtained');
+        return requestDigest;
+      } else {
+        console.error('❌ Failed to get request digest:', digestResponse.status);
+        
+        // Fallback to page digest
+        const digestElement = document.getElementById('__REQUESTDIGEST');
+        const pageDigest = digestElement?.value;
+        
+        if (pageDigest) {
+          console.log('⚠️ Using fallback page digest');
+          return pageDigest;
+        } else {
+          throw new Error(`Cannot get request digest: ${digestResponse.status}`);
+        }
+      }
+    } catch (err) {
+      console.error('❌ Error getting request digest:', err);
+      throw new Error('Cannot get authentication token: ' + err.message);
+    }
+  }
+
+  // ===================================================================
+  // EMAIL CONFIGURATION MANAGEMENT (Keep existing code)
+  // ===================================================================
+
   async getEmailConfig() {
     try {
       console.log('📧 Getting email configuration...');
@@ -25,7 +68,8 @@ class EmailService {
           headers: { 
             'Accept': 'application/json; odata=verbose',
             'Content-Type': 'application/json; odata=verbose'
-          }
+          },
+          credentials: 'include'
         }
       );
 
@@ -36,12 +80,11 @@ class EmailService {
       const data = await response.json();
       console.log('✅ Email config loaded:', data.d.results.length, 'items');
       
-      // Transform SharePoint data to app format
       const config = {
         globalCCList: [],
         adminList: [],
         procedureOwnersList: [],
-        testEmail: 'minaantoun@hsbc.com', // Always test to your email
+        testEmail: 'minaantoun@hsbc.com',
         smtpSettings: {
           server: 'SharePoint Email API',
           port: 'N/A',
@@ -84,7 +127,6 @@ class EmailService {
       
     } catch (error) {
       console.error('❌ Error getting email config:', error);
-      // Return default config
       return {
         globalCCList: [],
         adminList: [],
@@ -99,35 +141,19 @@ class EmailService {
     }
   }
 
-  // SAVE email configuration to SharePoint
   async saveEmailConfig(config) {
     try {
       console.log('📧 Saving email configuration:', config);
       
-      // Get request digest for SharePoint operations
-      const digestResponse = await fetch(`${this.baseUrl}/_api/contextinfo`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose'
-        }
-      });
-      
-      if (!digestResponse.ok) {
-        throw new Error('Failed to get request digest');
-      }
-      
-      const digestData = await digestResponse.json();
-      const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+      // Use enhanced digest method
+      const requestDigest = await this.getFreshRequestDigest();
       
       console.log('✅ Got request digest for email config save');
 
-      // Clear existing configuration first
       await this.clearExistingConfig(requestDigest);
 
       let savedCount = 0;
 
-      // Save Global CC List
       for (const cc of config.globalCCList) {
         if (cc.email && cc.email.trim()) {
           await this.saveConfigItem({
@@ -140,7 +166,6 @@ class EmailService {
         }
       }
 
-      // Save Admin List
       for (const admin of config.adminList) {
         if (admin.email && admin.email.trim()) {
           await this.saveConfigItem({
@@ -153,7 +178,6 @@ class EmailService {
         }
       }
 
-      // Save Test Email
       if (config.testEmail && config.testEmail.trim()) {
         await this.saveConfigItem({
           ConfigType: 'TestEmail',
@@ -173,31 +197,33 @@ class EmailService {
     }
   }
 
-  // Helper method to clear existing configuration
   async clearExistingConfig(requestDigest) {
     try {
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfiguration')/items?$select=Id`,
         {
-          headers: { 'Accept': 'application/json; odata=verbose' }
+          headers: { 
+            'Accept': 'application/json; odata=verbose' 
+          },
+          credentials: 'include'
         }
       );
 
       if (response.ok) {
         const data = await response.json();
         
-        // Delete existing items
         for (const item of data.d.results) {
           await fetch(
             `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfiguration')/items(${item.Id})`,
             {
-              method: 'DELETE',
+              method: 'POST',
               headers: {
                 'Accept': 'application/json; odata=verbose',
                 'X-RequestDigest': requestDigest,
                 'IF-MATCH': '*',
                 'X-HTTP-Method': 'DELETE'
-              }
+              },
+              credentials: 'include'
             }
           );
         }
@@ -208,7 +234,6 @@ class EmailService {
     }
   }
 
-  // Helper method to save a single config item
   async saveConfigItem(itemData, requestDigest) {
     const listItemData = {
       __metadata: { type: 'SP.Data.EmailConfigurationListItem' },
@@ -228,6 +253,7 @@ class EmailService {
           'Content-Type': 'application/json; odata=verbose',
           'X-RequestDigest': requestDigest
         },
+        credentials: 'include',
         body: JSON.stringify(listItemData)
       }
     );
@@ -241,10 +267,9 @@ class EmailService {
   }
 
   // ===================================================================
-  // EMAIL TEMPLATES MANAGEMENT
+  // EMAIL TEMPLATES MANAGEMENT (Keep existing code)
   // ===================================================================
 
-  // GET all email templates
   async getEmailTemplates() {
     try {
       console.log('📧 Getting email templates...');
@@ -252,7 +277,10 @@ class EmailService {
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items?$select=*&$orderby=TemplateType`,
         {
-          headers: { 'Accept': 'application/json; odata=verbose' }
+          headers: { 
+            'Accept': 'application/json; odata=verbose' 
+          },
+          credentials: 'include'
         }
       );
 
@@ -280,7 +308,6 @@ class EmailService {
     }
   }
 
-  // GET specific email template by type
   async getEmailTemplate(templateType) {
     try {
       console.log('📧 Getting email template:', templateType);
@@ -288,7 +315,10 @@ class EmailService {
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items?$filter=TemplateType eq '${templateType}'&$top=1`,
         {
-          headers: { 'Accept': 'application/json; odata=verbose' }
+          headers: { 
+            'Accept': 'application/json; odata=verbose' 
+          },
+          credentials: 'include'
         }
       );
 
@@ -311,7 +341,6 @@ class EmailService {
         };
       }
       
-      // Return default template if not found
       return this.getDefaultTemplateByType(templateType);
       
     } catch (error) {
@@ -320,22 +349,12 @@ class EmailService {
     }
   }
 
-  // SAVE email template
   async saveEmailTemplate(template) {
     try {
       console.log('📧 Saving email template:', template.type);
       
-      // Get request digest
-      const digestResponse = await fetch(`${this.baseUrl}/_api/contextinfo`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose'
-        }
-      });
-      
-      const digestData = await digestResponse.json();
-      const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+      // Use enhanced digest method
+      const requestDigest = await this.getFreshRequestDigest();
 
       const listItemData = {
         __metadata: { type: 'SP.Data.EmailTemplatesListItem' },
@@ -350,7 +369,6 @@ class EmailService {
       let response;
       
       if (template.id) {
-        // Update existing template
         response = await fetch(
           `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items(${template.id})`,
           {
@@ -362,11 +380,11 @@ class EmailService {
               'IF-MATCH': '*',
               'X-HTTP-Method': 'MERGE'
             },
+            credentials: 'include',
             body: JSON.stringify(listItemData)
           }
         );
       } else {
-        // Create new template
         response = await fetch(
           `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items`,
           {
@@ -376,6 +394,7 @@ class EmailService {
               'Content-Type': 'application/json; odata=verbose',
               'X-RequestDigest': requestDigest
             },
+            credentials: 'include',
             body: JSON.stringify(listItemData)
           }
         );
@@ -396,10 +415,9 @@ class EmailService {
   }
 
   // ===================================================================
-  // PROCEDURE OWNERS MANAGEMENT
+  // PROCEDURE OWNERS MANAGEMENT (Keep existing code)
   // ===================================================================
 
-  // GET all procedure owners from Procedures list
   async getProcedureOwners() {
     try {
       console.log('📧 Getting procedure owners...');
@@ -407,7 +425,10 @@ class EmailService {
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('Procedures')/items?$select=Id,Title,PrimaryOwner,PrimaryOwnerEmail,SecondaryOwner,SecondaryOwnerEmail&$top=5000`,
         {
-          headers: { 'Accept': 'application/json; odata=verbose' }
+          headers: { 
+            'Accept': 'application/json; odata=verbose' 
+          },
+          credentials: 'include'
         }
       );
 
@@ -418,11 +439,9 @@ class EmailService {
       const data = await response.json();
       console.log('✅ Procedures data loaded:', data.d.results.length);
       
-      // Extract unique owners with their emails
       const ownersMap = new Map();
       
       data.d.results.forEach(proc => {
-        // Add primary owner
         if (proc.PrimaryOwner && proc.PrimaryOwnerEmail) {
           const key = proc.PrimaryOwnerEmail.toLowerCase();
           if (!ownersMap.has(key)) {
@@ -437,7 +456,6 @@ class EmailService {
           ownersMap.get(key).procedures.push(proc.Title);
         }
         
-        // Add secondary owner
         if (proc.SecondaryOwner && proc.SecondaryOwnerEmail) {
           const key = proc.SecondaryOwnerEmail.toLowerCase();
           if (!ownersMap.has(key)) {
@@ -465,17 +483,16 @@ class EmailService {
   }
 
   // ===================================================================
-  // EMAIL SENDING - SHAREPOINT API
+  // ENHANCED: EMAIL SENDING - SHAREPOINT API
   // ===================================================================
 
-  // SEND test email using SharePoint API
   async sendTestEmail(config) {
     try {
       console.log('📧 Sending test email via SharePoint API to:', config.testEmail || 'minaantoun@hsbc.com');
       
       const emailData = {
         to: config.testEmail || 'minaantoun@hsbc.com',
-        subject: 'HSBC Procedures Hub - Email Test (SharePoint)',
+        subject: 'HSBC Procedures Hub - Email Test (SharePoint API)',
         body: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #d40000, #b30000); padding: 20px; color: white;">
@@ -503,7 +520,6 @@ class EmailService {
         `
       };
 
-      // Use SharePoint Email API
       const result = await this.sendEmailViaSharePoint(emailData);
       
       if (result.success) {
@@ -525,26 +541,18 @@ class EmailService {
     }
   }
 
-  // SEND email using SharePoint API
+  // ✅ ENHANCED: Better SharePoint Email API integration
   async sendEmailViaSharePoint(emailData) {
     try {
       console.log('📧 Sending email via SharePoint API...');
-      
-      // Get request digest
-      const digestResponse = await fetch(`${this.baseUrl}/_api/contextinfo`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose'
-        }
+      console.log('📤 Email data:', {
+        to: emailData.to,
+        subject: emailData.subject,
+        bodyLength: emailData.body?.length || 0
       });
       
-      if (!digestResponse.ok) {
-        throw new Error('Failed to get request digest');
-      }
-      
-      const digestData = await digestResponse.json();
-      const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+      // Use enhanced digest method
+      const requestDigest = await this.getFreshRequestDigest();
 
       // Prepare email payload for SharePoint
       const emailPayload = {
@@ -553,15 +561,20 @@ class EmailService {
           To: {
             results: Array.isArray(emailData.to) ? emailData.to : [emailData.to]
           },
-          CC: {
-            results: emailData.cc || []
-          },
           Subject: emailData.subject,
           Body: emailData.body || emailData.htmlBody
         }
       };
 
-      // Send email using SharePoint Utilities
+      // Add CC if provided
+      if (emailData.cc && emailData.cc.length > 0) {
+        emailPayload.properties.CC = {
+          results: Array.isArray(emailData.cc) ? emailData.cc : [emailData.cc]
+        };
+      }
+
+      console.log('📤 Sending email payload:', emailPayload);
+
       const response = await fetch(
         `${this.baseUrl}/_api/SP.Utilities.Utility.SendEmail`,
         {
@@ -571,12 +584,14 @@ class EmailService {
             'Content-Type': 'application/json; odata=verbose',
             'X-RequestDigest': requestDigest
           },
+          credentials: 'include',
           body: JSON.stringify(emailPayload)
         }
       );
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ SharePoint email API response:', response.status, errorText);
         throw new Error(`SharePoint email API failed: ${response.status} - ${errorText}`);
       }
 
@@ -589,19 +604,35 @@ class EmailService {
     }
   }
 
-  // SEND notification email
+  // ✅ NEW: Simple email method for admin dashboard integration
+  async sendSimpleEmail(to, subject, body) {
+    try {
+      console.log('📧 Sending simple email via SharePoint...');
+      
+      const emailData = {
+        to: Array.isArray(to) ? to : [to],
+        subject: subject,
+        body: body
+      };
+
+      return await this.sendEmailViaSharePoint(emailData);
+      
+    } catch (error) {
+      console.error('❌ Error sending simple email:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
   async sendNotificationEmail(templateType, recipients, variables) {
     try {
       console.log('📧 Sending notification email:', templateType);
       
-      // Get template
       const template = await this.getEmailTemplate(templateType);
       
       if (!template || !template.isActive) {
         throw new Error(`Template ${templateType} not found or inactive`);
       }
 
-      // Replace variables in template
       let subject = template.subject;
       let htmlContent = template.htmlContent;
       
@@ -611,7 +642,6 @@ class EmailService {
         htmlContent = htmlContent.replace(new RegExp(placeholder, 'g'), variables[key]);
       });
 
-      // Send email
       const emailData = {
         to: recipients,
         subject: subject,
@@ -634,7 +664,7 @@ class EmailService {
   }
 
   // ===================================================================
-  // DEFAULT TEMPLATES
+  // DEFAULT TEMPLATES (Keep existing)
   // ===================================================================
 
   getDefaultTemplates() {
@@ -705,20 +735,34 @@ class EmailService {
       },
       {
         id: null,
-        type: 'procedure-expired',
-        name: 'Procedure Expired',
-        subject: 'Procedure Expired: {{procedureName}}',
-        htmlContent: `<h2>Procedure Expired</h2><p>The procedure <strong>{{procedureName}}</strong> has expired.</p>`,
-        textContent: 'Procedure {{procedureName}} has expired',
-        isActive: true
-      },
-      {
-        id: null,
-        type: 'low-quality-score',
-        name: 'Low Quality Score Alert',
-        subject: 'Low Quality Score: {{procedureName}}',
-        htmlContent: `<h2>Low Quality Score</h2><p>The procedure <strong>{{procedureName}}</strong> has a quality score of {{qualityScore}}%.</p>`,
-        textContent: 'Procedure {{procedureName}} has low quality score: {{qualityScore}}%',
+        type: 'access-granted',
+        name: 'Access Granted',
+        subject: 'HSBC Procedures Hub - Access Granted',
+        htmlContent: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #4caf50, #388e3c); padding: 20px; color: white;">
+            <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9;">Access Granted</p>
+          </div>
+          <div style="padding: 30px; background: #f9f9f9;">
+            <h2 style="color: #333; margin-top: 0;">🎉 Welcome to HSBC Procedures Hub</h2>
+            <p style="color: #666; line-height: 1.6;">
+              You have been granted access to the HSBC Procedures Hub system.
+            </p>
+            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0;">
+              <h3 style="margin: 0 0 10px 0; color: #388e3c;">Your Access Details:</h3>
+              <p style="margin: 5px 0; color: #666;"><strong>User ID:</strong> {{userId}}</p>
+              <p style="margin: 5px 0; color: #666;"><strong>Role:</strong> {{userRole}}</p>
+              <p style="margin: 5px 0; color: #666;"><strong>Granted by:</strong> {{grantedBy}}</p>
+              <p style="margin: 5px 0; color: #666;"><strong>Access Date:</strong> {{accessDate}}</p>
+            </div>
+            <p style="color: #666; font-size: 14px; margin-top: 30px;">
+              You can now log in to the system and start using the procedures management platform.
+            </p>
+          </div>
+        </div>
+        `,
+        textContent: 'Access granted to HSBC Procedures Hub. User ID: {{userId}}, Role: {{userRole}}',
         isActive: true
       }
     ];
