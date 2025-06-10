@@ -1,4 +1,4 @@
-// services/EmailService.js - Enhanced Version with Admin Dashboard Integration
+// services/EmailService.js - Enhanced Fixed Version
 import SharePointService from './SharePointService';
 
 class EmailService {
@@ -54,7 +54,7 @@ class EmailService {
   }
 
   // ===================================================================
-  // EMAIL CONFIGURATION MANAGEMENT (Keep existing code)
+  // EMAIL CONFIGURATION MANAGEMENT
   // ===================================================================
 
   async getEmailConfig() {
@@ -74,7 +74,8 @@ class EmailService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to get email config: ${response.status}`);
+        console.warn(`⚠️ EmailConfiguration list not accessible (${response.status}), using defaults`);
+        return this.getDefaultEmailConfig();
       }
 
       const data = await response.json();
@@ -127,18 +128,23 @@ class EmailService {
       
     } catch (error) {
       console.error('❌ Error getting email config:', error);
-      return {
-        globalCCList: [],
-        adminList: [],
-        procedureOwnersList: [],
-        testEmail: 'minaantoun@hsbc.com',
-        smtpSettings: {
-          server: 'SharePoint Email API',
-          port: 'N/A',
-          useAuth: true
-        }
-      };
+      return this.getDefaultEmailConfig();
     }
+  }
+
+  // ✅ NEW: Default email config method
+  getDefaultEmailConfig() {
+    return {
+      globalCCList: [],
+      adminList: [],
+      procedureOwnersList: [],
+      testEmail: 'minaantoun@hsbc.com',
+      smtpSettings: {
+        server: 'SharePoint Email API',
+        port: 'N/A',
+        useAuth: true
+      }
+    };
   }
 
   async saveEmailConfig(config) {
@@ -267,7 +273,7 @@ class EmailService {
   }
 
   // ===================================================================
-  // EMAIL TEMPLATES MANAGEMENT (Keep existing code)
+  // EMAIL TEMPLATES MANAGEMENT
   // ===================================================================
 
   async getEmailTemplates() {
@@ -285,7 +291,8 @@ class EmailService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to get templates: ${response.status}`);
+        console.warn(`⚠️ EmailTemplates list not accessible (${response.status}), using defaults`);
+        return this.getDefaultTemplates();
       }
 
       const data = await response.json();
@@ -323,7 +330,8 @@ class EmailService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to get template: ${response.status}`);
+        console.warn(`⚠️ Template ${templateType} not found in SharePoint, using default`);
+        return this.getDefaultTemplateByType(templateType);
       }
 
       const data = await response.json();
@@ -414,8 +422,43 @@ class EmailService {
     }
   }
 
+  // ✅ NEW: Delete email template
+  async deleteEmailTemplate(templateId) {
+    try {
+      console.log('🗑️ Deleting email template:', templateId);
+      
+      const requestDigest = await this.getFreshRequestDigest();
+      
+      const response = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items(${templateId})`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest,
+            'IF-MATCH': '*',
+            'X-HTTP-Method': 'DELETE'
+          },
+          credentials: 'include'
+        }
+      );
+
+      if (!response.ok && response.status !== 404) {
+        const errorText = await response.text();
+        throw new Error(`Failed to delete template: ${response.status} - ${errorText}`);
+      }
+
+      console.log('✅ Email template deleted successfully');
+      return { success: true, message: 'Template deleted successfully from SharePoint' };
+      
+    } catch (error) {
+      console.error('❌ Error deleting email template:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
   // ===================================================================
-  // PROCEDURE OWNERS MANAGEMENT (Keep existing code)
+  // PROCEDURE OWNERS MANAGEMENT
   // ===================================================================
 
   async getProcedureOwners() {
@@ -433,7 +476,8 @@ class EmailService {
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to get procedure owners: ${response.status}`);
+        console.warn(`⚠️ Procedures list not accessible (${response.status}), returning empty owners list`);
+        return [];
       }
 
       const data = await response.json();
@@ -483,7 +527,7 @@ class EmailService {
   }
 
   // ===================================================================
-  // ENHANCED: EMAIL SENDING - SHAREPOINT API
+  // EMAIL SENDING - SHAREPOINT API
   // ===================================================================
 
   async sendTestEmail(config) {
@@ -604,7 +648,7 @@ class EmailService {
     }
   }
 
-  // ✅ NEW: Simple email method for admin dashboard integration
+  // ✅ ENHANCED: Simple email method for admin dashboard integration
   async sendSimpleEmail(to, subject, body) {
     try {
       console.log('📧 Sending simple email via SharePoint...');
@@ -662,6 +706,8 @@ class EmailService {
       return { success: false, message: error.message };
     }
   }
+
+
 
   // ===================================================================
   // DEFAULT TEMPLATES (Keep existing)
