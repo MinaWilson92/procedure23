@@ -5344,6 +5344,226 @@ Would you like me to continue with **Phase 6 (Testing & Go-Live)** or do you wan
 
 
 
+You’re absolutely right! I see the issue now. The error is coming from this specific line in the `handleSaveTemplate` function where we’re trying to use `EmailConfigurationService` but it’s commented out. Let me fix this properly.
 
+## 🔧 **Correct Fix: Remove EmailConfigurationService Usage**
+
+The issue is in your AdminDashboardPage where we have this problematic code:
+
+```javascript
+const handleSaveTemplate = async (template) => {
+  try {
+    // Save template to SharePoint
+    console.log('💾 Saving email template:', template);
+    setNotification({ 
+      type: 'success', 
+      message: `Email template saved successfully: ${template.type}` 
+    });
+    
+    // Here you would integrate with the EmailConfigurationService
+    // const configService = new EmailConfigurationService(getSharePointConfig().baseUrl);
+    // await configService.saveEmailTemplate(template);
+    
+  } catch (error) {
+    setNotification({ 
+      type: 'error', 
+      message: 'Failed to save email template: ' + error.message 
+    });
+  }
+};
+```
+
+**The problem:** Even though it’s commented out, if there’s any uncommented reference to `EmailConfigurationService` somewhere, it will cause a build error.
+
+## ✅ **Correct Solution: Clean Implementation**
+
+Replace your email management handlers in AdminDashboardPage with this clean version:
+
+```javascript
+// Clean email management handlers - replace your existing ones
+const handleSaveTemplate = async (template) => {
+  try {
+    console.log('💾 Saving email template:', template);
+    
+    if (sharePointAvailable) {
+      // Use the direct SharePoint API approach instead of a separate service
+      const config = getSharePointConfig();
+      const requestDigest = await getFreshRequestDigest();
+      
+      const templateData = {
+        __metadata: { type: 'SP.Data.EmailTemplatesListItem' },
+        Title: template.type,
+        TemplateType: template.type,
+        Subject: template.subject,
+        TemplateBody: template.htmlBody,
+        Enabled: template.enabled,
+        Priority: template.priority,
+        CreatedBy: user?.staffId || 'System'
+      };
+
+      // Try to save to SharePoint EmailTemplates list
+      const response = await fetch(`${config.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(templateData)
+      });
+
+      if (response.ok) {
+        setNotification({ 
+          type: 'success', 
+          message: `✅ Email template saved to SharePoint: ${template.type}` 
+        });
+      } else {
+        throw new Error(`SharePoint save failed: ${response.status}`);
+      }
+    } else {
+      // Demo mode
+      setNotification({ 
+        type: 'success', 
+        message: `📧 Email template saved (Demo Mode): ${template.type}` 
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to save email template:', error);
+    setNotification({ 
+      type: 'error', 
+      message: 'Failed to save email template: ' + error.message 
+    });
+  }
+};
+
+const handleSaveRecipientsConfig = async (config) => {
+  try {
+    console.log('💾 Saving recipients configuration:', config);
+    
+    if (sharePointAvailable) {
+      const spConfig = getSharePointConfig();
+      const requestDigest = await getFreshRequestDigest();
+      
+      const configData = {
+        __metadata: { type: 'SP.Data.EmailConfigurationsListItem' },
+        Title: config.notificationType,
+        NotificationType: config.notificationType,
+        Enabled: config.enabled,
+        CCList: config.globalCC?.join(', ') || '',
+        BCCList: config.globalBCC?.join(', ') || '',
+        LOBSpecificCC: JSON.stringify(config.lobSpecificCC || {}),
+        LOBSpecificBCC: JSON.stringify(config.lobSpecificBCC || {}),
+        SendToOwners: config.sendToOwners,
+        SendToSecondaryOwners: config.sendToSecondaryOwners,
+        AdditionalRecipients: config.additionalRecipients?.join(', ') || '',
+        Priority: 'Normal'
+      };
+
+      const response = await fetch(`${spConfig.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(configData)
+      });
+
+      if (response.ok) {
+        setNotification({ 
+          type: 'success', 
+          message: `✅ Recipients configuration saved to SharePoint: ${config.notificationType}` 
+        });
+      } else {
+        throw new Error(`SharePoint save failed: ${response.status}`);
+      }
+    } else {
+      setNotification({ 
+        type: 'success', 
+        message: `📧 Recipients configuration saved (Demo Mode): ${config.notificationType}` 
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to save recipients configuration:', error);
+    setNotification({ 
+      type: 'error', 
+      message: 'Failed to save recipients configuration: ' + error.message 
+    });
+  }
+};
+
+const handleSendCustomEmail = async (emailData) => {
+  try {
+    console.log('📧 Sending custom email:', emailData);
+    
+    if (sharePointAvailable) {
+      // Use your working SharePoint email API directly
+      const config = getSharePointConfig();
+      const requestDigest = await getFreshRequestDigest();
+      
+      const emailPayload = {
+        properties: {
+          __metadata: { type: 'SP.Utilities.EmailProperties' },
+          To: { results: emailData.to },
+          CC: emailData.cc?.length > 0 ? { results: emailData.cc } : { results: [] },
+          BCC: emailData.bcc?.length > 0 ? { results: emailData.bcc } : { results: [] },
+          Subject: emailData.subject,
+          Body: emailData.body
+        }
+      };
+
+      const response = await fetch(`${config.baseUrl}/_api/SP.Utilities.Utility.SendEmail`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (response.ok) {
+        setNotification({ 
+          type: 'success', 
+          message: `✅ Custom email sent successfully to ${emailData.to.length} recipients via SharePoint!` 
+        });
+      } else {
+        throw new Error(`Email send failed: ${response.status}`);
+      }
+    } else {
+      setNotification({ 
+        type: 'success', 
+        message: `📧 Custom email sent (Demo Mode) to ${emailData.to.length} recipients` 
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to send custom email:', error);
+    setNotification({ 
+      type: 'error', 
+      message: 'Failed to send custom email: ' + error.message 
+    });
+  }
+};
+```
+
+## 🎯 **Key Changes:**
+
+✅ **Removed all EmailConfigurationService references** - No more undefined service errors  
+✅ **Direct SharePoint API calls** - Uses your working email API directly  
+✅ **Same functionality** - Templates and configs still save to SharePoint  
+✅ **Build-safe** - No undefined imports or services
+
+This approach uses your existing `getFreshRequestDigest()` and `getSharePointConfig()` functions that already work, and directly calls the SharePoint APIs without needing a separate service class.
+
+Try building now:
+
+```bash
+npm run build
+```
+
+This should resolve the build error completely! 🚀​​​​​​​​​​​​​​​​
 
 
