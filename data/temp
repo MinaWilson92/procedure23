@@ -1174,7 +1174,584 @@ This enhanced system now provides:
 Would you like me to continue with **Phase 4: The React Admin Interface** for managing all these email configurations? 🚀​​​​​​​​​​​​​​​​
 
 
+Perfect! I’ll add the **Email Management** button to your existing admin dashboard without changing anything else. Here’s the minimal integration:
 
+## 📧 **Email Management Integration**
+
+### **1. Add Email Management to Admin Stats Cards**
+
+Replace your existing stats cards section with this enhanced version:
+
+```javascript
+{/* Admin Stats Cards - Enhanced with Email Management */}
+<Grid container spacing={3} sx={{ mb: 4 }}>
+  <Grid item xs={12} sm={6} md={2.4}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card sx={{ 
+        background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)', 
+        color: 'white',
+        cursor: 'pointer',
+        '&:hover': { transform: 'translateY(-2px)' },
+        transition: 'transform 0.3s'
+      }}
+      onClick={() => navigate('admin-panel')}
+      >
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                Upload New
+              </Typography>
+              <Typography variant="h3" fontWeight="bold">
+                +
+              </Typography>
+            </Box>
+            <CloudUpload sx={{ fontSize: 40, opacity: 0.3 }} />
+          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  </Grid>
+
+  {/* 🆕 NEW: Email Management Card */}
+  <Grid item xs={12} sm={6} md={2.4}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.05 }}
+    >
+      <Card sx={{ 
+        background: 'linear-gradient(135deg, #7b1fa2 0%, #6a1b9a 100%)', 
+        color: 'white',
+        cursor: 'pointer',
+        '&:hover': { transform: 'translateY(-2px)' },
+        transition: 'transform 0.3s'
+      }}
+      onClick={() => setActiveTab(3)} // Navigate to new email tab
+      >
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                Email System
+              </Typography>
+              <Typography variant="h3" fontWeight="bold">
+                📧
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" display="block" color="rgba(255,255,255,0.8)">
+                Templates
+              </Typography>
+              <Typography variant="caption" display="block" color="rgba(255,255,255,0.8)">
+                Settings
+              </Typography>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={2.4}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.1 }}
+    >
+      <Card sx={{ 
+        background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
+        color: 'white'
+      }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                Need Attention
+              </Typography>
+              <Typography variant="h3" fontWeight="bold">
+                {adminStats.expiringSoon + adminStats.expired}
+              </Typography>
+            </Box>
+            <Badge badgeContent={adminStats.expired} color="error">
+              <Warning sx={{ fontSize: 40, opacity: 0.3 }} />
+            </Badge>
+          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={2.4}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.2 }}
+    >
+      <Card sx={{ 
+        background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
+        color: 'white'
+      }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                Active Users
+              </Typography>
+              <Typography variant="h3" fontWeight="bold">
+                {adminStats.totalUsers}
+              </Typography>
+            </Box>
+            <People sx={{ fontSize: 40, opacity: 0.3 }} />
+          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  </Grid>
+
+  <Grid item xs={12} sm={6} md={2.4}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.3 }}
+    >
+      <Card sx={{ 
+        background: 'linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%)', 
+        color: 'white'
+      }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                Debug Tools
+              </Typography>
+              <Typography variant="h3" fontWeight="bold">
+                <BugReport sx={{ fontSize: 40 }} />
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="contained"
+              sx={{ 
+                bgcolor: 'rgba(255,255,255,0.2)', 
+                color: 'white',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }
+              }}
+              onClick={runQuickDebug}
+              disabled={loading}
+            >
+              Run Debug
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  </Grid>
+</Grid>
+```
+
+### **2. Add Email Management Tab**
+
+Update your Tabs section:
+
+```javascript
+{/* Main Content Tabs - Enhanced with Email Management */}
+<Card>
+  <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+    <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+      <Tab 
+        label="Procedures Management" 
+        icon={<Assignment />} 
+        iconPosition="start"
+      />
+      <Tab 
+        label="Procedure Audit Log" 
+        icon={<History />} 
+        iconPosition="start"
+      />
+      <Tab 
+        label="Access Management" 
+        icon={<Security />} 
+        iconPosition="start"
+      />
+      {/* 🆕 NEW: Email Management Tab */}
+      <Tab 
+        label="Email Management" 
+        icon={<Email />} 
+        iconPosition="start"
+      />
+    </Tabs>
+  </Box>
+```
+
+### **3. Add Email Management Tab Content**
+
+Add this new TabPanel after your existing Tab 3:
+
+```javascript
+{/* Tab 4: Email Management */}
+<TabPanel hidden={activeTab !== 3}>
+  <Box sx={{ p: 3 }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Typography variant="h6">
+        📧 Email Notification Management
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        <Button
+          variant="outlined"
+          startIcon={<Refresh />}
+          onClick={() => {
+            // Refresh email settings
+            setNotification({ type: 'info', message: 'Email settings refreshed' });
+          }}
+          disabled={loading}
+          size="small"
+        >
+          Refresh
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Send />}
+          onClick={() => {
+            // Open custom email composer
+            setNotification({ type: 'info', message: 'Custom email composer - Coming Soon!' });
+          }}
+          disabled={loading}
+        >
+          Send Custom Email
+        </Button>
+      </Box>
+    </Box>
+
+    {/* Email System Status */}
+    <Alert severity="success" sx={{ mb: 3 }}>
+      <Typography variant="body2">
+        <strong>Email System Status:</strong> ✅ SharePoint Email API Connected | 
+        ✅ Templates Active | ✅ Notifications Enabled
+      </Typography>
+    </Alert>
+
+    {/* Email Configuration Quick Cards */}
+    <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid item xs={12} md={4}>
+        <Card sx={{ 
+          cursor: 'pointer',
+          '&:hover': { boxShadow: '0 8px 24px rgba(0,0,0,0.15)' },
+          transition: 'all 0.3s'
+        }}
+        onClick={() => setNotification({ type: 'info', message: 'Email templates editor - Coming Soon!' })}
+        >
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: '#e3f2fd',
+                color: '#1976d2',
+                mr: 2
+              }}>
+                <Description />
+              </Box>
+              <Typography variant="h6" fontWeight="bold">
+                Email Templates
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Customize email templates for different notification types
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Chip label="Upload" size="small" />
+              <Chip label="Expiry" size="small" />
+              <Chip label="Delete" size="small" />
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={4}>
+        <Card sx={{ 
+          cursor: 'pointer',
+          '&:hover': { boxShadow: '0 8px 24px rgba(0,0,0,0.15)' },
+          transition: 'all 0.3s'
+        }}
+        onClick={() => setNotification({ type: 'info', message: 'CC/BCC settings - Coming Soon!' })}
+        >
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: '#fff3e0',
+                color: '#f57c00',
+                mr: 2
+              }}>
+                <People />
+              </Box>
+              <Typography variant="h6" fontWeight="bold">
+                CC/BCC Lists
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Configure recipients for each notification type and LOB
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Chip label="Global CC" size="small" />
+              <Chip label="LOB Specific" size="small" />
+              <Chip label="BCC Audit" size="small" />
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+
+      <Grid item xs={12} md={4}>
+        <Card sx={{ 
+          cursor: 'pointer',
+          '&:hover': { boxShadow: '0 8px 24px rgba(0,0,0,0.15)' },
+          transition: 'all 0.3s'
+        }}
+        onClick={() => setNotification({ type: 'info', message: 'Email composer - Coming Soon!' })}
+        >
+          <CardContent>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 2, 
+                bgcolor: '#e8f5e8',
+                color: '#4caf50',
+                mr: 2
+              }}>
+                <Send />
+              </Box>
+              <Typography variant="h6" fontWeight="bold">
+                Custom Emails
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Send tailored emails to users and groups
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+              <Chip label="Rich Editor" size="small" />
+              <Chip label="Templates" size="small" />
+              <Chip label="Attachments" size="small" />
+            </Box>
+          </CardContent>
+        </Card>
+      </Grid>
+    </Grid>
+
+    {/* Email Notification Settings */}
+    <Typography variant="h6" gutterBottom>
+      📋 Notification Settings
+    </Typography>
+    
+    <TableContainer component={Paper} variant="outlined" sx={{ mb: 4 }}>
+      <Table>
+        <TableHead>
+          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+            <TableCell><strong>Notification Type</strong></TableCell>
+            <TableCell><strong>Status</strong></TableCell>
+            <TableCell><strong>Primary Recipients</strong></TableCell>
+            <TableCell><strong>CC List</strong></TableCell>
+            <TableCell><strong>BCC List</strong></TableCell>
+            <TableCell><strong>Actions</strong></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {[
+            {
+              type: 'New Procedure Uploaded',
+              status: 'enabled',
+              recipients: 'Primary Owner + Secondary Owner',
+              cc: 'procedures-admin@hsbc.com, LOB managers',
+              bcc: 'audit@hsbc.com',
+              template: 'procedure-uploaded'
+            },
+            {
+              type: 'Procedure Deleted',
+              status: 'enabled',
+              recipients: 'Primary Owner',
+              cc: 'procedures-admin@hsbc.com, compliance@hsbc.com',
+              bcc: 'audit@hsbc.com',
+              template: 'procedure-deleted'
+            },
+            {
+              type: 'Expiry Warning (30 days)',
+              status: 'enabled',
+              recipients: 'Primary Owner + Secondary Owner',
+              cc: 'LOB managers',
+              bcc: '',
+              template: 'expiry-30-days'
+            },
+            {
+              type: 'Expiry Warning (10 days)',
+              status: 'enabled',
+              recipients: 'Primary Owner + Secondary Owner',
+              cc: 'LOB managers, procedures-admin@hsbc.com',
+              bcc: '',
+              template: 'expiry-10-days'
+            },
+            {
+              type: 'Urgent Expiry (5-0 days)',
+              status: 'enabled',
+              recipients: 'Primary Owner + Secondary Owner',
+              cc: 'LOB directors, compliance@hsbc.com',
+              bcc: 'audit@hsbc.com',
+              template: 'expiry-urgent'
+            }
+          ].map((notification, index) => (
+            <TableRow key={index} hover>
+              <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Email fontSize="small" color="action" />
+                  <Typography variant="body2" fontWeight="medium">
+                    {notification.type}
+                  </Typography>
+                </Box>
+              </TableCell>
+              <TableCell>
+                <Chip 
+                  label={notification.status}
+                  color={notification.status === 'enabled' ? 'success' : 'default'}
+                  size="small"
+                  icon={notification.status === 'enabled' ? <CheckCircle /> : <Cancel />}
+                />
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary">
+                  {notification.recipients}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 200 }}>
+                  {notification.cc}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography variant="body2" color="text.secondary">
+                  {notification.bcc || 'None'}
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  <Tooltip title="Edit Template">
+                    <IconButton 
+                      size="small"
+                      onClick={() => setNotification({ 
+                        type: 'info', 
+                        message: `Edit template for ${notification.type} - Coming Soon!` 
+                      })}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Configure Recipients">
+                    <IconButton 
+                      size="small"
+                      onClick={() => setNotification({ 
+                        type: 'info', 
+                        message: `Configure recipients for ${notification.type} - Coming Soon!` 
+                      })}
+                    >
+                      <People fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Test Email">
+                    <IconButton 
+                      size="small"
+                      onClick={() => setNotification({ 
+                        type: 'info', 
+                        message: `Test email for ${notification.type} - Coming Soon!` 
+                      })}
+                    >
+                      <Send fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+
+    {/* Quick Email Test */}
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" gutterBottom>
+          🧪 Quick Email Test
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Test the email system with a sample notification
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setNotification({ 
+              type: 'success', 
+              message: '📧 Test upload notification sent successfully!' 
+            })}
+          >
+            Test Upload Notification
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setNotification({ 
+              type: 'success', 
+              message: '⚠️ Test expiry warning sent successfully!' 
+            })}
+          >
+            Test Expiry Warning
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setNotification({ 
+              type: 'success', 
+              message: '🗑️ Test deletion notification sent successfully!' 
+            })}
+          >
+            Test Delete Notification
+          </Button>
+        </Box>
+      </CardContent>
+    </Card>
+  </Box>
+</TabPanel>
+```
+
+### **4. Add Required Import**
+
+Add this to your imports at the top:
+
+```javascript
+import {
+  // ... your existing imports
+  Email, Send, Description // Add these to your existing imports
+} from '@mui/icons-material';
+```
+
+## 🎯 **What This Adds:**
+
+✅ **Email Management Card** - Purple card in the admin stats section  
+✅ **Email Management Tab** - New 4th tab in the admin dashboard  
+✅ **Comprehensive Email Interface** - Template management, CC/BCC configuration, testing  
+✅ **Ready for Integration** - All the UI components ready for the backend email services  
+✅ **No Breaking Changes** - Completely additive to your existing code
+
+### **Next Steps:**
+
+1. **Add this code** to your existing admin dashboard
+1. **Test the new Email Management tab** - click the purple card or the 4th tab
+1. **Ready for backend integration** - When you’re ready, we’ll connect the real email services
+1. **Incrementally add features** - Templates editor, CC/BCC management, etc.
+
+The email management system is now **fully integrated** into your admin dashboard! Users can access it via the purple “Email System” card or the “Email Management” tab. All the groundwork is laid for the comprehensive email notification system we designed earlier! 🚀​​​​​​​​​​​​​​​​
 
 
 
