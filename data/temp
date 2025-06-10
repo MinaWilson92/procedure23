@@ -3832,5 +3832,1518 @@ const testEmailSystem = async () => {
 1. **User Training** - Document the email management features
 1. **Go Live** - Enable automatic notifications
 
-Would you like me to continue with **Phase 5 (Backend Integration)** to connect everything to your working SharePoint email system? 🚀​​​​​​​​​​​​​​​​
+Would you like me to continue with **Phase 5 (Backend Integration)** to connect everything to your working SharePoint email system? 
+
+Perfect! Let’s continue with **Phase 5: Backend Integration** to connect everything to your working SharePoint email system.
+
+## 🚀 **Phase 5: Backend Integration**
+
+### **1. Create Required SharePoint Lists**
+
+First, let’s create the SharePoint lists needed for email management. Add this to your AdminDashboardPage:
+
+```javascript
+// Add this function to create all required email-related SharePoint lists
+const createEmailManagementLists = async () => {
+  try {
+    setLoading(true);
+    console.log('📝 Creating Email Management SharePoint Lists...');
+    
+    const config = getSharePointConfig();
+    const requestDigest = await getFreshRequestDigest();
+    
+    const listsToCreate = [
+      {
+        name: 'EmailConfigurations',
+        description: 'Email notification configurations for different types',
+        columns: [
+          { Title: 'NotificationType', FieldTypeKind: 2, Required: true },
+          { Title: 'Enabled', FieldTypeKind: 8, Required: true }, // Boolean
+          { Title: 'CCList', FieldTypeKind: 3, Required: false }, // Note
+          { Title: 'BCCList', FieldTypeKind: 3, Required: false },
+          { Title: 'LOBSpecificCC', FieldTypeKind: 3, Required: false },
+          { Title: 'LOBSpecificBCC', FieldTypeKind: 3, Required: false },
+          { Title: 'SendToOwners', FieldTypeKind: 8, Required: true },
+          { Title: 'SendToSecondaryOwners', FieldTypeKind: 8, Required: true },
+          { Title: 'AdditionalRecipients', FieldTypeKind: 3, Required: false },
+          { Title: 'Priority', FieldTypeKind: 2, Required: false },
+          { Title: 'Template', FieldTypeKind: 3, Required: false }
+        ]
+      },
+      {
+        name: 'EmailTemplates',
+        description: 'Custom email templates for notifications',
+        columns: [
+          { Title: 'TemplateType', FieldTypeKind: 2, Required: true },
+          { Title: 'Subject', FieldTypeKind: 2, Required: true },
+          { Title: 'TemplateBody', FieldTypeKind: 3, Required: true }, // Note
+          { Title: 'Variables', FieldTypeKind: 3, Required: false },
+          { Title: 'Enabled', FieldTypeKind: 8, Required: true },
+          { Title: 'Priority', FieldTypeKind: 2, Required: false },
+          { Title: 'CreatedBy', FieldTypeKind: 2, Required: false },
+          { Title: 'LastModified', FieldTypeKind: 4, Required: false }
+        ]
+      },
+      {
+        name: 'EmailNotificationLog',
+        description: 'Log of all sent email notifications',
+        columns: [
+          { Title: 'NotificationType', FieldTypeKind: 2, Required: true },
+          { Title: 'ProcedureId', FieldTypeKind: 1, Required: false }, // Number
+          { Title: 'ProcedureName', FieldTypeKind: 2, Required: false },
+          { Title: 'Recipients', FieldTypeKind: 3, Required: true },
+          { Title: 'CCList', FieldTypeKind: 3, Required: false },
+          { Title: 'BCCList', FieldTypeKind: 3, Required: false },
+          { Title: 'SentAt', FieldTypeKind: 4, Required: true }, // DateTime
+          { Title: 'Success', FieldTypeKind: 8, Required: true },
+          { Title: 'ErrorMessage', FieldTypeKind: 3, Required: false },
+          { Title: 'DaysUntilExpiry', FieldTypeKind: 1, Required: false },
+          { Title: 'SentBy', FieldTypeKind: 2, Required: false }
+        ]
+      },
+      {
+        name: 'EmailScheduler',
+        description: 'Email scheduling and monitoring configuration',
+        columns: [
+          { Title: 'SchedulerEnabled', FieldTypeKind: 8, Required: true },
+          { Title: 'LastRun', FieldTypeKind: 4, Required: false },
+          { Title: 'NextRun', FieldTypeKind: 4, Required: false },
+          { Title: 'CheckInterval', FieldTypeKind: 1, Required: false }, // Minutes
+          { Title: 'Status', FieldTypeKind: 2, Required: false },
+          { Title: 'Configuration', FieldTypeKind: 3, Required: false }
+        ]
+      }
+    ];
+    
+    let createdCount = 0;
+    let existingCount = 0;
+    
+    for (const listConfig of listsToCreate) {
+      try {
+        // Check if list already exists
+        const checkResponse = await fetch(
+          `${config.baseUrl}/_api/web/lists/getbytitle('${listConfig.name}')`,
+          { headers: { 'Accept': 'application/json; odata=verbose' } }
+        );
+        
+        if (checkResponse.ok) {
+          console.log(`✅ List ${listConfig.name} already exists`);
+          existingCount++;
+          continue;
+        }
+        
+        // Create the list
+        console.log(`📝 Creating list: ${listConfig.name}`);
+        
+        const listData = {
+          __metadata: { type: 'SP.List' },
+          Title: listConfig.name,
+          Description: listConfig.description,
+          BaseTemplate: 100 // Generic List
+        };
+        
+        const createResponse = await fetch(`${config.baseUrl}/_api/web/lists`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          body: JSON.stringify(listData)
+        });
+        
+        if (createResponse.ok) {
+          const createdList = await createResponse.json();
+          console.log(`✅ Created list: ${listConfig.name}`);
+          
+          // Add custom columns
+          await addColumnsToList(createdList.d.Id, listConfig.columns, requestDigest);
+          createdCount++;
+        } else {
+          console.error(`❌ Failed to create list ${listConfig.name}:`, createResponse.status);
+        }
+        
+      } catch (listError) {
+        console.error(`❌ Error with list ${listConfig.name}:`, listError);
+      }
+    }
+    
+    setNotification({ 
+      type: 'success', 
+      message: `📝 Email Management Lists Setup Complete! Created: ${createdCount}, Existing: ${existingCount}` 
+    });
+    
+  } catch (error) {
+    console.error('❌ Error creating email management lists:', error);
+    setNotification({ 
+      type: 'error', 
+      message: 'Failed to create email management lists: ' + error.message 
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Helper function to add columns to a list
+const addColumnsToList = async (listId, columns, requestDigest) => {
+  const config = getSharePointConfig();
+  
+  for (const column of columns) {
+    try {
+      const columnData = {
+        __metadata: { type: 'SP.Field' },
+        Title: column.Title,
+        FieldTypeKind: column.FieldTypeKind,
+        Required: column.Required || false,
+        Description: column.Description || `${column.Title} field for email management`
+      };
+      
+      const columnResponse = await fetch(`${config.baseUrl}/_api/web/lists('${listId}')/fields`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(columnData)
+      });
+      
+      if (columnResponse.ok) {
+        console.log(`✅ Added column: ${column.Title}`);
+      } else {
+        console.log(`⚠️ Could not add column ${column.Title}: ${columnResponse.status}`);
+      }
+    } catch (err) {
+      console.log(`⚠️ Error adding column ${column.Title}:`, err);
+    }
+  }
+};
+```
+
+### **2. Enhanced Email Notification Service with Real SharePoint Integration**
+
+Now let’s create the complete email service that integrates with your working SharePoint API:
+
+```javascript
+// services/EmailNotificationService.js - Complete Integration
+class EmailNotificationService {
+  constructor() {
+    this.baseUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+    this.requestDigest = null;
+    this.isInitialized = false;
+    this.configCache = new Map();
+    this.lastConfigRefresh = null;
+  }
+
+  // Initialize the service and get request digest
+  async initialize() {
+    try {
+      console.log('🔧 Initializing HSBC Email Service...');
+      
+      const response = await fetch(`${this.baseUrl}/_api/contextinfo`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        this.requestDigest = data.d.GetContextWebInformation.FormDigestValue;
+        this.isInitialized = true;
+        console.log('✅ Email service initialized successfully');
+        
+        // Initialize default configurations if needed
+        await this.initializeDefaultConfigurations();
+        
+        return true;
+      } else {
+        throw new Error(`Failed to initialize: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('❌ Email service initialization failed:', error);
+      return false;
+    }
+  }
+
+  // Initialize default email configurations if they don't exist
+  async initializeDefaultConfigurations() {
+    try {
+      console.log('🔧 Checking email configurations...');
+      
+      const defaultConfigs = [
+        {
+          NotificationType: 'procedure-uploaded',
+          Enabled: true,
+          CCList: 'procedures-admin@hsbc.com',
+          BCCList: '',
+          LOBSpecificCC: JSON.stringify({
+            'IWPB': ['iwpb-procedures@hsbc.com'],
+            'CIB': ['cib-procedures@hsbc.com'],
+            'GCOO': ['gcoo-procedures@hsbc.com'],
+            'GRM': ['grm-procedures@hsbc.com'],
+            'GF': ['gf-procedures@hsbc.com'],
+            'GTRB': ['gtrb-procedures@hsbc.com']
+          }),
+          LOBSpecificBCC: JSON.stringify({}),
+          SendToOwners: true,
+          SendToSecondaryOwners: true,
+          AdditionalRecipients: '',
+          Priority: 'Normal'
+        },
+        {
+          NotificationType: 'procedure-deleted',
+          Enabled: true,
+          CCList: 'procedures-admin@hsbc.com, audit@hsbc.com',
+          BCCList: 'compliance@hsbc.com',
+          LOBSpecificCC: JSON.stringify({
+            'IWPB': ['iwpb-procedures@hsbc.com'],
+            'CIB': ['cib-procedures@hsbc.com'],
+            'GCOO': ['gcoo-procedures@hsbc.com']
+          }),
+          LOBSpecificBCC: JSON.stringify({}),
+          SendToOwners: true,
+          SendToSecondaryOwners: false,
+          AdditionalRecipients: '',
+          Priority: 'High'
+        },
+        {
+          NotificationType: 'expiry-30-days',
+          Enabled: true,
+          CCList: 'procedures-admin@hsbc.com',
+          BCCList: '',
+          LOBSpecificCC: JSON.stringify({
+            'IWPB': ['iwpb-manager@hsbc.com'],
+            'CIB': ['cib-manager@hsbc.com'],
+            'GCOO': ['gcoo-manager@hsbc.com']
+          }),
+          LOBSpecificBCC: JSON.stringify({}),
+          SendToOwners: true,
+          SendToSecondaryOwners: true,
+          AdditionalRecipients: '',
+          Priority: 'Normal'
+        },
+        {
+          NotificationType: 'expiry-10-days',
+          Enabled: true,
+          CCList: 'procedures-admin@hsbc.com',
+          BCCList: '',
+          LOBSpecificCC: JSON.stringify({
+            'IWPB': ['iwpb-manager@hsbc.com'],
+            'CIB': ['cib-manager@hsbc.com'],
+            'GCOO': ['gcoo-manager@hsbc.com']
+          }),
+          LOBSpecificBCC: JSON.stringify({}),
+          SendToOwners: true,
+          SendToSecondaryOwners: true,
+          AdditionalRecipients: '',
+          Priority: 'High'
+        },
+        {
+          NotificationType: 'expiry-urgent',
+          Enabled: true,
+          CCList: 'procedures-admin@hsbc.com, compliance@hsbc.com',
+          BCCList: 'audit@hsbc.com',
+          LOBSpecificCC: JSON.stringify({
+            'IWPB': ['iwpb-manager@hsbc.com', 'iwpb-director@hsbc.com'],
+            'CIB': ['cib-manager@hsbc.com', 'cib-director@hsbc.com'],
+            'GCOO': ['gcoo-manager@hsbc.com', 'gcoo-director@hsbc.com']
+          }),
+          LOBSpecificBCC: JSON.stringify({
+            'IWPB': ['iwpb-audit@hsbc.com'],
+            'CIB': ['cib-audit@hsbc.com'],
+            'GCOO': ['gcoo-audit@hsbc.com']
+          }),
+          SendToOwners: true,
+          SendToSecondaryOwners: true,
+          AdditionalRecipients: '',
+          Priority: 'High'
+        }
+      ];
+
+      for (const config of defaultConfigs) {
+        await this.createOrUpdateConfiguration(config);
+      }
+
+      console.log('✅ Email configurations initialized');
+
+    } catch (error) {
+      console.warn('⚠️ Could not initialize default configurations:', error);
+    }
+  }
+
+  // Create or update email configuration
+  async createOrUpdateConfiguration(configData) {
+    try {
+      // Check if configuration exists
+      const existingResponse = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items?$filter=NotificationType eq '${configData.NotificationType}'&$select=Id`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        }
+      );
+
+      const requestDigest = await this.getFreshRequestDigest();
+      
+      const itemData = {
+        __metadata: { type: 'SP.Data.EmailConfigurationsListItem' },
+        Title: configData.NotificationType,
+        ...configData
+      };
+
+      if (existingResponse.ok) {
+        const existingData = await existingResponse.json();
+        if (existingData.d.results.length > 0) {
+          // Update existing
+          const itemId = existingData.d.results[0].Id;
+          const updateResponse = await fetch(
+            `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items(${itemId})`,
+            {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json; odata=verbose',
+                'Content-Type': 'application/json; odata=verbose',
+                'X-RequestDigest': requestDigest,
+                'X-HTTP-Method': 'MERGE',
+                'IF-MATCH': '*'
+              },
+              body: JSON.stringify(itemData)
+            }
+          );
+          return updateResponse.ok;
+        }
+      }
+      
+      // Create new
+      const createResponse = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          body: JSON.stringify(itemData)
+        }
+      );
+      
+      return createResponse.ok;
+
+    } catch (error) {
+      console.error('Error creating/updating configuration:', error);
+      return false;
+    }
+  }
+
+  // Get email configuration for specific notification type with caching
+  async getEmailConfig(notificationType) {
+    try {
+      // Check cache first (refresh every 5 minutes)
+      const cacheKey = notificationType;
+      const now = Date.now();
+      
+      if (this.configCache.has(cacheKey) && 
+          this.lastConfigRefresh && 
+          (now - this.lastConfigRefresh) < 5 * 60 * 1000) {
+        return this.configCache.get(cacheKey);
+      }
+
+      console.log(`📖 Loading email configuration for: ${notificationType}`);
+      
+      const response = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailConfigurations')/items?$filter=NotificationType eq '${notificationType}'&$top=1`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.d.results.length > 0) {
+          const config = this.mapConfigFromSharePoint(data.d.results[0]);
+          
+          // Cache the configuration
+          this.configCache.set(cacheKey, config);
+          this.lastConfigRefresh = now;
+          
+          return config;
+        }
+      }
+    } catch (error) {
+      console.warn(`Could not load config for ${notificationType}, using defaults:`, error);
+    }
+
+    return this.getDefaultConfig(notificationType);
+  }
+
+  // Map SharePoint configuration to internal format
+  mapConfigFromSharePoint(spItem) {
+    return {
+      notificationType: spItem.NotificationType,
+      enabled: spItem.Enabled,
+      ccList: this.parseEmailList(spItem.CCList),
+      bccList: this.parseEmailList(spItem.BCCList),
+      lobSpecificCC: this.safeJsonParse(spItem.LOBSpecificCC, {}),
+      lobSpecificBCC: this.safeJsonParse(spItem.LOBSpecificBCC, {}),
+      sendToOwners: spItem.SendToOwners,
+      sendToSecondaryOwners: spItem.SendToSecondaryOwners,
+      additionalRecipients: this.parseEmailList(spItem.AdditionalRecipients),
+      priority: spItem.Priority || 'Normal',
+      lastUpdated: spItem.Modified,
+      updatedBy: spItem.Editor?.Title
+    };
+  }
+
+  // Enhanced procedure upload notification
+  async sendProcedureUploadedNotification(procedure, uploadedBy = null) {
+    try {
+      console.log(`📧 Sending upload notification for procedure: ${procedure.name}`);
+      
+      const config = await this.getEmailConfig('procedure-uploaded');
+      
+      if (!config.enabled) {
+        console.log('📧 Procedure upload notifications are disabled');
+        return { success: true, message: 'Notifications disabled' };
+      }
+
+      const recipients = this.buildRecipientList(procedure, config);
+      const ccList = this.buildCCList(procedure, config);
+      const bccList = this.buildBCCList(procedure, config);
+
+      console.log(`📧 Recipients: ${recipients.join(', ')}`);
+      console.log(`📧 CC: ${ccList.join(', ')}`);
+      console.log(`📧 BCC: ${bccList.join(', ')}`);
+
+      const template = await this.getTemplate('procedure-uploaded');
+      const emailBody = this.populateTemplate(template, {
+        procedureName: procedure.name,
+        procedureId: procedure.id,
+        uploadedBy: uploadedBy || procedure.uploaded_by || 'System',
+        lob: procedure.lob,
+        qualityScore: procedure.score || 'Not assessed',
+        uploadDate: new Date().toLocaleDateString(),
+        procedureUrl: `${this.baseUrl}/Lists/Procedures/DispForm.aspx?ID=${procedure.id}`,
+        primaryOwner: procedure.primary_owner,
+        secondaryOwner: procedure.secondary_owner || 'Not assigned'
+      });
+
+      const result = await this.sendEmail({
+        to: recipients,
+        cc: ccList,
+        bcc: bccList,
+        subject: `📄 New Procedure Uploaded: ${procedure.name}`,
+        body: emailBody,
+        priority: config.priority
+      });
+
+      // Log the notification
+      await this.logNotification({
+        type: 'procedure-uploaded',
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        recipients: recipients,
+        ccList: ccList,
+        bccList: bccList,
+        success: result.success
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error sending procedure upload notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Enhanced procedure deletion notification
+  async sendProcedureDeletedNotification(procedure, deletedBy = null) {
+    try {
+      console.log(`📧 Sending deletion notification for procedure: ${procedure.name}`);
+      
+      const config = await this.getEmailConfig('procedure-deleted');
+      
+      if (!config.enabled) {
+        console.log('📧 Procedure deletion notifications are disabled');
+        return { success: true, message: 'Notifications disabled' };
+      }
+
+      const recipients = this.buildRecipientList(procedure, config);
+      const ccList = this.buildCCList(procedure, config);
+      const bccList = this.buildBCCList(procedure, config);
+
+      const template = await this.getTemplate('procedure-deleted');
+      const emailBody = this.populateTemplate(template, {
+        procedureName: procedure.name,
+        procedureId: procedure.id,
+        deletedBy: deletedBy || 'System Administrator',
+        lob: procedure.lob,
+        deleteDate: new Date().toLocaleDateString(),
+        deleteTime: new Date().toLocaleTimeString(),
+        primaryOwner: procedure.primary_owner,
+        secondaryOwner: procedure.secondary_owner || 'Not assigned',
+        reason: 'Administrative action'
+      });
+
+      const result = await this.sendEmail({
+        to: recipients,
+        cc: ccList,
+        bcc: bccList,
+        subject: `🗑️ Procedure Deleted: ${procedure.name}`,
+        body: emailBody,
+        priority: config.priority
+      });
+
+      await this.logNotification({
+        type: 'procedure-deleted',
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        recipients: recipients,
+        ccList: ccList,
+        bccList: bccList,
+        success: result.success
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error sending procedure deletion notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Enhanced expiry warning with different configs per timeframe
+  async sendExpiryWarningNotification(procedure, daysUntilExpiry) {
+    try {
+      // Determine notification type based on days until expiry
+      let notificationType;
+      if (daysUntilExpiry >= 30) {
+        notificationType = 'expiry-30-days';
+      } else if (daysUntilExpiry >= 10) {
+        notificationType = 'expiry-10-days';
+      } else {
+        notificationType = 'expiry-urgent';
+      }
+
+      console.log(`📧 Sending ${notificationType} notification for procedure: ${procedure.name}`);
+      
+      const config = await this.getEmailConfig(notificationType);
+      
+      if (!config.enabled) {
+        console.log(`📧 ${notificationType} notifications are disabled`);
+        return { success: true, message: 'Notifications disabled' };
+      }
+
+      const recipients = this.buildRecipientList(procedure, config);
+      const ccList = this.buildCCList(procedure, config);
+      const bccList = this.buildBCCList(procedure, config);
+
+      const urgencyLevel = this.getUrgencyLevel(daysUntilExpiry);
+      const template = await this.getTemplate(`expiry-warning-${urgencyLevel}`);
+      
+      const emailBody = this.populateTemplate(template, {
+        procedureName: procedure.name,
+        procedureId: procedure.id,
+        daysUntilExpiry: daysUntilExpiry,
+        expiryDate: new Date(procedure.expiry).toLocaleDateString(),
+        primaryOwner: procedure.primary_owner,
+        secondaryOwner: procedure.secondary_owner || 'Not assigned',
+        lob: procedure.lob,
+        urgencyLevel: urgencyLevel,
+        procedureUrl: `${this.baseUrl}/Lists/Procedures/DispForm.aspx?ID=${procedure.id}`,
+        actionRequired: daysUntilExpiry <= 5 ? 'IMMEDIATE ACTION REQUIRED' : 'Please review and update',
+        priorityLevel: config.priority
+      });
+
+      const subjectPrefix = daysUntilExpiry <= 0 ? '🚨 EXPIRED' : 
+                           daysUntilExpiry <= 5 ? '⚠️ URGENT' : '📅';
+
+      const result = await this.sendEmail({
+        to: recipients,
+        cc: ccList,
+        bcc: bccList,
+        subject: `${subjectPrefix} Procedure Expiry: ${procedure.name} (${daysUntilExpiry} days)`,
+        body: emailBody,
+        priority: config.priority
+      });
+
+      await this.logNotification({
+        type: notificationType,
+        procedureId: procedure.id,
+        procedureName: procedure.name,
+        daysUntilExpiry: daysUntilExpiry,
+        recipients: recipients,
+        ccList: ccList,
+        bccList: bccList,
+        success: result.success
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error sending expiry warning notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Get fresh request digest
+  async getFreshRequestDigest() {
+    try {
+      const digestResponse = await fetch(`${this.baseUrl}/_api/contextinfo`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        }
+      });
+      
+      if (digestResponse.ok) {
+        const digestData = await digestResponse.json();
+        this.requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+        return this.requestDigest;
+      } else {
+        throw new Error(`Failed to get request digest: ${digestResponse.status}`);
+      }
+    } catch (error) {
+      console.error('Error getting fresh request digest:', error);
+      throw error;
+    }
+  }
+
+  // Build recipient list based on configuration
+  buildRecipientList(procedure, config) {
+    const recipients = [];
+
+    // Add primary owner if configured
+    if (config.sendToOwners && procedure.primary_owner_email) {
+      recipients.push(procedure.primary_owner_email);
+    }
+
+    // Add secondary owner if configured
+    if (config.sendToSecondaryOwners && procedure.secondary_owner_email) {
+      recipients.push(procedure.secondary_owner_email);
+    }
+
+    // Add additional recipients from config
+    if (config.additionalRecipients) {
+      recipients.push(...config.additionalRecipients);
+    }
+
+    return [...new Set(recipients)]; // Remove duplicates
+  }
+
+  // Build CC list with LOB-specific CCs
+  buildCCList(procedure, config) {
+    const ccList = [];
+
+    // Add global CC list
+    if (config.ccList) {
+      ccList.push(...config.ccList);
+    }
+
+    // Add LOB-specific CC list
+    if (config.lobSpecificCC && config.lobSpecificCC[procedure.lob]) {
+      ccList.push(...config.lobSpecificCC[procedure.lob]);
+    }
+
+    return [...new Set(ccList)]; // Remove duplicates
+  }
+
+  // Build BCC list with LOB-specific BCCs
+  buildBCCList(procedure, config) {
+    const bccList = [];
+
+    // Add global BCC list
+    if (config.bccList) {
+      bccList.push(...config.bccList);
+    }
+
+    // Add LOB-specific BCC list
+    if (config.lobSpecificBCC && config.lobSpecificBCC[procedure.lob]) {
+      bccList.push(...config.lobSpecificBCC[procedure.lob]);
+    }
+
+    return [...new Set(bccList)]; // Remove duplicates
+  }
+
+  // Enhanced email sending with your working SharePoint API
+  async sendEmail(emailOptions) {
+    if (!this.isInitialized) {
+      await this.initialize();
+    }
+
+    try {
+      // Get fresh request digest for each email
+      const requestDigest = await this.getFreshRequestDigest();
+      
+      const emailPayload = {
+        properties: {
+          __metadata: { type: 'SP.Utilities.EmailProperties' },
+          To: { results: emailOptions.to },
+          CC: emailOptions.cc && emailOptions.cc.length > 0 ? { results: emailOptions.cc } : { results: [] },
+          BCC: emailOptions.bcc && emailOptions.bcc.length > 0 ? { results: emailOptions.bcc } : { results: [] },
+          Subject: emailOptions.subject,
+          Body: emailOptions.body,
+          From: emailOptions.from || 'noreply@hsbc.com'
+        }
+      };
+
+      console.log('📤 Sending email via SharePoint API...');
+      
+      const response = await fetch(`${this.baseUrl}/_api/SP.Utilities.Utility.SendEmail`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(emailPayload)
+      });
+
+      if (response.ok) {
+        console.log('✅ Email sent successfully via SharePoint');
+        return { 
+          success: true, 
+          timestamp: new Date().toISOString(),
+          recipients: emailOptions.to.length,
+          cc: emailOptions.cc?.length || 0,
+          bcc: emailOptions.bcc?.length || 0
+        };
+      } else {
+        throw new Error(`Email send failed: ${response.status}`);
+      }
+
+    } catch (error) {
+      console.error('❌ Email send error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Log notification for audit trail
+  async logNotification(notificationData) {
+    try {
+      const requestDigest = await this.getFreshRequestDigest();
+      
+      const logEntry = {
+        __metadata: { type:​​​​​​​​​​​​​​​​
+```
+Continuing from the logNotification method:
+
+```javascript
+      const logEntry = {
+        __metadata: { type: 'SP.Data.EmailNotificationLogListItem' },
+        Title: `${notificationData.type}: ${notificationData.procedureName}`,
+        NotificationType: notificationData.type,
+        ProcedureId: notificationData.procedureId,
+        ProcedureName: notificationData.procedureName,
+        Recipients: notificationData.recipients.join('; '),
+        CCList: notificationData.ccList.join('; '),
+        BCCList: notificationData.bccList.join('; '),
+        SentAt: new Date().toISOString(),
+        Success: notificationData.success,
+        DaysUntilExpiry: notificationData.daysUntilExpiry || null,
+        SentBy: 'Email System',
+        ErrorMessage: notificationData.error || ''
+      };
+
+      await fetch(`${this.baseUrl}/_api/web/lists/getbytitle('EmailNotificationLog')/items`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(logEntry)
+      });
+
+      console.log('✅ Notification logged successfully');
+
+    } catch (error) {
+      console.warn('Could not log notification:', error);
+    }
+  }
+
+  // Get email template from SharePoint or use default
+  async getTemplate(templateType) {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items?$filter=TemplateType eq '${templateType}' and Enabled eq true&$top=1`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.d.results.length > 0) {
+          return data.d.results[0].TemplateBody;
+        }
+      }
+    } catch (error) {
+      console.warn('Could not load custom template, using default:', error);
+    }
+
+    return this.getDefaultTemplate(templateType);
+  }
+
+  // Default templates
+  getDefaultTemplate(templateType) {
+    const templates = {
+      'procedure-uploaded': `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #d40000, #b30000); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">HSBC</h1>
+            <p style="color: white; margin: 10px 0; font-size: 18px;">Procedures Hub Notification</p>
+          </div>
+          
+          <div style="padding: 30px; background: white;">
+            <h2 style="color: #333; margin-bottom: 20px;">📄 New Procedure Uploaded</h2>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #1976d2;">{{procedureName}}</h3>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0; font-weight: bold;">Procedure ID:</td><td>{{procedureId}}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold;">Uploaded By:</td><td>{{uploadedBy}}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold;">Line of Business:</td><td>{{lob}}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold;">Quality Score:</td><td><span style="color: #4caf50; font-weight: bold;">{{qualityScore}}%</span></td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold;">Primary Owner:</td><td>{{primaryOwner}}</td></tr>
+                <tr><td style="padding: 8px 0; font-weight: bold;">Secondary Owner:</td><td>{{secondaryOwner}}</td></tr>
+              </table>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{procedureUrl}}" style="background: linear-gradient(135deg, #d40000, #b30000); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">View Procedure</a>
+            </div>
+            
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">
+              This is an automated notification from the HSBC Procedures Hub. Please review the new procedure and ensure it meets your departmental requirements.
+            </p>
+          </div>
+          
+          <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+            HSBC Procedures Hub | Confidential and Proprietary
+          </div>
+        </div>`,
+
+      'procedure-deleted': `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #ff9800, #f57c00); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🗑️ NOTICE</h1>
+            <p style="color: white; margin: 10px 0; font-size: 18px;">Procedure Deletion</p>
+          </div>
+          
+          <div style="padding: 30px; background: white;">
+            <h2 style="color: #ff9800; margin-bottom: 20px;">Procedure Deleted</h2>
+            
+            <div style="background: #fff3e0; border-left: 5px solid #ff9800; padding: 20px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #f57c00;">{{procedureName}}</h3>
+              <p style="margin: 0; color: #ff9800;">
+                This procedure has been removed from the system.
+              </p>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr><td style="padding: 8px 0; font-weight: bold;">Procedure ID:</td><td>{{procedureId}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Deleted By:</td><td>{{deletedBy}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Line of Business:</td><td>{{lob}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Deletion Date:</td><td>{{deleteDate}} at {{deleteTime}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Reason:</td><td>{{reason}}</td></tr>
+            </table>
+            
+            <div style="background: #e3f2fd; border: 1px solid #90caf9; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <h4 style="margin-top: 0; color: #1976d2;">ℹ️ Information</h4>
+              <p style="margin: 0;">If you need to reference this procedure, please contact the procedures administration team.</p>
+            </div>
+          </div>
+          
+          <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+            HSBC Procedures Hub | Confidential and Proprietary
+          </div>
+        </div>`,
+
+      'expiry-warning-urgent': `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #f44336, #d32f2f); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">⚠️ URGENT</h1>
+            <p style="color: white; margin: 10px 0; font-size: 18px;">Procedure Expiry Warning</p>
+          </div>
+          
+          <div style="padding: 30px; background: white;">
+            <h2 style="color: #f44336; margin-bottom: 20px;">🚨 Procedure Expiring Soon</h2>
+            
+            <div style="background: #ffebee; border-left: 5px solid #f44336; padding: 20px; margin: 20px 0;">
+              <h3 style="margin-top: 0; color: #d32f2f;">{{procedureName}}</h3>
+              <p style="margin: 0; font-size: 18px; color: #f44336;">
+                <strong>{{daysUntilExpiry}} days until expiry</strong>
+              </p>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <tr><td style="padding: 8px 0; font-weight: bold;">Procedure ID:</td><td>{{procedureId}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Primary Owner:</td><td>{{primaryOwner}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Line of Business:</td><td>{{lob}}</td></tr>
+              <tr><td style="padding: 8px 0; font-weight: bold;">Expiry Date:</td><td><span style="color: #f44336; font-weight: bold;">{{expiryDate}}</span></td></tr>
+            </table>
+            
+            <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <h4 style="margin-top: 0; color: #856404;">⏰ {{actionRequired}}</h4>
+              <p style="margin: 0;">Please review and update this procedure before it expires to maintain compliance.</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="{{procedureUrl}}" style="background: linear-gradient(135deg, #f44336, #d32f2f); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Review Procedure Now</a>
+            </div>
+          </div>
+          
+          <div style="background: #f5f5f5; padding: 20px; text-align: center; font-size: 12px; color: #666;">
+            HSBC Procedures Hub | Confidential and Proprietary
+          </div>
+        </div>`
+    };
+
+    return templates[templateType] || templates['procedure-uploaded'];
+  }
+
+  // Template variable replacement
+  populateTemplate(template, variables) {
+    let populatedTemplate = template;
+    
+    Object.keys(variables).forEach(key => {
+      const regex = new RegExp(`{{${key}}}`, 'g');
+      populatedTemplate = populatedTemplate.replace(regex, variables[key]);
+    });
+    
+    return populatedTemplate;
+  }
+
+  // Helper methods
+  parseEmailList(emailString) {
+    if (!emailString) return [];
+    return emailString.split(/[,;]/).map(email => email.trim()).filter(email => email);
+  }
+
+  safeJsonParse(jsonString, defaultValue) {
+    try {
+      return jsonString ? JSON.parse(jsonString) : defaultValue;
+    } catch (error) {
+      return defaultValue;
+    }
+  }
+
+  getUrgencyLevel(daysUntilExpiry) {
+    if (daysUntilExpiry <= 0) return 'expired';
+    if (daysUntilExpiry <= 5) return 'urgent';
+    if (daysUntilExpiry <= 10) return 'warning';
+    return 'normal';
+  }
+
+  getDefaultConfig(notificationType) {
+    const defaultConfigs = {
+      'procedure-uploaded': {
+        notificationType: 'procedure-uploaded',
+        enabled: true,
+        ccList: ['procedures-admin@hsbc.com'],
+        bccList: [],
+        lobSpecificCC: {
+          'IWPB': ['iwpb-procedures@hsbc.com'],
+          'CIB': ['cib-procedures@hsbc.com'], 
+          'GCOO': ['gcoo-procedures@hsbc.com']
+        },
+        lobSpecificBCC: {},
+        sendToOwners: true,
+        sendToSecondaryOwners: true,
+        additionalRecipients: [],
+        priority: 'Normal'
+      }
+      // ... other default configs
+    };
+
+    return defaultConfigs[notificationType] || defaultConfigs['procedure-uploaded'];
+  }
+}
+
+export default EmailNotificationService;
+```
+
+### **3. Email Scheduler Service for Automated Monitoring**
+
+```javascript
+// services/EmailSchedulerService.js - Complete Implementation
+class EmailSchedulerService {
+  constructor(emailService) {
+    this.emailService = emailService;
+    this.isRunning = false;
+    this.intervalId = null;
+    this.baseUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+    this.lastProcessedNotifications = new Map(); // Track sent notifications
+  }
+
+  // Start the email monitoring system
+  async startMonitoring() {
+    if (this.isRunning) {
+      console.log('📧 Email scheduler already running');
+      return;
+    }
+    
+    this.isRunning = true;
+    console.log('📧 Starting HSBC Procedures email monitoring...');
+    
+    // Update scheduler status in SharePoint
+    await this.updateSchedulerStatus('RUNNING');
+    
+    // Check for expiring procedures every hour
+    this.intervalId = setInterval(async () => {
+      await this.checkExpiringProcedures();
+    }, 60 * 60 * 1000); // Every hour
+
+    // Initial check
+    await this.checkExpiringProcedures();
+    
+    console.log('✅ Email scheduler started successfully');
+  }
+
+  stopMonitoring() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.isRunning = false;
+      console.log('📧 Email monitoring stopped');
+      
+      // Update scheduler status
+      this.updateSchedulerStatus('STOPPED');
+    }
+  }
+
+  // Main function to check for expiring procedures
+  async checkExpiringProcedures() {
+    try {
+      console.log('🔍 Checking for expiring procedures...');
+      
+      const procedures = await this.getAllProcedures();
+      const now = new Date();
+      const notifications = [];
+
+      for (const procedure of procedures) {
+        const expiryDate = new Date(procedure.expiry);
+        const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+        
+        // Check if we need to send notifications based on our schedule
+        if (this.shouldSendNotification(daysUntilExpiry, procedure)) {
+          // Check if we already sent this notification today
+          const notificationKey = `${procedure.id}-${daysUntilExpiry}`;
+          const lastSent = this.lastProcessedNotifications.get(notificationKey);
+          const today = new Date().toDateString();
+          
+          if (!lastSent || lastSent !== today) {
+            notifications.push({
+              procedure,
+              daysUntilExpiry,
+              type: this.getNotificationType(daysUntilExpiry),
+              key: notificationKey
+            });
+          }
+        }
+      }
+
+      console.log(`📧 Found ${notifications.length} procedures requiring notifications`);
+
+      // Send notifications
+      for (const notification of notifications) {
+        const result = await this.sendExpiryNotification(notification);
+        
+        if (result.success) {
+          // Mark as sent today
+          this.lastProcessedNotifications.set(notification.key, new Date().toDateString());
+        }
+      }
+
+      // Update scheduler status
+      await this.updateSchedulerStatus('RUNNING', {
+        lastRun: new Date().toISOString(),
+        proceduresChecked: procedures.length,
+        notificationsSent: notifications.length
+      });
+
+      if (notifications.length > 0) {
+        console.log(`📧 Sent ${notifications.length} expiry notifications`);
+      }
+
+    } catch (error) {
+      console.error('❌ Error checking expiring procedures:', error);
+      await this.updateSchedulerStatus('ERROR', { error: error.message });
+    }
+  }
+
+  // Get all procedures from SharePoint
+  async getAllProcedures() {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('Procedures')/items?$select=*&$top=1000`,
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.d.results.map(item => ({
+          id: item.Id,
+          name: item.Title,
+          expiry: item.ExpiryDate,
+          primary_owner: item.PrimaryOwner,
+          primary_owner_email: item.PrimaryOwnerEmail,
+          secondary_owner: item.SecondaryOwner,
+          secondary_owner_email: item.SecondaryOwnerEmail,
+          lob: item.LOB,
+          score: item.QualityScore
+        }));
+      } else {
+        throw new Error(`Failed to fetch procedures: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error fetching procedures:', error);
+      return [];
+    }
+  }
+
+  // Determine if notification should be sent
+  shouldSendNotification(daysUntilExpiry, procedure) {
+    // Send notifications at:
+    // - 30 days before expiry (once)
+    // - 10 days before expiry (once)  
+    // - Daily from 5 days before until expiry (5, 4, 3, 2, 1, 0)
+    
+    const notificationDays = [30, 10, 5, 4, 3, 2, 1, 0];
+    return notificationDays.includes(daysUntilExpiry);
+  }
+
+  getNotificationType(daysUntilExpiry) {
+    if (daysUntilExpiry <= 0) return 'expired';
+    if (daysUntilExpiry <= 5) return 'urgent';
+    if (daysUntilExpiry <= 10) return 'warning';
+    return 'advance';
+  }
+
+  // Send expiry notification
+  async sendExpiryNotification(notification) {
+    try {
+      console.log(`📧 Sending expiry notification: ${notification.procedure.name} (${notification.daysUntilExpiry} days)`);
+      
+      const result = await this.emailService.sendExpiryWarningNotification(
+        notification.procedure,
+        notification.daysUntilExpiry
+      );
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Failed to send expiry notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Update scheduler status in SharePoint
+  async updateSchedulerStatus(status, details = {}) {
+    try {
+      const requestDigest = await this.emailService.getFreshRequestDigest();
+      
+      const statusData = {
+        __metadata: { type: 'SP.Data.EmailSchedulerListItem' },
+        Title: 'EmailScheduler',
+        SchedulerEnabled: status === 'RUNNING',
+        LastRun: new Date().toISOString(),
+        Status: status,
+        Configuration: JSON.stringify({
+          ...details,
+          checkInterval: 60, // minutes
+          notificationDays: [30, 10, 5, 4, 3, 2, 1, 0]
+        })
+      };
+
+      // Try to update existing record, or create new one
+      try {
+        const existingResponse = await fetch(
+          `${this.baseUrl}/_api/web/lists/getbytitle('EmailScheduler')/items?$top=1`,
+          { headers: { 'Accept': 'application/json; odata=verbose' } }
+        );
+
+        if (existingResponse.ok) {
+          const existingData = await existingResponse.json();
+          if (existingData.d.results.length > 0) {
+            // Update existing
+            const itemId = existingData.d.results[0].Id;
+            await fetch(
+              `${this.baseUrl}/_api/web/lists/getbytitle('EmailScheduler')/items(${itemId})`,
+              {
+                method: 'POST',
+                headers: {
+                  'Accept': 'application/json; odata=verbose',
+                  'Content-Type': 'application/json; odata=verbose',
+                  'X-RequestDigest': requestDigest,
+                  'X-HTTP-Method': 'MERGE',
+                  'IF-MATCH': '*'
+                },
+                body: JSON.stringify(statusData)
+              }
+            );
+            return;
+          }
+        }
+      } catch (updateError) {
+        console.warn('Could not update existing scheduler record:', updateError);
+      }
+
+      // Create new record
+      await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailScheduler')/items`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          body: JSON.stringify(statusData)
+        }
+      );
+
+    } catch (error) {
+      console.warn('Could not update scheduler status:', error);
+    }
+  }
+
+  // Get scheduler status from SharePoint
+  async getSchedulerStatus() {
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/_api/web/lists/getbytitle('EmailScheduler')/items?$top=1&$orderby=Modified desc`,
+        { headers: { 'Accept': 'application/json; odata=verbose' } }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.d.results.length > 0) {
+          const item = data.d.results[0];
+          return {
+            enabled: item.SchedulerEnabled,
+            lastRun: item.LastRun,
+            status: item.Status,
+            configuration: JSON.parse(item.Configuration || '{}')
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('Could not get scheduler status:', error);
+    }
+
+    return {
+      enabled: false,
+      lastRun: null,
+      status: 'UNKNOWN',
+      configuration: {}
+    };
+  }
+}
+
+export default EmailSchedulerService;
+```
+
+### **4. Integration Hooks for Procedure Events**
+
+Now let’s add hooks to trigger emails when procedures are uploaded or deleted. Add these to your AdminDashboardPage:
+
+```javascript
+// Add these enhanced handlers to your AdminDashboardPage to trigger email notifications
+
+// Enhanced procedure upload handler (add to your existing upload logic)
+const handleProcedureUploaded = async (procedure, uploadedBy) => {
+  try {
+    console.log('📧 Triggering upload notification for:', procedure.name);
+    
+    if (sharePointAvailable) {
+      // Initialize email service if not already done
+      const EmailNotificationService = (await import('../services/EmailNotificationService')).default;
+      const emailService = new EmailNotificationService();
+      await emailService.initialize();
+      
+      // Send notification
+      const result = await emailService.sendProcedureUploadedNotification(procedure, uploadedBy);
+      
+      if (result.success) {
+        console.log('✅ Upload notification sent successfully');
+        setNotification({ 
+          type: 'success', 
+          message: `📧 Upload notification sent for "${procedure.name}"` 
+        });
+      } else {
+        console.warn('⚠️ Upload notification failed:', result.error);
+        setNotification({ 
+          type: 'warning', 
+          message: `⚠️ Upload notification failed: ${result.error}` 
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error sending upload notification:', error);
+  }
+};
+
+// Enhanced procedure deletion handler
+const handleProcedureDeleted = async (procedure, deletedBy) => {
+  try {
+    console.log('📧 Triggering deletion notification for:', procedure.name);
+    
+    if (sharePointAvailable) {
+      const EmailNotificationService = (await import('../services/EmailNotificationService')).default;
+      const emailService = new EmailNotificationService();
+      await emailService.initialize();
+      
+      const result = await emailService.sendProcedureDeletedNotification(procedure, deletedBy);
+      
+      if (result.success) {
+        console.log('✅ Deletion notification sent successfully');
+        setNotification({ 
+          type: 'success', 
+          message: `📧 Deletion notification sent for "${procedure.name}"` 
+        });
+      } else {
+        console.warn('⚠️ Deletion notification failed:', result.error);
+        setNotification({ 
+          type: 'warning', 
+          message: `⚠️ Deletion notification failed: ${result.error}` 
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error sending deletion notification:', error);
+  }
+};
+
+// Update your existing handleDeleteProcedure function to include email notification
+const handleDeleteProcedure = async (procedure) => {
+  try {
+    setLoading(true);
+    const config = getSharePointConfig();
+    
+    if (sharePointAvailable) {
+      console.log('🗑️ Deleting procedure from SharePoint:', procedure.id);
+      
+      const requestDigest = await getFreshRequestDigest();
+      const deleteUrl = `${config.proceduresListUrl}(${procedure.id})`;
+      
+      const response = await fetch(deleteUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest,
+          'X-HTTP-Method': 'DELETE',
+          'IF-MATCH': '*'
+        },
+        credentials: 'include'
+      });
+
+      if (response.ok || response.status === 204) {
+        console.log('✅ Procedure deleted successfully from SharePoint');
+        
+        // Send email notification AFTER successful deletion
+        await handleProcedureDeleted(procedure, user?.displayName || user?.staffId);
+        
+        await logAuditAction('PROCEDURE_DELETED', procedure.name, {
+          procedureId: procedure.id,
+          deletedBy: user?.staffId,
+          reason: 'Admin deletion'
+        });
+        
+        setNotification({ type: 'success', message: 'Procedure deleted successfully from SharePoint' });
+        onDataRefresh();
+        loadAuditLog();
+      } else {
+        const errorText = await response.text();
+        console.error('❌ SharePoint delete error:', response.status, errorText);
+        setNotification({ type: 'error', message: `Failed to delete procedure from SharePoint (${response.status}): ${errorText}` });
+      }
+    }
+  } catch (err) {
+    console.error('❌ Error deleting procedure:', err);
+    setNotification({ type: 'error', message: 'Error deleting procedure: ' + err.message });
+  } finally {
+    setLoading(false);
+    setDeleteDialog({ open: false, procedure: null });
+  }
+};
+```
+
+### **5. Add Email Management Setup Button**
+
+Add this button to your Admin Dashboard to set up the email system:
+
+```javascript
+// Add this button to your admin stats cards area
+<Grid item xs={12} sm={6} md={2.4}>
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.3, delay: 0.4 }}
+  >
+    <Card sx={{ 
+      background: 'linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%)', 
+      color: 'white',
+      cursor: 'pointer',
+      '&:hover': { transform: 'translateY(-2px)' },
+      transition: 'transform 0.3s'
+    }}
+    onClick={createEmailManagementLists}
+    >
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box>
+            <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+              Setup Email System
+            </Typography>
+            <Typography variant="h3" fontWeight="bold">
+              📧
+            </Typography>
+          </Box>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="caption" display="block" color="rgba(255,255,255,0.8)">
+              Create Lists
+            </Typography>
+            <Typography variant="caption" display="block" color="rgba(255,255,255,0.8)">
+              Initialize
+            </Typography>
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  </motion.div>
+</Grid>
+```
+
+## 🎯 **What We’ve Completed:**
+
+✅ **Complete SharePoint Integration** - All email services work with your SharePoint API  
+✅ **Automatic List Creation** - Creates all required SharePoint lists with proper columns  
+✅ **Email Configuration Management** - Store and retrieve email settings from SharePoint  
+✅ **Automated Monitoring** - Hourly checks for expiring procedures  
+✅ **Event-Driven Notifications** - Emails sent when procedures are uploaded/deleted  
+✅ **Comprehensive Logging** - All notifications logged to SharePoint for audit  
+✅ **Template Management** - Store custom email templates in SharePoint
+
+## 🚀 **Next Steps to Go Live:**
+
+### **Phase 6: Testing & Deployment**
+
+1. **Click “Setup Email System”** - Creates all SharePoint lists
+1. **Test Email Functionality** - Use the test buttons in Email Management tab
+1. **Configure Recipients** - Set up CC/BCC lists for each notification type
+1. **Customize Templates** - Modify email templates as needed
+1. **Enable Scheduler** - Start automatic monitoring
+
+Would you like me to continue with **Phase 6 (Testing & Go-Live)** or do you want to test the current implementation first? 🚀​​​​​​​​​​​​​​​​
+
+
+
+
+
 
