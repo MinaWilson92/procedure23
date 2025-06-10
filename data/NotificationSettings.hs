@@ -10,7 +10,7 @@ List, ListItem, ListItemText, ListItemSecondaryAction
 } from ‘@mui/material’;
 import {
 Settings, Edit, Save, Cancel, ExpandMore, Email,
-Notifications, Template, Preview, Refresh, Add,
+Notifications, Description, Preview, Refresh, Add,
 CheckCircle, Warning, Info
 } from ‘@mui/icons-material’;
 import { motion } from ‘framer-motion’;
@@ -501,7 +501,7 @@ Refresh Templates
   >
     <DialogTitle>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Template color="primary" />
+        <Description color="primary" />
         Edit Email Template: {templateForm.name}
       </Box>
     </DialogTitle>
