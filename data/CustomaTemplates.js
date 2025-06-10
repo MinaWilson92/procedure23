@@ -9,7 +9,7 @@ CircularProgress, Divider
 } from ‘@mui/material’;
 import {
 Add, Edit, Delete, Save, Cancel, Preview, Email,
-Template, Send, Refresh
+Description, Send, Refresh
 } from ‘@mui/icons-material’;
 import { motion } from ‘framer-motion’;
 import EmailService from ‘../../services/EmailService’;
@@ -246,7 +246,7 @@ New Template
   {customTemplates.length === 0 ? (
     <Card>
       <CardContent sx={{ textAlign: 'center', py: 6 }}>
-        <Template sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
+        <Description sx={{ fontSize: 80, color: 'text.disabled', mb: 2 }} />
         <Typography variant="h5" color="text.secondary" gutterBottom>
           No Custom Templates
         </Typography>
@@ -406,7 +406,7 @@ New Template
   >
     <DialogTitle>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Template color="primary" />
+        <Description color="primary" />
         {currentTemplate ? 'Edit Custom Template' : 'Create New Custom Template'}
       </Box>
     </DialogTitle>
