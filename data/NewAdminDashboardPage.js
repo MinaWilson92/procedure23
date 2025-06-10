@@ -1,5 +1,5 @@
 // pages/AdminDashboard.js - Complete Fixed Version
-import React, { useState, useEffect, useContext } from ‘react’;
+import React, { useState, useEffect } from ‘react’;
 import {
 Box, Container, Typography, Grid, Paper, Card, CardContent,
 Button, Chip, IconButton, useTheme, alpha, List, ListItem,
@@ -19,17 +19,17 @@ OpenInNew, Settings, BarChart, PieChart, Timeline,
 AdminPanelSettings, Security, Refresh, Add, Edit,
 Delete, Visibility, Send, Group, People
 } from ‘@mui/icons-material’;
-import { useNavigate } from ‘react-router-dom’;
 import { motion } from ‘framer-motion’;
-import { UserContext } from ‘../UserContext’;
+import { useSharePoint } from ‘../SharePointContext’;
+import { useNavigation } from ‘../contexts/NavigationContext’;
 
 // Import the FIXED email management component
 import EmailManagement from ‘../components/EmailManagement’;
 
 const AdminDashboard = () => {
-const navigate = useNavigate();
+const { navigate } = useNavigation();
 const theme = useTheme();
-const { user } = useContext(UserContext);
+const { user } = useSharePoint();
 
 // State management
 const [activeTab, setActiveTab] = useState(0);
@@ -40,6 +40,9 @@ const [auditLog, setAuditLog] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState(null);
 const [selectedTimeRange, setSelectedTimeRange] = useState(‘30’);
+
+// SharePoint API base URL
+const baseUrl = ‘https://teams.global.hsbc/sites/EmployeeEng’;
 
 // Tab configuration
 const adminTabs = [
@@ -91,37 +94,20 @@ setLoading(true);
 setError(null);
 
 ```
-  // Fetch dashboard summary
-  const dashboardRes = await fetch('/ProceduresHubEG6/api/admin/dashboard-summary');
-  if (dashboardRes.ok) {
-    const dashboardData = await dashboardRes.json();
-    setDashboardData(dashboardData);
-  }
-
-  // Fetch all procedures for management
-  const proceduresRes = await fetch('/ProceduresHubEG6/api/procedures');
-  if (proceduresRes.ok) {
-    const proceduresData = await proceduresRes.json();
-    setProcedures(proceduresData);
-  }
-
-  // Fetch users
-  const usersRes = await fetch('/ProceduresHubEG6/api/admin/users');
-  if (usersRes.ok) {
-    const usersData = await usersRes.json();
-    setUsers(usersData);
-  }
-
-  // Fetch audit log
-  const auditRes = await fetch(`/ProceduresHubEG6/api/admin/audit-log?days=${selectedTimeRange}`);
-  if (auditRes.ok) {
-    const auditData = await auditRes.json();
-    setAuditLog(auditData);
-  }
-
+  console.log('📊 Fetching admin dashboard data from SharePoint...');
+  
+  // Fetch procedures from SharePoint
+  await fetchProcedures();
+  
+  // Calculate dashboard summary from procedures
+  calculateDashboardSummary();
+  
 } catch (err) {
-  console.error('Error fetching admin dashboard data:', err);
+  console.error('❌ Error fetching admin dashboard data:', err);
   setError(err.message);
+  
+  // Set mock data as fallback
+  setMockDashboardData();
 } finally {
   setLoading(false);
 }
@@ -129,16 +115,106 @@ setError(null);
 
 };
 
-const handleTabChange = (event, newValue) => {
-setActiveTab(newValue);
+const fetchProcedures = async () => {
+try {
+console.log(‘📄 Fetching procedures from SharePoint…’);
+
+```
+  const response = await fetch(
+    `${baseUrl}/_api/web/lists/getbytitle('Procedures')/items?$select=*&$top=5000`,
+    {
+      method: 'GET',
+      headers: { 
+        'Accept': 'application/json; odata=verbose',
+        'Content-Type': 'application/json; odata=verbose'
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch procedures: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const proceduresData = data.d.results.map(item => ({
+    id: item.Id,
+    name: item.Title,
+    expiry: item.ExpiryDate,
+    primary_owner: item.PrimaryOwner,
+    primary_owner_email: item.PrimaryOwnerEmail,
+    secondary_owner: item.SecondaryOwner || '',
+    secondary_owner_email: item.SecondaryOwnerEmail || '',
+    lob: item.LOB,
+    procedure_subsection: item.ProcedureSubsection || '',
+    score: item.QualityScore || 0,
+    uploaded_by: item.UploadedBy,
+    uploaded_at: item.UploadedAt,
+    status: item.Status || 'Active'
+  }));
+  
+  setProcedures(proceduresData);
+  console.log('✅ Procedures loaded from SharePoint:', proceduresData.length);
+  
+} catch (error) {
+  console.error('❌ Error fetching procedures from SharePoint:', error);
+  throw error;
+}
+```
+
 };
 
-const handleTimeRangeChange = (event) => {
-setSelectedTimeRange(event.target.value);
+const calculateDashboardSummary = () => {
+if (procedures.length === 0) {
+setMockDashboardData();
+return;
+}
+
+```
+const now = new Date();
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+const summary = {
+  totalProcedures: procedures.length,
+  activeProcedures: procedures.filter(p => p.status === 'Active').length,
+  expiredProcedures: procedures.filter(p => new Date(p.expiry) < now).length,
+  expiringSoon: procedures.filter(p => {
+    const expiry = new Date(p.expiry);
+    return expiry > now && expiry - now < THIRTY_DAYS;
+  }).length,
+  highQualityProcedures: procedures.filter(p => (p.score || 0) >= 80).length,
+  lowQualityProcedures: procedures.filter(p => (p.score || 0) < 60).length,
+  averageQualityScore: procedures.length > 0 ? 
+    Math.round(procedures.reduce((sum, p) => sum + (p.score || 0), 0) / procedures.length) : 0,
+  totalUsers: 156, // This would come from SharePoint UserRoles list
+  activeUsers: 142,
+  adminUsers: 8,
+  recentUploads: procedures.filter(p => {
+    const uploadDate = new Date(p.uploaded_at);
+    return now - uploadDate < THIRTY_DAYS;
+  }).length,
+  systemHealth: 98.5,
+  sharepointSync: true,
+  emailNotifications: true,
+  lobBreakdown: calculateLOBBreakdown(procedures)
 };
 
-// Mock data for demo when API is not available
-const mockDashboardData = {
+setDashboardData(summary);
+console.log('✅ Dashboard summary calculated:', summary);
+```
+
+};
+
+const calculateLOBBreakdown = (proceduresData) => {
+const breakdown = {};
+proceduresData.forEach(proc => {
+const lob = proc.lob || ‘Other’;
+breakdown[lob] = (breakdown[lob] || 0) + 1;
+});
+return breakdown;
+};
+
+const setMockDashboardData = () => {
+const mockData = {
 totalProcedures: 247,
 activeProcedures: 231,
 expiredProcedures: 8,
@@ -151,7 +227,7 @@ activeUsers: 142,
 adminUsers: 8,
 recentUploads: 12,
 systemHealth: 98.5,
-sharepointSync: true,
+sharepointSync: false, // Indicate this is mock data
 emailNotifications: true,
 lobBreakdown: {
 ‘IWPB’: 45,
@@ -160,14 +236,21 @@ lobBreakdown: {
 ‘GRM’: 52,
 ‘GF’: 29,
 ‘GTRB’: 16
-},
-monthlyTrends: {
-uploads: [12, 18, 15, 22, 19, 25],
-quality: [82, 84, 83, 85, 84, 84]
 }
 };
+setDashboardData(mockData);
+console.log(‘⚠️ Using mock dashboard data’);
+};
 
-const stats = dashboardData || mockDashboardData;
+const handleTabChange = (event, newValue) => {
+setActiveTab(newValue);
+};
+
+const handleTimeRangeChange = (event) => {
+setSelectedTimeRange(event.target.value);
+};
+
+const stats = dashboardData || {};
 
 if (loading && activeTab === 0) {
 return (
@@ -218,7 +301,7 @@ boxShadow: ‘0 4px 6px rgba(0,0,0,0.1)’
 }}>
 <Container maxWidth="lg">
 <Box sx={{ display: ‘flex’, alignItems: ‘center’, gap: 2 }}>
-<IconButton onClick={() => navigate(’/’)} sx={{ color: ‘white’ }}>
+<IconButton onClick={() => navigate(‘home’)} sx={{ color: ‘white’ }}>
 <ArrowBack />
 </IconButton>
 <Box sx={{ flex: 1 }}>
@@ -248,6 +331,14 @@ backgroundColor: ‘rgba(255,255,255,0.2)’,
 color: ‘white’
 }}
 />
+{!stats.sharepointSync && (
+<Chip
+label=“Demo Mode”
+size=“small”
+color=“warning”
+sx={{ fontWeight: ‘bold’ }}
+/>
+)}
 </Box>
 </Box>
 </Container>
@@ -287,6 +378,16 @@ color: ‘white’
       </Tabs>
     </Paper>
 
+    {/* SharePoint Connection Status */}
+    {!stats.sharepointSync && (
+      <Alert severity="warning" sx={{ mb: 3 }}>
+        <Typography variant="body2">
+          <strong>Demo Mode:</strong> SharePoint connection not available. 
+          Displaying sample data for demonstration purposes.
+        </Typography>
+      </Alert>
+    )}
+
     {/* Tab Content */}
     <Box>
       {/* Dashboard Overview Tab */}
@@ -311,7 +412,7 @@ color: ‘white’
                         Total Procedures
                       </Typography>
                       <Typography variant="h3" fontWeight="bold">
-                        {stats.totalProcedures}
+                        {stats.totalProcedures || 0}
                       </Typography>
                     </Box>
                     <FolderOpen sx={{ fontSize: 50, opacity: 0.3 }} />
@@ -333,7 +434,7 @@ color: ‘white’
                         Need Attention
                       </Typography>
                       <Typography variant="h3" fontWeight="bold">
-                        {stats.expiringSoon}
+                        {stats.expiringSoon || 0}
                       </Typography>
                     </Box>
                     <Warning sx={{ fontSize: 50, opacity: 0.3 }} />
@@ -355,7 +456,7 @@ color: ‘white’
                         Active Users
                       </Typography>
                       <Typography variant="h3" fontWeight="bold">
-                        {stats.activeUsers}
+                        {stats.activeUsers || 0}
                       </Typography>
                     </Box>
                     <Person sx={{ fontSize: 50, opacity: 0.3 }} />
@@ -377,7 +478,7 @@ color: ‘white’
                         Quality Score
                       </Typography>
                       <Typography variant="h3" fontWeight="bold">
-                        {stats.averageQualityScore}%
+                        {stats.averageQualityScore || 0}%
                       </Typography>
                     </Box>
                     <Assessment sx={{ fontSize: 50, opacity: 0.3 }} />
@@ -405,11 +506,11 @@ color: ‘white’
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <LinearProgress 
                             variant="determinate" 
-                            value={stats.systemHealth} 
+                            value={stats.systemHealth || 0} 
                             sx={{ flex: 1, height: 8, borderRadius: 4 }}
                           />
                           <Typography variant="h6" color="success.main">
-                            {stats.systemHealth}%
+                            {stats.systemHealth || 0}%
                           </Typography>
                         </Box>
                       </Box>
@@ -423,8 +524,8 @@ color: ‘white’
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Chip 
                             icon={stats.sharepointSync ? <CheckCircle /> : <ErrorIcon />}
-                            label={stats.sharepointSync ? 'Connected' : 'Disconnected'}
-                            color={stats.sharepointSync ? 'success' : 'error'}
+                            label={stats.sharepointSync ? 'Connected' : 'Demo Mode'}
+                            color={stats.sharepointSync ? 'success' : 'warning'}
                             size="small"
                           />
                         </Box>
@@ -453,7 +554,7 @@ color: ‘white’
                           Recent Uploads
                         </Typography>
                         <Typography variant="h6" color="primary.main">
-                          {stats.recentUploads} this month
+                          {stats.recentUploads || 0} this month
                         </Typography>
                       </Box>
                     </Grid>
@@ -533,7 +634,7 @@ color: ‘white’
                 <Button
                   variant="contained"
                   startIcon={<Upload />}
-                  onClick={() => navigate('/admin')}
+                  onClick={() => navigate('submit-procedure')}
                 >
                   Upload New Procedure
                 </Button>
@@ -549,7 +650,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'primary.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.totalProcedures}
+                      {stats.totalProcedures || 0}
                     </Typography>
                     <Typography variant="body2">
                       Total Procedures
@@ -559,7 +660,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.activeProcedures}
+                      {stats.activeProcedures || 0}
                     </Typography>
                     <Typography variant="body2">
                       Active
@@ -569,7 +670,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.expiringSoon}
+                      {stats.expiringSoon || 0}
                     </Typography>
                     <Typography variant="body2">
                       Expiring Soon
@@ -579,7 +680,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.expiredProcedures}
+                      {stats.expiredProcedures || 0}
                     </Typography>
                     <Typography variant="body2">
                       Expired
@@ -591,7 +692,7 @@ color: ‘white’
               <Button
                 variant="outlined"
                 startIcon={<OpenInNew />}
-                onClick={() => navigate('/')}
+                onClick={() => navigate('procedures')}
                 fullWidth
               >
                 View All Procedures in Main Interface
@@ -622,7 +723,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'info.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.totalUsers}
+                      {stats.totalUsers || 0}
                     </Typography>
                     <Typography variant="body2">
                       Total Users
@@ -632,7 +733,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'success.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.activeUsers}
+                      {stats.activeUsers || 0}
                     </Typography>
                     <Typography variant="body2">
                       Active Users
@@ -642,7 +743,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'error.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.adminUsers}
+                      {stats.adminUsers || 0}
                     </Typography>
                     <Typography variant="body2">
                       Administrators
@@ -652,7 +753,7 @@ color: ‘white’
                 <Grid item xs={6} sm={3}>
                   <Paper sx={{ p: 2, textAlign: 'center', bgcolor: 'warning.main', color: 'white' }}>
                     <Typography variant="h4" fontWeight="bold">
-                      {stats.totalUsers - stats.activeUsers}
+                      {(stats.totalUsers || 0) - (stats.activeUsers || 0)}
                     </Typography>
                     <Typography variant="body2">
                       Inactive
@@ -709,9 +810,13 @@ color: ‘white’
                         <ListItem>
                           <ListItemText 
                             primary="SharePoint Integration"
-                            secondary="Connected to HSBC SharePoint"
+                            secondary={`Connected to ${baseUrl}`}
                           />
-                          <Chip label="Active" color="success" size="small" />
+                          <Chip 
+                            label={stats.sharepointSync ? "Connected" : "Demo Mode"} 
+                            color={stats.sharepointSync ? "success" : "warning"} 
+                            size="small" 
+                          />
                         </ListItem>
                         <ListItem>
                           <ListItemText 
@@ -757,6 +862,12 @@ color: ‘white’
                             secondary="2.4GB / 100GB"
                           />
                         </ListItem>
+                        <ListItem>
+                          <ListItemText 
+                            primary="Procedures Loaded"
+                            secondary={`${procedures.length} from SharePoint`}
+                          />
+                        </ListItem>
                       </List>
                     </CardContent>
                   </Card>
@@ -796,6 +907,11 @@ color: ‘white’
               
               <Alert severity="info" sx={{ mb: 3 }}>
                 System activity and audit trail for the last {selectedTimeRange} days.
+                {!stats.sharepointSync && (
+                  <Typography variant="body2" sx={{ mt: 1 }}>
+                    <strong>Note:</strong> In demo mode, showing sample audit data.
+                  </Typography>
+                )}
               </Alert>
 
               <Typography variant="h6" gutterBottom>
@@ -846,6 +962,15 @@ color: ‘white’
                   <ListItemText 
                     primary="Quality analysis completed"
                     secondary="Trading Guidelines scored 89% - 3 days ago"
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <CloudSync color="info" />
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary="SharePoint data synchronized"
+                    secondary={`${procedures.length} procedures synced - ${stats.sharepointSync ? 'Live data' : 'Demo data'}`}
                   />
                 </ListItem>
               </List>
