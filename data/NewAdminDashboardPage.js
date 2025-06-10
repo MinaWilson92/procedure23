@@ -25,6 +25,8 @@ import { motion } from 'framer-motion';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import EmailManagement from '../components/EmailManagement';
+import EmailNotificationService from '../services/EmailNotificationService';
+
 
 
 const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
@@ -43,6 +45,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const [error, setError] = useState(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState('30');
   const [notification, setNotification] = useState(null);
+  const [emailNotificationService] = useState(() => new EmailNotificationService());
+
   
   // Email Management State
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
