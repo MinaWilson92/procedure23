@@ -800,8 +800,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
           type: 'success', 
           message: `Access granted to User ID ${newUser.userId} (${newUser.displayName}) - Demo Mode` 
         });
-
-      const mockUser = {
+        const mockUser = {
          id: Date.now(),
          userId: newUser.userId,
          displayName: newUser.displayName || `User ${newUser.userId}`,
@@ -1547,7 +1546,7 @@ return (
                     />
                     <Typography variant="h6" color="success.main">
                       {stats.systemHealth || 98.5}%
-                    </Typography
+                    </Typography>
 </Box>
                 </Box>
               </Grid>
