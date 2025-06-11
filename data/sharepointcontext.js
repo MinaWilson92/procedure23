@@ -163,4 +163,55 @@ export const SharePointProvider = ({ children }) => {
       console.error('❌ API initialization error:', err);
       setError(`API authentication failed: ${err.message}`);
       // Set an unauthenticated user state on error to avoid loading spinners indefinitely
-      setUser({ authenticated: false, role: 'guest', source: 'Error',
+      setUser({ authenticated: false, role: 'guest', source: 'Error', displayName: 'Guest' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const value = {
+    user,
+    loading,
+    error,
+    refreshUser: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
+    logout: () => setUser(null),
+    manualLogin: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
+    isAdmin: user?.role === 'admin',
+    isAuthenticated: !!user?.authenticated,
+
+    spContext,
+    siteUrl: spContext?.webAbsoluteUrl,
+    adUserId: user?.adUserId,
+    displayName: user?.displayName,
+
+    getUserInfo: () => ({
+      staffId: user?.staffId,
+      adUserId: user?.adUserId,
+      displayName: user?.displayName,
+      email: user?.email,
+      role: user?.role,
+      authenticated: user?.authenticated,
+      loginName: user?.loginName,
+      jobTitle: user?.jobTitle,
+      department: user?.department
+    }),
+
+    authStatus: {
+      loading,
+      authenticated: !!user?.authenticated,
+      error,
+      environment: spContext?.isDevelopment ? 'development' : 'sharepoint',
+      source: user?.source
+    }
+  };
+
+  if (loading) {
+    return <LoadingScreen message="Fetching user profile from Microsoft APIs..." />;
+  }
+
+  return (
+    <SharePointContext.Provider value={value}>
+      {children}
+    </SharePointContext.Provider>
+  );
+};
