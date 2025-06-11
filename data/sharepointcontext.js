@@ -1,8 +1,6 @@
-// src/SharePointContext.js - Fixed version with error resolved
+// src/SharePointContext.js - Fixed with Absolute URL Enforcement
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
-
-// PnPjs is loaded globally via CDN in index.html, so no imports are needed here.
 
 const SharePointContext = createContext();
 
@@ -14,40 +12,36 @@ export const useSharePoint = () => {
   return context;
 };
 
-// Define the base URL explicitly (ADDED TRAILING SLASH)
-const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng/';
+// Define the EXACT SharePoint site URL (no trailing slash)
+const SHAREPOINT_SITE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
 
-// Helper function to initialize and get the PnPjs instance (PnPjs v2) - FIXED URL ISSUE
-const getPnPjs = () => {
-  // Ensure PnPjs v2 global 'pnp' object and its 'sp' property are available
-  if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
-    console.error("PnPjs v2 global 'pnp.sp' object not found.");
-    console.error("Please ensure PnPjs v2 CDN script (pnp.min.js) is loaded correctly in index.html.");
-    throw new Error("PnPjs v2 library not loaded. Check index.html CDN link and script order.");
+// FIXED: Use direct fetch with absolute URLs - bypass PnPjs URL detection
+const makeDirectSharePointCall = async (endpoint) => {
+  const fullUrl = `${SHAREPOINT_SITE_URL}/_api${endpoint}`;
+  console.log(`🚀 Direct API call to: ${fullUrl}`);
+  
+  const response = await fetch(fullUrl, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json; odata=verbose',
+      'Content-Type': 'application/json; odata=verbose'
+    },
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    throw new Error(`API call failed: ${response.status} ${response.statusText} for ${fullUrl}`);
   }
 
-  const sp = window.pnp.sp;
-
-  // FORCE the correct base URL every time (don't rely on setup flags)
-  sp.setup({
-    baseUrl: SHAREPOINT_BASE_URL.replace(/\/$/, '') // Remove trailing slash to avoid double slashes
-  });
-  
-  console.log(`✅ PnPjs v2 base URL FORCED to: ${SHAREPOINT_BASE_URL.replace(/\/$/, '')}`);
-  console.log('🔧 Expected API calls should go to:', `${SHAREPOINT_BASE_URL.replace(/\/$/, '')}/_api/`);
-
-  return sp;
+  const data = await response.json();
+  return data.d;
 };
 
-// METHOD 1: SharePoint User Profile Service (API calls generally compatible with v2)
-const getUserProfileFromSharePoint = async (siteUrl, userId) => {
+// Helper function to get user profile via direct API call
+const getUserProfileDirect = async () => {
   try {
-    console.log('👤 Method 1: Trying SharePoint User Profile Service...');
-
-    // Use the explicitly configured PnPjs instance for profile calls
-    const sp = getPnPjs(); // This will return the globally configured sp object for v2
-    const profile = await sp.profiles.myProperties.get(); // This uses the configured base URL
-
+    console.log('👤 Getting user profile via direct API...');
+    const profile = await makeDirectSharePointCall('/SP.UserProfiles.PeopleManager/GetMyProperties');
     console.log('✅ SharePoint User Profile data:', profile);
 
     // Extract user properties from UserProfileProperties
@@ -57,25 +51,25 @@ const getUserProfileFromSharePoint = async (siteUrl, userId) => {
     };
 
     return {
-      userId: userId,
-      staffId: getProperty('StaffId') || userId,
+      userId: profile.UserProfileProperties ? getProperty('UserId') : null,
+      staffId: getProperty('StaffId') || profile.AccountName?.split('|')[2],
       adUserId: profile.UserPrincipalName,
       displayName: profile.DisplayName,
       email: profile.Email,
       role: 'Staff',
       authenticated: true,
-      loginName: profile.LoginName,
+      loginName: profile.AccountName,
       jobTitle: getProperty('Title'),
       department: getProperty('Department'),
-      source: 'SharePoint Profile'
+      source: 'SharePoint Profile Direct API'
     };
   } catch (err) {
-    console.warn('⚠️ Method 1 (SharePoint User Profile Service) failed:', err);
+    console.warn('⚠️ Direct user profile API failed:', err);
     return null;
   }
 };
 
-// Loading screen component (unchanged)
+// Loading screen component
 const LoadingScreen = ({ message }) => (
   <Box sx={{
     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -94,31 +88,32 @@ export const SharePointProvider = ({ children }) => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      initializeWithAPIs();
+      initializeWithDirectAPIs();
     }
   }, []);
 
-  const initializeWithAPIs = async () => {
+  const initializeWithDirectAPIs = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Ensure PnPjs is initialized with the correct base URL
-      const sp = getPnPjs(); // Call the helper to ensure PnPjs is configured for v2
-
-      // Use sp.site.rootWeb() to explicitly target the root web of the site collection
-      const webInfo = await sp.site.rootWeb();
+      console.log('🎯 Initializing with DIRECT API calls to avoid URL detection issues...');
+      
+      // STEP 1: Get web info via direct API call
+      const webInfo = await makeDirectSharePointCall('/web?$expand=CurrentUser');
+      console.log('✅ Web info retrieved:', webInfo);
+      
       const webAbsoluteUrl = webInfo.Url;
-      const currentUserId = webInfo.CurrentUser.Id;
-      const currentUserEmail = webInfo.CurrentUser.Email;
-      const currentDisplayName = webInfo.CurrentUser.Title;
+      const currentUserId = webInfo.CurrentUser?.Id;
+      const currentUserEmail = webInfo.CurrentUser?.Email;
+      const currentDisplayName = webInfo.CurrentUser?.Title;
 
       setSpContext({ webAbsoluteUrl, currentUserId, isDevelopment: false });
 
-      // Try fetching user profile using the PnPjs instance
-      let userProfile = await getUserProfileFromSharePoint(webAbsoluteUrl, currentUserId);
+      // STEP 2: Try to get detailed user profile
+      let userProfile = await getUserProfileDirect();
 
       if (!userProfile) {
-        console.warn('⚠️ Could not retrieve full user profile, falling back to basic SharePoint web context user info.');
+        console.warn('⚠️ Could not retrieve full user profile, using web context user info.');
         userProfile = {
           userId: currentUserId,
           adUserId: currentUserEmail,
@@ -126,47 +121,79 @@ export const SharePointProvider = ({ children }) => {
           email: currentUserEmail,
           role: 'Staff',
           authenticated: true,
-          loginName: webInfo.CurrentUser.LoginName,
-          source: 'SharePoint Web Context'
+          loginName: webInfo.CurrentUser?.LoginName,
+          source: 'SharePoint Web Context Direct API'
         };
       }
 
-      // Basic role assignment logic (example)
+      // STEP 3: Determine user role
       if (userProfile.email && userProfile.email.includes('@hsbc.com')) {
         userProfile.role = 'user';
       }
-      if (userProfile.email && userProfile.email.toLowerCase() === 'youradminemail@hsbc.com') { // Replace with your actual admin email
+      
+      // Set admin role based on email or staff ID
+      const adminEmails = ['your.admin@hsbc.com']; // Replace with actual admin emails
+      const adminStaffIds = ['43898931', 'admin']; // Replace with actual admin staff IDs
+      
+      if (adminEmails.includes(userProfile.email?.toLowerCase()) || 
+          adminStaffIds.includes(userProfile.staffId)) {
         userProfile.role = 'admin';
       }
+
+      console.log('✅ User authentication successful:', {
+        displayName: userProfile.displayName,
+        email: userProfile.email,
+        role: userProfile.role,
+        source: userProfile.source
+      });
 
       setUser({
         ...userProfile,
         authenticated: true,
-        environment: spContext?.isDevelopment ? 'development' : 'sharepoint',
+        environment: 'sharepoint',
         source: userProfile.source
       });
 
     } catch (err) {
-      console.error('❌ API initialization error:', err);
-      setError(`API authentication failed: ${err.message}`);
-      setUser({ authenticated: false, role: 'guest', source: 'Error', displayName: 'Guest' });
+      console.error('❌ Direct API initialization error:', err);
+      setError(`SharePoint API authentication failed: ${err.message}`);
+      
+      // Fallback: Set a basic authenticated user
+      setUser({ 
+        authenticated: false, 
+        role: 'guest', 
+        source: 'Error', 
+        displayName: 'SharePoint User',
+        email: 'user@hsbc.com',
+        error: err.message
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Method to make SharePoint list API calls with correct URLs
+  const makeSharePointListCall = async (listName, query = '') => {
+    const endpoint = `/web/lists/getbytitle('${listName}')/items${query}`;
+    return await makeDirectSharePointCall(endpoint);
   };
 
   const value = {
     user,
     loading,
     error,
-    refreshUser: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
+    refreshUser: () => { if (typeof window !== 'undefined') initializeWithDirectAPIs(); },
     logout: () => setUser(null),
-    manualLogin: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
+    manualLogin: () => { if (typeof window !== 'undefined') initializeWithDirectAPIs(); },
     isAdmin: user?.role === 'admin',
     isAuthenticated: !!user?.authenticated,
 
+    // SharePoint API helpers with correct URLs
+    makeSharePointCall: makeDirectSharePointCall,
+    makeListCall: makeSharePointListCall,
+    siteUrl: SHAREPOINT_SITE_URL,
+
     spContext,
-    siteUrl: spContext?.webAbsoluteUrl,
     adUserId: user?.adUserId,
     displayName: user?.displayName,
 
@@ -186,13 +213,14 @@ export const SharePointProvider = ({ children }) => {
       loading,
       authenticated: !!user?.authenticated,
       error,
-      environment: spContext?.isDevelopment ? 'development' : 'sharepoint',
-      source: user?.source
+      environment: 'sharepoint',
+      source: user?.source,
+      apiBaseUrl: `${SHAREPOINT_SITE_URL}/_api/`
     }
   };
 
   if (loading) {
-    return <LoadingScreen message="Fetching user profile from Microsoft APIs..." />;
+    return <LoadingScreen message="Connecting to SharePoint APIs..." />;
   }
 
   return (
