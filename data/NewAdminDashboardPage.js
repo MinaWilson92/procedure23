@@ -85,7 +85,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
       // With the setup complete, we can now use the simple 'pnp.sp.web' syntax.
       // It will automatically use the correct site URL.
       const sp = window.pnp.sp.web.lists.getByTitle('Procedures');
-      const items = await sp.items.select('*,Approver/Title,Reviewer/Title').expand('Approver,Reviewer').get();
+const items = await sp.items.select('*').get();
       setAllProcedures(items);
       processProcedures(items);
 
