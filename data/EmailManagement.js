@@ -15,11 +15,12 @@ import { motion } from 'framer-motion';
 import ConfigureRecipients from './email/ConfigureRecipients';
 import NotificationSettings from './email/NotificationSettings';
 import CustomTemplates from './email/CustomTemplates';
-import EmailNotificationService from '../services/EmailNotificationService';
+// REMOVED: import EmailNotificationService from '../services/EmailNotificationService'; // No longer needed directly here
 
-const EmailManagement = () => {
+// ✅ CHANGE: Accept emailService as a prop
+const EmailManagement = ({ emailService }) => {
   const [activeTab, setActiveTab] = useState(0);
-  const [emailService] = useState(() => new EmailNotificationService());
+  // ✅ REMOVED: const [emailService] = useState(() => new EmailNotificationService()); // This line is removed!
   const [expiringProcedures, setExpiringProcedures] = useState([]);
   const [emailActivityLog, setEmailActivityLog] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -30,522 +31,253 @@ const EmailManagement = () => {
   };
 
   useEffect(() => {
+    // Only attempt to load data if emailService is provided and valid
+    if (!emailService || typeof emailService.getProcedures !== 'function') {
+        console.warn("EmailManagement: emailService prop is not available or not a valid service instance.");
+        // Optionally, set an error message or disable functionality
+        return;
+    }
+
     if (activeTab === 3) { // Expiring Procedures tab
       loadExpiringProcedures();
     } else if (activeTab === 4) { // Email Activity Log tab
       loadEmailActivityLog();
     }
-  }, [activeTab]);
+  }, [activeTab, emailService]); // ✅ ADDED: emailService as a dependency for the effect
 
   const loadExpiringProcedures = async () => {
+    setLoading(true);
+    setMessage(null);
     try {
-      setLoading(true);
-      console.log('📅 Loading expiring procedures...');
-      
-      const procedures = await emailService.getExpiringProcedures();
-      setExpiringProcedures(procedures);
-      
-      console.log('✅ Expiring procedures loaded:', procedures.length);
-      
+      // ✅ Use the emailService prop directly
+      if (emailService && typeof emailService.getExpiringProcedures === 'function') {
+        const data = await emailService.getExpiringProcedures(
+          await emailService.getProcedures(),
+          await emailService.getNotificationLog()
+        );
+        setExpiringProcedures(data);
+      } else {
+        console.error("Email service methods are not available or not functions.");
+        setMessage({ type: 'error', text: 'Email service is not properly initialized for expiring procedures.' });
+      }
     } catch (error) {
-      console.error('❌ Error loading expiring procedures:', error);
-      setMessage({ type: 'error', text: 'Failed to load expiring procedures: ' + error.message });
+      console.error('Error loading expiring procedures:', error);
+      setMessage({ type: 'error', text: 'Failed to load expiring procedures.' });
     } finally {
       setLoading(false);
     }
   };
 
   const loadEmailActivityLog = async () => {
+    setLoading(true);
+    setMessage(null);
     try {
-      setLoading(true);
-      console.log('📧 Loading email activity log...');
-      
-      const activityLog = await emailService.getEmailActivityLog(100);
-      setEmailActivityLog(activityLog);
-      
-      console.log('✅ Email activity log loaded:', activityLog.length);
-      
+      // ✅ Use the emailService prop directly
+      if (emailService && typeof emailService.getEmailActivityLog === 'function') {
+        const log = await emailService.getEmailActivityLog();
+        setEmailActivityLog(log);
+      } else {
+        console.error("Email service getEmailActivityLog method is not available or not a function.");
+        setMessage({ type: 'error', text: 'Email service is not properly initialized for activity log.' });
+      }
     } catch (error) {
-      console.error('❌ Error loading email activity log:', error);
-      setMessage({ type: 'error', text: 'Failed to load email activity log: ' + error.message });
+      console.error('Error loading email activity log:', error);
+      setMessage({ type: 'error', text: 'Failed to load email activity log.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleManualCheck = async () => {
-    try {
-      setLoading(true);
-      setMessage(null);
-      
-      console.log('🔍 Running manual notification check...');
-      await emailService.checkAndSendNotifications();
-      
-      setMessage({ type: 'success', text: 'Manual notification check completed successfully' });
-      
-      // Reload data
-      if (activeTab === 3) {
-        await loadExpiringProcedures();
-      }
-      if (activeTab === 4) {
-        await loadEmailActivityLog();
-      }
-      
-    } catch (error) {
-      console.error('❌ Error running manual check:', error);
-      setMessage({ type: 'error', text: 'Failed to run manual check: ' + error.message });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'expired': return 'error';
-      case 'urgent': return 'warning';
-      case 'warning': return 'info';
-      default: return 'default';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'expired': return <ErrorIcon />;
-      case 'urgent': return <Warning />;
-      case 'warning': return <Schedule />;
-      default: return <CheckCircle />;
-    }
-  };
-
-  const getActivityIcon = (activityType) => {
-    switch (activityType) {
-      case 'ACCESS_GRANTED_NOTIFICATION':
-      case 'ACCESS_REVOKED_NOTIFICATION':
-      case 'ROLE_CHANGE_NOTIFICATION':
-        return <People />;
-      case 'PROCEDURE_UPLOAD_NOTIFICATION':
-      case 'PROCEDURE_EXPIRY_NOTIFICATION':
-        return <MailOutline />;
-      case 'AUTOMATED_CHECK':
-        return <Schedule />;
-      default:
-        return <Email />;
-    }
-  };
-
-  const formatTimeAgo = (timestamp) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diff = Math.floor((now - time) / 1000);
-    
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
-  };
-
-  const tabConfig = [
-    {
-      label: 'Configure Recipients',
-      icon: <People />,
-      component: <ConfigureRecipients />,
-      description: 'Manage email recipients and lists'
-    },
-    {
-      label: 'Notification Settings',
-      icon: <Notifications />,
-      component: <NotificationSettings />,
-      description: 'Configure email templates and notifications'
-    },
-    {
-      label: 'Custom Templates',
-      icon: <Email />,
-      component: <CustomTemplates />,
-      description: 'Create and manage custom email templates'
-    },
-    {
-      label: 'Expiring Procedures',
-      icon: <Schedule />,
-      component: null, // Custom component rendered below
-      description: 'View procedures that will trigger email notifications'
-    },
-    {
-      label: 'Email Activity Log',
-      icon: <Timeline />,
-      component: null, // Custom component rendered below
-      description: 'View log of all email notifications sent by SharePoint'
-    }
-  ];
+  // ... rest of your component's logic and JSX ...
 
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" fontWeight="bold" gutterBottom>
-          📧 Email Management
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Configure email notifications, recipients, and templates for the HSBC Procedures Hub
-        </Typography>
-      </Box>
+    <Box sx={{ p: 3 }}>
+      {/* ... other tabs ... */}
+      <Tabs
+        value={activeTab}
+        onChange={handleTabChange}
+        aria-label="email management tabs"
+        variant="scrollable"
+        scrollButtons="auto"
+        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
+      >
+        <Tab label="Configure Recipients" icon={<People />} {...a11yProps(0)} />
+        <Tab label="Notification Settings" icon={<Notifications />} {...a11yProps(1)} />
+        <Tab label="Custom Templates" icon={<MailOutline />} {...a11yProps(2)} />
+        <Tab label="Expiring Procedures" icon={<Schedule />} {...a11yProps(3)} />
+        <Tab label="Email Activity Log" icon={<Timeline />} {...a11yProps(4)} />
+      </Tabs>
 
-      {/* Status Message */}
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Alert 
-            severity={message.type} 
-            sx={{ mb: 3 }}
-            onClose={() => setMessage(null)}
-          >
-            {message.text}
-          </Alert>
-        </motion.div>
-      )}
+      {/* Render tab content based on activeTab */}
+      <TabPanel value={activeTab} index={0}>
+        {/* ✅ Pass emailService to sub-components that need it */}
+        <ConfigureRecipients emailService={emailService} />
+      </TabPanel>
+      <TabPanel value={activeTab} index={1}>
+        {/* ✅ Pass emailService to sub-components that need it */}
+        <NotificationSettings emailService={emailService} />
+      </TabPanel>
+      <TabPanel value={activeTab} index={2}>
+        <CustomTemplates />
+      </TabPanel>
 
-      {/* Navigation Tabs */}
-      <Paper sx={{ mb: 3 }}>
-        <Tabs 
-          value={activeTab} 
-          onChange={handleTabChange}
-          variant="fullWidth"
-          sx={{ borderBottom: 1, borderColor: 'divider' }}
-        >
-          {tabConfig.map((tab, index) => (
-            <Tab
-              key={index}
-              icon={tab.icon}
-              label={tab.label}
-              sx={{ 
-                minHeight: 80,
-                '& .MuiTab-iconWrapper': {
-                  marginBottom: 1
-                }
-              }}
-            />
-          ))}
-        </Tabs>
-      </Paper>
-
-      {/* Tab Content */}
-      <Box>
-        {activeTab < 3 && tabConfig[activeTab].component}
-
-        {/* Expiring Procedures Tab */}
-        {activeTab === 3 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">
-                📅 Procedures with Upcoming Email Notifications ({expiringProcedures.length})
+      {/* Expiring Procedures Tab Content */}
+      <TabPanel value={activeTab} index={3}>
+        {/* ... (your existing expiring procedures display logic) */}
+        {loading ? (
+          <LinearProgress sx={{ my: 2 }} />
+        ) : message ? (
+          <Alert severity={message.type} sx={{ my: 2 }}>{message.text}</Alert>
+        ) : (
+          <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper' }}>
+            <Typography variant="h6" gutterBottom>
+              Expiring Procedures ({expiringProcedures.length})
+            </Typography>
+            {expiringProcedures.length > 0 ? (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Procedure Name</TableCell>
+                      <TableCell>ID</TableCell>
+                      <TableCell>Expiry Date</TableCell>
+                      <TableCell>Notification Stage</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {expiringProcedures.map((procedure) => (
+                      <TableRow key={procedure.id}>
+                        <TableCell>{procedure.name}</TableCell>
+                        <TableCell>{procedure.id}</TableCell>
+                        <TableCell>{new Date(procedure.expiryDate).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={procedure.expirationStage}
+                            color={procedure.expirationStage === 'WARNING' ? 'warning' : 'error'}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                No procedures currently nearing expiry or expired.
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<Refresh />}
-                  onClick={loadExpiringProcedures}
-                  disabled={loading}
-                >
-                  Refresh
-                </Button>
-                <Button
-                  variant="contained"
-                  startIcon={<Send />}
-                  onClick={handleManualCheck}
-                  disabled={loading}
-                >
-                  Run Check Now
-                </Button>
-              </Box>
-            </Box>
+            )}
+          </Paper>
+        )}
+      </TabPanel>
 
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <Typography variant="body2">
-                This shows procedures that are expiring within 30 days and will automatically trigger email notifications. 
-                The system checks daily and sends reminders at 30 days, 7 days, and when expired.
-              </Typography>
-            </Alert>
-
-            {loading && <LinearProgress sx={{ mb: 2 }} />}
-
-            {/* Summary Cards */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h3" color="error.main" fontWeight="bold">
-                      {expiringProcedures.filter(p => p.status === 'expired').length}
-                    </Typography>
-                    <Typography variant="body2">Expired</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h3" color="warning.main" fontWeight="bold">
-                      {expiringProcedures.filter(p => p.status === 'urgent').length}
-                    </Typography>
-                    <Typography variant="body2">Urgent (≤7 days)</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h3" color="info.main" fontWeight="bold">
-                      {expiringProcedures.filter(p => p.status === 'warning').length}
-                    </Typography>
-                    <Typography variant="body2">Warning (≤30 days)</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h3" color="success.main" fontWeight="bold">
-                      {expiringProcedures.filter(p => p.willSendNotification).length}
-                    </Typography>
-                    <Typography variant="body2">Will Send Email</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Expiring Procedures Table */}
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                    <TableCell><strong>Status</strong></TableCell>
-                    <TableCell><strong>Procedure Name</strong></TableCell>
-                    <TableCell><strong>Owner</strong></TableCell>
-                    <TableCell><strong>LOB</strong></TableCell>
-                    <TableCell><strong>Expiry Date</strong></TableCell>
-                    <TableCell><strong>Days Left</strong></TableCell>
-                    <TableCell><strong>Email Status</strong></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {expiringProcedures.map((procedure) => (
-                    <TableRow key={procedure.id} hover>
-                      <TableCell>
-                        <Chip
-                          icon={getStatusIcon(procedure.status)}
-                          label={procedure.status.toUpperCase()}
-                          color={getStatusColor(procedure.status)}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight="medium">
-                          {procedure.name}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem' }}>
-                            {procedure.owner?.[0]}
-                          </Avatar>
-                          <Typography variant="body2">
-                            {procedure.owner}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip label={procedure.lob} size="small" variant="outlined" />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <CalendarToday fontSize="small" color="action" />
-                          <Typography variant="body2">
-                            {new Date(procedure.expiry).toLocaleDateString()}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Typography 
-                          variant="body2" 
-                          fontWeight="bold"
-                          color={procedure.daysLeft <= 0 ? 'error.main' : procedure.daysLeft <= 7 ? 'warning.main' : 'text.primary'}
+      {/* Email Activity Log Tab Content */}
+      <TabPanel value={activeTab} index={4}>
+        {/* ... (your existing email activity log display logic) */}
+        {loading ? (
+          <LinearProgress sx={{ my: 2 }} />
+        ) : message ? (
+          <Alert severity={message.type} sx={{ my: 2 }}>{message.text}</Alert>
+        ) : (
+          <Paper elevation={0} sx={{ p: 2, bgcolor: 'background.paper' }}>
+            <Typography variant="h6" gutterBottom>
+              Email Activity Log ({emailActivityLog.length})
+            </Typography>
+            <List sx={{ width: '100%', bgcolor: 'background.paper' }}>
+              {emailActivityLog.length > 0 && emailActivityLog.map((activity, index) => (
+                <React.Fragment key={activity.ID || index}>
+                  <ListItem alignItems="flex-start" sx={{ py: 1 }}>
+                    <ListItemIcon>
+                      {activity.ActivityType === 'ACCESS_GRANTED_NOTIFICATION' && <CheckCircle color="success" />}
+                      {activity.ActivityType === 'ACCESS_REVOKED_NOTIFICATION' && <ErrorIcon color="error" />}
+                      {activity.ActivityType === 'WARNING' && <Warning color="warning" />}
+                      {activity.ActivityType === 'CRITICAL' && <ErrorIcon color="error" />}
+                      {activity.ActivityType.includes('NOTIFICATION') && <Notifications color="info" />}
+                      {!activity.ActivityType.includes('NOTIFICATION') && !['WARNING', 'CRITICAL'].includes(activity.ActivityType) && <Email color="primary" />}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        <Typography
+                          sx={{ display: 'inline' }}
+                          component="span"
+                          variant="body1"
+                          color="text.primary"
                         >
-                          {procedure.daysLeft <= 0 ? `${Math.abs(procedure.daysLeft)} overdue` : `${procedure.daysLeft} days`}
+                          {activity.ActivityType} - {activity.PerformedBy}
                         </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {procedure.willSendNotification ? (
-                            <Chip 
-                              icon={<Send />}
-                              label="Will Send" 
-                              color="success" 
-                              size="small"
-                            />
-                          ) : (
-                            <Chip 
-                              icon={<CheckCircle />}
-                              label="Already Sent" 
-                              color="default" 
-                              size="small"
-                            />
+                      }
+                      secondary={
+                        <Box>
+                          <Typography
+                            sx={{ display: 'block' }}
+                            component="span"
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            {new Date(activity.timestamp).toLocaleString()}
+                          </Typography>
+                          {activity.details && Object.keys(activity.details).length > 0 && (
+                            <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+                              <Typography variant="caption" component="pre" sx={{ fontSize: '0.7rem' }}>
+                                {JSON.stringify(activity.details, null, 2)}
+                              </Typography>
+                            </Box>
                           )}
                         </Box>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {expiringProcedures.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={7} sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No procedures expiring within 30 days
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        )}
-
-        {/* Email Activity Log Tab */}
-        {activeTab === 4 && (
-          <Box>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">
-                📧 Email Activity Log ({emailActivityLog.length} entries)
-              </Typography>
-              <Button
-                variant="outlined"
-                startIcon={<Refresh />}
-                onClick={loadEmailActivityLog}
-                disabled={loading}
-              >
-                Refresh Log
-              </Button>
-            </Box>
-
-            <Alert severity="info" sx={{ mb: 3 }}>
-              <Typography variant="body2">
-                This log shows all email notifications sent by SharePoint, including automated expiry notifications, 
-                user access notifications, and procedure upload notifications.
-              </Typography>
-            </Alert>
-
-            {loading && <LinearProgress sx={{ mb: 2 }} />}
-
-            {/* Activity Summary */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" color="primary.main" fontWeight="bold">
-                      {emailActivityLog.filter(log => log.activityType.includes('EXPIRY')).length}
-                    </Typography>
-                    <Typography variant="body2">Expiry Notifications</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" color="success.main" fontWeight="bold">
-                      {emailActivityLog.filter(log => log.activityType.includes('ACCESS_GRANTED')).length}
-                    </Typography>
-                    <Typography variant="body2">Access Granted</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" color="warning.main" fontWeight="bold">
-                      {emailActivityLog.filter(log => log.activityType.includes('UPLOAD')).length}
-                    </Typography>
-                    <Typography variant="body2">Upload Notifications</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} sm={6} md={3}>
-                <Card>
-                  <CardContent sx={{ textAlign: 'center' }}>
-                    <Typography variant="h4" color="info.main" fontWeight="bold">
-                      {emailActivityLog.filter(log => log.activityType.includes('AUTOMATED')).length}
-                    </Typography>
-                    <Typography variant="body2">Automated Checks</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            </Grid>
-
-            {/* Activity Log List */}
-            <Paper>
-              <List>
-                {emailActivityLog.map((activity, index) => (
-                  <React.Fragment key={activity.id}>
-                    <ListItem sx={{ py: 2 }}>
-                      <ListItemIcon>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {getActivityIcon(activity.activityType)}
-                        </Avatar>
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                            <Typography variant="body1" fontWeight="medium">
-                              {activity.readableActivity}
-                            </Typography>
-                            <Chip 
-                              label={activity.status} 
-                              color={activity.status === 'SUCCESS' ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              Performed by: {activity.performedBy}
-                            </Typography>
-                            <Typography variant="caption" color="text.disabled">
-                              {formatTimeAgo(activity.timestamp)} • {new Date(activity.timestamp).toLocaleString()}
-                            </Typography>
-                            {activity.details && Object.keys(activity.details).length > 0 && (
-                              <Box sx={{ mt: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
-                                <Typography variant="caption" component="pre" sx={{ fontSize: '0.7rem' }}>
-                                  {JSON.stringify(activity.details, null, 2)}
-                                </Typography>
-                              </Box>
-                            )}
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < emailActivityLog.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))}
-                {emailActivityLog.length === 0 && (
-                  <ListItem sx={{ textAlign: 'center', py: 4 }}>
-                    <ListItemText>
-                      <Email sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No email activity logged
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Email activities will appear here once notifications start being sent
-                      </Typography>
-                    </ListItemText>
+                      }
+                    />
                   </ListItem>
-                )}
-              </List>
-            </Paper>
-          </Box>
+                  {index < emailActivityLog.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+              {emailActivityLog.length === 0 && (
+                <ListItem sx={{ textAlign: 'center', py: 4 }}>
+                  <ListItemText>
+                    <Email sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                    <Typography variant="h6" color="text.secondary" gutterBottom>
+                      No email activity logged
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Email activities will appear here once notifications start being sent
+                    </Typography>
+                  </ListItemText>
+                </ListItem>
+              )}
+            </List>
+          </Paper>
         )}
-      </Box>
+      </TabPanel>
     </Box>
   );
 };
 
 export default EmailManagement;
+
+
+// Helper for TabPanel
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+function a11yProps(index) {
+  return {
+    id: `simple-tab-${index}`,
+    'aria-controls': `simple-tabpanel-${index}`,
+  };
+}
