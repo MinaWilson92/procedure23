@@ -50,37 +50,25 @@ const getUserProfileFromSharePoint = async (siteUrl, userId) => {
   try {
     console.log('👤 Method 1: Trying SharePoint User Profile Service...');
 
-    // Use the explicitly configured PnPjs instance for profile calls
-    const sp = getPnPjs(); // This will return the globally configured sp object for v2
-    const profile = await sp.profiles.myProperties.get(); // This uses the configured base URL
-
-    console.log('✅ SharePoint User Profile data:', profile);
-
-    // Extract user properties from UserProfileProperties
-    const getProperty = (key) => {
-      const prop = profile.UserProfileProperties?.results?.find(p => p.Key === key);
-      return prop ? prop.Value : null;
-    };
-
-    return {
-      userId: userId,
-      staffId: getProperty('StaffId') || userId,
-      adUserId: profile.UserPrincipalName,
-      displayName: profile.DisplayName,
-      email: profile.Email,
-      role: 'Staff',
-      authenticated: true,
-      loginName: profile.LoginName,
-      jobTitle: getProperty('Title'),
-      department: getProperty('Department'),
-      source: 'SharePoint Profile'
-    };
-  } catch (err) {
-    console.warn('⚠️ Method 1 (SharePoint User Profile Service) failed:', err);
-    return null;
+ const getPnPjs = () => {
+  if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
+    console.error("PnPjs v2 global 'pnp.sp' object not found.");
+    throw new Error("PnPjs v2 library not loaded. Check index.html CDN link and script order.");
   }
-};
 
+  const sp = window.pnp.sp;
+
+  if (!sp.__pnpjs_setup_done__) {
+    sp.setup({
+      baseUrl: SHAREPOINT_BASE_URL
+    });
+    sp.__pnpjs_setup_done__ = true;
+    console.log('✅ PnPjs v2 configured successfully');
+    console.log('🔧 Target SharePoint site:', SHAREPOINT_BASE_URL);
+  }
+
+  return sp;
+};
 
 // Loading screen component (unchanged)
 const LoadingScreen = ({ message }) => (
