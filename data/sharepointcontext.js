@@ -14,8 +14,8 @@ export const useSharePoint = () => {
   return context;
 };
 
-// Define the base URL explicitly
-const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
+// Define the base URL explicitly (ADDED TRAILING SLASH)
+const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng/';
 
 // Helper function to initialize and get the PnPjs instance (PnPjs v2)
 const getPnPjs = () => {
@@ -36,6 +36,11 @@ const getPnPjs = () => {
     sp.__pnpjs_setup_done__ = true; // Mark as setup
     console.log(`✅ PnPjs v2 base URL set to: ${SHAREPOINT_BASE_URL}`);
   }
+
+  // >>> DIAGNOSTIC LOG <<<
+  // Log the internal base URL PnPjs thinks it has
+  console.log('PnPjs internal configured baseUrl after setup:', sp.to["_options"]?.baseUrl);
+
   return sp;
 };
 
@@ -107,7 +112,6 @@ export const SharePointProvider = ({ children }) => {
       // Ensure PnPjs is initialized with the correct base URL
       const sp = getPnPjs(); // Call the helper to ensure PnPjs is configured for v2
 
-      // >>> CRITICAL CHANGE HERE <<<
       // Use sp.site.rootWeb() to explicitly target the root web of the site collection
       const webInfo = await sp.site.rootWeb();
       const webAbsoluteUrl = webInfo.Url;
