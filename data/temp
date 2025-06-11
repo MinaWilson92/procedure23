@@ -1,3 +1,6 @@
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@pnp/pnpjs@2.15.0/dist/pnp.js"></script>
+
+
 <!-- PnP Rollup Package (includes both @pnp/sp and @pnp/logging functionality) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pnp-pnpjs/2.15.0/pnp.min.js"></script>
 
