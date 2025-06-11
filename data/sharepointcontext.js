@@ -231,7 +231,7 @@ export const SharePointProvider = ({ children }) => {
 
       try {
         // Fetch users from the 'UserRoles' list, selecting necessary fields
-        // ✅ FIXED: Requesting 'Title' instead of 'StaffId' for the Staff ID in the list
+        // 'Title' column contains the UserID according to your description
         const userRolesListItems = await makeSharePointListCall('UserRoles', '?$select=Id,Title,UserRole,Email,Status'); 
         
         if (userRolesListItems?.results && userRolesListItems.results.length > 0) {
@@ -241,18 +241,22 @@ export const SharePointProvider = ({ children }) => {
                 const itemEmail = item.Email?.toLowerCase();
                 // ✅ FIXED: Use item.Title for StaffId comparison from the list
                 const itemStaffIdFromList = item.Title; 
-                const itemRole = item.UserRole?.toLowerCase(); // Make sure this column is 'UserRole' as per your description
+                const itemRole = item.UserRole?.toLowerCase(); 
+                // ✅ Added this to make sure itemTitle is defined for comparison if Title holds something other than StaffId
+                const itemTitleLower = item.Title?.toLowerCase(); 
 
                 // Match logic: prioritize email, then StaffId (from list Title), then AD User ID, then Login Name
                 const isEmailMatch = userProfile.email?.toLowerCase() === itemEmail;
                 const isStaffIdMatch = userProfile.staffId && userProfile.staffId === itemStaffIdFromList;
-                const isAdUserIdMatch = userProfile.adUserId?.toLowerCase() === itemTitle; // Assuming Title could also be AD User ID if not Staff ID
-                const isLoginNameMatch = userProfile.loginName?.toLowerCase() === itemTitle; // Assuming Title could also be Login Name
+                // ✅ FIXED: Use itemTitleLower for comparison against AD User ID and Login Name
+                const isAdUserIdMatch = userProfile.adUserId?.toLowerCase() === itemTitleLower; 
+                const isLoginNameMatch = userProfile.loginName?.toLowerCase() === itemTitleLower; 
+
 
                 if (isEmailMatch) console.log(`Debug: Email match found for ${userProfile.email}`);
                 if (isStaffIdMatch) console.log(`Debug: Staff ID match found for ${userProfile.staffId} against list Title (${itemStaffIdFromList})`);
-                if (isAdUserIdMatch) console.log(`Debug: AD User ID match found for ${userProfile.adUserId} against list Title (${itemTitle})`);
-                if (isLoginNameMatch) console.log(`Debug: Login Name match found for ${userProfile.loginName} against list Title (${itemTitle})`);
+                if (isAdUserIdMatch) console.log(`Debug: AD User ID match found for ${userProfile.adUserId} against list Title (${itemTitleLower})`);
+                if (isLoginNameMatch) console.log(`Debug: Login Name match found for ${userProfile.loginName} against list Title (${itemTitleLower})`);
 
 
                 return isEmailMatch || isStaffIdMatch || isAdUserIdMatch || isLoginNameMatch;
@@ -262,7 +266,7 @@ export const SharePointProvider = ({ children }) => {
                 console.log('✅ Current user found in UserRoles list:', matchedListItem);
                 
                 // If user is found, update LastLogin for them
-                const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD for SharePoint Date-only field
+                const currentDate = new Date().toISOString().split('T')[0]; // Format asYYYY-MM-DD for SharePoint Date-only field
                 const updateData = { LastLogin: currentDate }; 
                 
                 try {
