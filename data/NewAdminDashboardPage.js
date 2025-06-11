@@ -76,33 +76,46 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
 
   // Load Initial Data for Dashboard
   const loadDashboardData = async () => {
+    console.log("Starting loadDashboardData. Pausing execution...");
+    
+    // This keyword will pause your code if the developer tools are open.
+    debugger;
+
+    // Let's check what is on the window object right before the call
+    console.log("Checking for window.pnp:", window.pnp);
+    console.log("Checking for window.Ng:", window.Ng);
+
     setLoading(true);
     setError(null);
     try {
+      console.log("Attempting to call SharePoint using 'window.pnp'...");
       const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
       const items = await sp.items.select('*,Approver/Title,Reviewer/Title').expand('Approver,Reviewer').get();
+      console.log("SharePoint call was successful.");
+
       setAllProcedures(items);
       processProcedures(items);
 
-      // Example: Load placeholder users for management tab
-      // In a real app, you'd fetch from SharePoint groups or AD
       const dummyUsers = [
         { id: 1, name: 'Alice Smith', email: 'alice.smith@hsbc.com', role: 'Staff' },
         { id: 2, name: 'Bob Johnson', email: 'bob.johnson@hsbc.com', role: 'Admin' },
         { id: 3, name: 'Charlie Brown', email: 'charlie.brown@hsbc.com', role: 'Reviewer' },
       ];
       setUsers(dummyUsers);
-      setUserRoles(['Staff', 'Admin', 'Reviewer', 'Management']); // Example roles
+      setUserRoles(['Staff', 'Admin', 'Reviewer', 'Management']);
 
     } catch (err) {
-      console.error("Error loading dashboard data:", err);
+      console.error("An error occurred inside the try block:", err);
+      
+      // If an error happens, we will pause again to inspect it.
+      debugger; 
+      
       setError("Failed to load dashboard data. Please refresh.");
       setNotification({ type: 'error', message: 'Failed to load dashboard data.' });
     } finally {
       setLoading(false);
     }
   };
-
   const loadNotificationLog = async () => {
     try {
       if (emailService && typeof emailService.getNotificationLog === 'function') {
