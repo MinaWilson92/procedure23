@@ -278,7 +278,7 @@ class EmailNotificationService {
       if (validProcedures.length === 0) {
         console.log('⚠️ No procedures with valid expiry dates found');
         await this.logEmailActivity('AUTOMATED_CHECK', 'System', {
-          proceduresChecked: procedures.length,
+          proceduresChecked: procedures.length, // This is procedures.length, not validProcedures.length
           validProceduresFound: 0,
           notificationsSent: 0,
           message: 'No procedures with valid expiry dates',
@@ -554,7 +554,7 @@ class EmailNotificationService {
 
   // Helper methods
 
-  // Refinement 1: Enhanced safeJsonParse
+  // Refinement 1: Enhanced safeJsonParse (HTML stripping)
   safeJsonParse(jsonString, defaultValue) {
     try {
       // Ensure jsonString is actually a string and not null/undefined
