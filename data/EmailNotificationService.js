@@ -747,7 +747,7 @@ class EmailNotificationService {
     return { success: true };
   }
 
-  // Email activity log methods
+    // Email activity log methods
   async getEmailActivityLog(limit = 50) {
     try {
       const response = await fetch(
@@ -764,8 +764,8 @@ class EmailNotificationService {
           id: item.Id,
           activityType: item.ActivityType,
           performedBy: item.PerformedBy,
-          details: this.safeJsonParse(item.ActivityDetails, {}),​​​​​​​​​​​​​​​​
-                    timestamp: item.ActivityTimestamp,
+          details: this.safeJsonParse(item.ActivityDetails, {}),
+          timestamp: item.ActivityTimestamp,
           status: item.Status || 'SUCCESS',
           readableActivity: this.getReadableActivity(item.ActivityType, this.safeJsonParse(item.ActivityDetails, {}))
         }));
