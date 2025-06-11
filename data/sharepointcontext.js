@@ -1,12 +1,8 @@
-// src/SharePointContext.js - Using SharePoint User Profile APIs with explicit base URL
+// src/SharePointContext.js - Using SharePoint User Profile APIs with explicit base URL (CDN-compatible)
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
-// Import pnpjs specifics
-import { spfi, SPFx, SPBrowser } from "@pnp/sp";
-import "@pnp/sp/webs"; // Required for sp.web()
-import "@pnp/sp/site-users/web"; // Required for sp.web.currentUser
-import "@pnp/sp/user-profiles"; // Required for sp.profiles.myProperties.get()
+// REMOVED PnPjs IMPORTS - PnPjs is now expected to be loaded globally via CDN in index.html
 
 const SharePointContext = createContext();
 
@@ -23,29 +19,26 @@ const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
 
 // Helper function to initialize and get the PnPjs instance
 const getPnPjs = () => {
-  // Check if PnPjs is already initialized globally for this context
-  if (typeof window.pnp === 'undefined' || !window.pnp.sp) {
-    console.log('✨ Initializing PnPjs...');
-    window.pnp = window.pnp || {};
+  // Ensure PnPjs global object is available
+  if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
+    console.error("PnPjs global 'pnp' object not found. Please ensure CDN scripts are loaded correctly in index.html.");
+    // Throw an error or return null to prevent further execution without PnPjs
+    throw new Error("PnPjs library not loaded. Check index.html CDN links.");
+  }
 
-    // Initialize PnPjs based on environment:
-    // If running within a SharePoint Framework (SPFx) context and _spPageContextInfo is available, use SPFx.
-    // Otherwise, use SPBrowser for standalone apps or explicit URL configuration.
-    if (typeof window._spPageContextInfo !== 'undefined' && window._spPageContextInfo.webAbsoluteUrl) {
-        window.pnp.sp = spfi().using(SPFx(window._spPageContextInfo)); // Use SPFx context
-        console.log('PnPjs initialized using SPFx context.');
-    } else {
-        window.pnp.sp = spfi().using(SPBrowser()); // Use SPBrowser for non-SPFx/development
-        console.log('PnPjs initialized using SPBrowser.');
-    }
+  // Access the globally available PnPjs sp object
+  const sp = window.pnp.sp;
 
-    // ✅ EXPLICITLY SET THE BASE URL FOR PNPJS
-    window.pnp.sp.setup({
-        baseUrl: SHAREPOINT_BASE_URL
+  // Ensure setup is done only once, or re-setup if base URL needs changing
+  // Using a custom flag to avoid re-running setup on every call to getPnPjs
+  if (!sp.__pnpjs_setup_done__) {
+    sp.setup({
+      baseUrl: SHAREPOINT_BASE_URL
     });
+    sp.__pnpjs_setup_done__ = true; // Mark as setup
     console.log(`✅ PnPjs base URL set to: ${SHAREPOINT_BASE_URL}`);
   }
-  return window.pnp.sp;
+  return sp;
 };
 
 
@@ -55,7 +48,7 @@ const getUserProfileFromSharePoint = async (siteUrl, userId) => {
     console.log('👤 Method 1: Trying SharePoint User Profile Service...');
 
     // Use the explicitly configured PnPjs instance for profile calls
-    const sp = getPnPjs();
+    const sp = getPnPjs(); // This will return the globally configured sp object
     const profile = await sp.profiles.myProperties.get(); // This uses the configured base URL
 
     console.log('✅ SharePoint User Profile data:', profile);
