@@ -86,6 +86,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
       // It will automatically use the correct site URL.
       const sp = window.pnp.sp.web.lists.getByTitle('Procedures');
 const items = await sp.items.select('*').get();
+      console.log("Sample of first procedure item:", items[0]);
+
       setAllProcedures(items);
       processProcedures(items);
 
