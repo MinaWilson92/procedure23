@@ -1,4 +1,4 @@
-// src/SharePointContext.js - COMPLETE & LATEST VERSION with Dynamic Roles from SharePoint List and LastLogin Update
+// src/SharePointContext.js - COMPLETE & LATEST VERSION with Dynamic Roles from SharePoint List (Title as StaffId) and Correct User Staff ID Extraction
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
@@ -15,7 +15,7 @@ export const useSharePoint = () => {
 // Define the EXACT SharePoint site URL (no trailing slash)
 const SHAREPOINT_SITE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
 
-// ✅ New Helper: Get fresh request digest for POST/MERGE operations
+// New Helper: Get fresh request digest for POST/MERGE operations
 const getFreshRequestDigest = async () => {
   try {
     const digestUrl = `${SHAREPOINT_SITE_URL}/_api/contextinfo`;
@@ -71,7 +71,7 @@ const makeDirectSharePointCall = async (endpoint) => {
   return data.d;
 };
 
-// ✅ New Helper: Update SharePoint List Item
+// New Helper: Update SharePoint List Item
 const updateSharePointListItem = async (listName, itemId, data) => {
   const digest = await getFreshRequestDigest();
   if (!digest) {
@@ -134,7 +134,8 @@ const getUserProfileDirect = async () => {
 
     return {
       userId: profile.UserProfileProperties ? getProperty('UserId') : null, // SharePoint integer ID
-      staffId: getProperty('StaffId') || profile.AccountName?.split('|')[2], // Custom Staff ID or derived from AccountName
+      // ✅ FIXED: Look for 'EmployeeID' specifically, fallback to parsing AccountName if not found
+      staffId: getProperty('EmployeeID') || profile.AccountName?.split('|')[2],
       adUserId: profile.UserPrincipalName, // Active Directory User Principal Name
       displayName: profile.DisplayName,
       email: profile.Email,
@@ -224,34 +225,35 @@ export const SharePointProvider = ({ children }) => {
       
       console.log('--- Dynamic Role & LastLogin Update Debug ---');
       console.log('Current User Email (lowercase):', userProfile.email?.toLowerCase());
-      console.log('Current User Staff ID:', userProfile.staffId);
+      console.log('Current User Staff ID (from Profile):', userProfile.staffId); // ✅ DEBUG: Corrected log
       console.log('Current User AD User ID (UserPrincipalName):', userProfile.adUserId);
       console.log('Current User Login Name (AccountName):', userProfile.loginName);
 
       try {
         // Fetch users from the 'UserRoles' list, selecting necessary fields
-        // 'Title' column contains the UserID according to your description
-        const userRolesListItems = await makeSharePointListCall('UserRoles', '?$select=Id,Title,UserRole,Email,Status,StaffId');
+        // ✅ FIXED: Requesting 'Title' instead of 'StaffId' for the Staff ID in the list
+        const userRolesListItems = await makeSharePointListCall('UserRoles', '?$select=Id,Title,UserRole,Email,Status'); 
         
         if (userRolesListItems?.results && userRolesListItems.results.length > 0) {
             console.log('Fetched UserRoles list items:', userRolesListItems.results);
 
             matchedListItem = userRolesListItems.results.find(item => {
                 const itemEmail = item.Email?.toLowerCase();
-                const itemStaffId = item.StaffId;
-                const itemTitle = item.Title?.toLowerCase(); // User ID from the list
+                // ✅ FIXED: Use item.Title for StaffId comparison from the list
+                const itemStaffIdFromList = item.Title; 
+                const itemRole = item.UserRole?.toLowerCase(); // Make sure this column is 'UserRole' as per your description
 
-                // Match logic: prioritize email, then staffId, then Title (which could be AD User ID or Login Name)
+                // Match logic: prioritize email, then StaffId (from list Title), then AD User ID, then Login Name
                 const isEmailMatch = userProfile.email?.toLowerCase() === itemEmail;
-                const isStaffIdMatch = userProfile.staffId && userProfile.staffId === itemStaffId;
-                const isAdUserIdMatch = userProfile.adUserId?.toLowerCase() === itemTitle;
-                const isLoginNameMatch = userProfile.loginName?.toLowerCase() === itemTitle;
-
+                const isStaffIdMatch = userProfile.staffId && userProfile.staffId === itemStaffIdFromList;
+                const isAdUserIdMatch = userProfile.adUserId?.toLowerCase() === itemTitle; // Assuming Title could also be AD User ID if not Staff ID
+                const isLoginNameMatch = userProfile.loginName?.toLowerCase() === itemTitle; // Assuming Title could also be Login Name
 
                 if (isEmailMatch) console.log(`Debug: Email match found for ${userProfile.email}`);
-                if (isStaffIdMatch) console.log(`Debug: Staff ID match found for ${userProfile.staffId}`);
-                if (isAdUserIdMatch) console.log(`Debug: AD User ID match found for ${userProfile.adUserId} against list Title`);
-                if (isLoginNameMatch) console.log(`Debug: Login Name match found for ${userProfile.loginName} against list Title`);
+                if (isStaffIdMatch) console.log(`Debug: Staff ID match found for ${userProfile.staffId} against list Title (${itemStaffIdFromList})`);
+                if (isAdUserIdMatch) console.log(`Debug: AD User ID match found for ${userProfile.adUserId} against list Title (${itemTitle})`);
+                if (isLoginNameMatch) console.log(`Debug: Login Name match found for ${userProfile.loginName} against list Title (${itemTitle})`);
+
 
                 return isEmailMatch || isStaffIdMatch || isAdUserIdMatch || isLoginNameMatch;
             });
