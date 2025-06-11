@@ -155,7 +155,8 @@ class EmailNotificationService {
         console.log(`📧 Got ${data.d.results.length} email activity records from SharePoint`);
 
         const activities = data.d.results.map(item => {
-          const details = this.safeJsonParse(item.ActivityDetails, {}); // Calls the refined safeJsonParse
+          // Use the robust safeJsonParse here
+          const details = this.safeJsonParse(item.ActivityDetails, {});
 
           return {
             id: item.Id || 0,
@@ -391,7 +392,7 @@ class EmailNotificationService {
       });
 
       if (result.success) {
-        // Log the notification with complete details
+        // Log the notification with complete structured details
         await this.logEmailActivity('PROCEDURE_EXPIRY_NOTIFICATION', 'System', {
           procedureName: procedure.name,
           procedureId: procedure.id,
@@ -449,7 +450,7 @@ class EmailNotificationService {
     }
   }
 
-  // ✅ FIXED: Log activity with NO undefined values
+  // ✅ FIXED: Log activity with NO undefined values and ensures JSON stringification
   async logEmailActivity(activityType, performedBy, details) {
     try {
       const requestDigest = await this.getFreshRequestDigest();
@@ -463,7 +464,7 @@ class EmailNotificationService {
         notificationsSent: details.notificationsSent !== undefined ? details.notificationsSent : 0,
         validProceduresFound: details.validProceduresFound !== undefined ? details.validProceduresFound : 0,
         timestamp: details.timestamp || new Date().toISOString(),
-        systemVersion: 'EmailNotificationService v5.0',
+        systemVersion: 'EmailNotificationService v5.1', // Updated version for this fix
         ...details // Spread other details but safe defaults come first
       };
 
@@ -474,6 +475,7 @@ class EmailNotificationService {
         Title: `${activityType}_${safeDetails.procedureName}_${Date.now()}`,
         ActivityType: activityType,
         PerformedBy: performedBy || 'System',
+        // Crucial: Ensure ActivityDetails is a JSON string of the structured details, not raw HTML
         ActivityDetails: JSON.stringify(safeDetails),
         ActivityTimestamp: new Date().toISOString(),
         Status: 'SUCCESS'
@@ -496,7 +498,8 @@ class EmailNotificationService {
       if (response.ok) {
         console.log(`✅ Email activity logged: ${activityType}`);
       } else {
-        console.warn('⚠️ Could not log email activity:', response.status);
+        const errorText = await response.text();
+        console.warn('⚠️ Could not log email activity:', response.status, 'Error:', errorText);
       }
 
     } catch (error) {
@@ -560,14 +563,40 @@ class EmailNotificationService {
         return defaultValue;
       }
 
+      let cleanedString = jsonString.trim();
+
       // Check for common non-JSON patterns that might cause issues before parsing
       // This is a heuristic and might not catch all cases, but helps with HTML-like content
-      if (jsonString.trim().startsWith('<') && jsonString.trim().endsWith('>')) {
-        console.warn('⚠️ safeJsonParse: Input looks like HTML, returning default value.', jsonString.substring(0, 100) + '...');
-        return defaultValue;
+      if (cleanedString.startsWith('<') && cleanedString.endsWith('>')) {
+        console.warn('⚠️ safeJsonParse: Input looks like HTML. Attempting to strip HTML tags before parsing.', cleanedString.substring(0, 100) + '...');
+
+        // This regex tries to extract content that looks like it's within a div
+        // If the HTML is more complex, this might need adjustment.
+        const match = cleanedString.match(/<div[^>]*>(.*?)<\/div>/s);
+        if (match && match[1]) {
+          cleanedString = match[1].trim();
+          // Also decode common HTML entities that might be in the JSON itself
+          cleanedString = cleanedString.replace(/&quot;/g, '"')
+                                     .replace(/&amp;/g, '&')
+                                     .replace(/&lt;/g, '<')
+                                     .replace(/&gt;/g, '>');
+        } else {
+           // Fallback: If not a simple div, try stripping all HTML tags (very aggressive)
+           cleanedString = cleanedString.replace(/<[^>]*>/g, '');
+           cleanedString = cleanedString.replace(/&quot;/g, '"')
+                                       .replace(/&amp;/g, '&')
+                                       .replace(/&lt;/g, '<')
+                                       .replace(/&gt;/g, '>');
+        }
       }
 
-      return JSON.parse(jsonString);
+      // Final check before parsing, ensuring it's not empty after stripping
+      if (!cleanedString) {
+          console.warn('⚠️ safeJsonParse: After HTML stripping, input is empty. Returning default value.');
+          return defaultValue;
+      }
+
+      return JSON.parse(cleanedString);
     } catch (error) {
       console.warn('⚠️ JSON parse error for input:', jsonString.substring(0, 100) + '...', 'Error:', error.message);
       return defaultValue;
