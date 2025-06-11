@@ -1,4 +1,4 @@
-// src/SharePointContext.js - Further Updated for PnPjs v2 CDN compatibility
+// src/SharePointContext.js - Further Updated for PnPjs v2 CDN compatibility and correct root web access
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
@@ -17,7 +17,7 @@ export const useSharePoint = () => {
 // Define the base URL explicitly
 const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
 
-// Helper function to initialize and get the PnPjs instance (UPDATED AGAIN FOR V2)
+// Helper function to initialize and get the PnPjs instance (PnPjs v2)
 const getPnPjs = () => {
   // Ensure PnPjs v2 global 'pnp' object and its 'sp' property are available
   if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
@@ -26,8 +26,6 @@ const getPnPjs = () => {
     throw new Error("PnPjs v2 library not loaded. Check index.html CDN link and script order.");
   }
 
-  // >>> CRITICAL CHANGE HERE <<<
-  // In PnPjs v2 rollup, 'window.pnp.sp' is the actual spfi instance
   const sp = window.pnp.sp;
 
   // Set up the base URL only once for the sp instance
@@ -109,8 +107,9 @@ export const SharePointProvider = ({ children }) => {
       // Ensure PnPjs is initialized with the correct base URL
       const sp = getPnPjs(); // Call the helper to ensure PnPjs is configured for v2
 
-      // Get current web info from PnPjs (this will use the configured base URL)
-      const webInfo = await sp.web();
+      // >>> CRITICAL CHANGE HERE <<<
+      // Use sp.site.rootWeb() to explicitly target the root web of the site collection
+      const webInfo = await sp.site.rootWeb();
       const webAbsoluteUrl = webInfo.Url;
       const currentUserId = webInfo.CurrentUser.Id;
       const currentUserEmail = webInfo.CurrentUser.Email;
