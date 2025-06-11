@@ -77,7 +77,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
       // --- FIX for CDN ---
       // Use pnp.Web(siteUrl) to create a web object with the correct site URL,
       // instead of the default window.pnp.sp.web which is relative to the page.
-      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
+const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
       const items = await sp.items.select('*,Approver/Title,Reviewer/Title').expand('Approver,Reviewer').get();
       setAllProcedures(items);
       processProcedures(items);
@@ -180,7 +180,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     setLoading(true);
     try {
       // --- FIX for CDN ---
-      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
+const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
       const itemAddResult = await sp.items.add({
         Title: newProcedure.Title,
         Description: newProcedure.Description,
@@ -208,7 +208,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     setLoading(true);
     try {
       // --- FIX for CDN ---
-      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
+const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
       await sp.items.getById(procedure.ID).update({
         Title: procedure.Title,
         Description: procedure.Description,
@@ -235,7 +235,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     setDeleteDialog({ open: false, procedure: null }); // Close dialog immediately
     try {
       // --- FIX for CDN ---
-      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
+const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
       await sp.items.getById(procedure.ID).delete();
       setNotification({ type: 'success', message: `Procedure "${procedure.name}" deleted successfully!` });
       onDataRefresh(); // Refresh data in parent component
