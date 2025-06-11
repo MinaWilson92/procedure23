@@ -1,6 +1,5 @@
-<script src="https://cdn.jsdelivr.net/npm/@pnp/sp@3.22.0/dist/sp.es5.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@pnp/logging@3.22.0/dist/logging.es5.umd.min.js"></script>
-d
+<!-- PnP Rollup Package (includes both @pnp/sp and @pnp/logging functionality) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pnp-pnpjs/2.15.0/pnp.min.js"></script>
 
 const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
 
