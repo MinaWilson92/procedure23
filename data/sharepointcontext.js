@@ -1,6 +1,12 @@
-// src/SharePointContext.js - COMPLETE FIXED VERSION
+// src/SharePointContext.js - Using SharePoint User Profile APIs with explicit base URL
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
+
+// Import pnpjs specifics
+import { spfi, SPFx, SPBrowser } from "@pnp/sp";
+import "@pnp/sp/webs"; // Required for sp.web()
+import "@pnp/sp/site-users/web"; // Required for sp.web.currentUser
+import "@pnp/sp/user-profiles"; // Required for sp.profiles.myProperties.get()
 
 const SharePointContext = createContext();
 
@@ -12,101 +18,84 @@ export const useSharePoint = () => {
   return context;
 };
 
-// Utility to clean SharePoint Claims ID (e.g., 'i:0#.f|membership|user@domain.com' -> 'user@domain.com')
-const cleanClaimsId = (claimsId) => {
-  if (!claimsId || typeof claimsId !== 'string') return claimsId;
-  const match = claimsId.match(/\|membership\|([^|]+)$/);
-  if (match && match[1]) {
-    return match[1]; // Extracts the email/username part
+// ✅ DEFINING THE BASE URL EXPLICITLY HERE
+const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
+
+// Helper function to initialize and get the PnPjs instance
+const getPnPjs = () => {
+  // Check if PnPjs is already initialized globally for this context
+  if (typeof window.pnp === 'undefined' || !window.pnp.sp) {
+    console.log('✨ Initializing PnPjs...');
+    window.pnp = window.pnp || {};
+
+    // Initialize PnPjs based on environment:
+    // If running within a SharePoint Framework (SPFx) context and _spPageContextInfo is available, use SPFx.
+    // Otherwise, use SPBrowser for standalone apps or explicit URL configuration.
+    if (typeof window._spPageContextInfo !== 'undefined' && window._spPageContextInfo.webAbsoluteUrl) {
+        window.pnp.sp = spfi().using(SPFx(window._spPageContextInfo)); // Use SPFx context
+        console.log('PnPjs initialized using SPFx context.');
+    } else {
+        window.pnp.sp = spfi().using(SPBrowser()); // Use SPBrowser for non-SPFx/development
+        console.log('PnPjs initialized using SPBrowser.');
+    }
+
+    // ✅ EXPLICITLY SET THE BASE URL FOR PNPJS
+    window.pnp.sp.setup({
+        baseUrl: SHAREPOINT_BASE_URL
+    });
+    console.log(`✅ PnPjs base URL set to: ${SHAREPOINT_BASE_URL}`);
   }
-  return claimsId; // Return original if no match
+  return window.pnp.sp;
 };
+
 
 // ✅ METHOD 1: SharePoint User Profile Service
 const getUserProfileFromSharePoint = async (siteUrl, userId) => {
   try {
     console.log('👤 Method 1: Trying SharePoint User Profile Service...');
-    
-    // Get current user profile using SharePoint REST API
-    const profileUrl = `${siteUrl}/_api/SP.UserProfiles.PeopleManager/GetMyProperties`;
-    
-    const response = await fetch(profileUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json; odata=verbose',
-        'Content-Type': 'application/json; odata=verbose'
-      },
-      credentials: 'include'
-    });
 
-    if (response.ok) {
-      const data = await response.json();
-      const profile = data.d;
-      
-      console.log('✅ SharePoint User Profile data:', profile);
-      
-      // Extract user properties
-      const getProperty = (key) => {
-        const prop = profile.UserProfileProperties?.results?.find(p => p.Key === key);
-        return prop ? prop.Value : null;
-      };
-      
-      return {
-        userId: userId,
-        displayName: getProperty('DisplayName') || profile.DisplayName || 'Unknown User',
-        email: getProperty('WorkEmail') || profile.Email || 'unknown@hsbc.com',
-        loginName: profile.UserPrincipalName || profile.LoginName,
-        jobTitle: getProperty('Title'),
-        department: getProperty('Department'),
-        authenticated: true,
-        source: 'sharepoint_profile'
-      };
-    } else {
-      console.warn('⚠️ SharePoint User Profile Service failed:', response.status, await response.text());
-      return null; // Return null to indicate failure, so Graph API can be tried
-    }
-  } catch (error) {
-    console.error('❌ Error getting SharePoint user profile:', error);
-    return null; // Return null on error
+    // Use the explicitly configured PnPjs instance for profile calls
+    const sp = getPnPjs();
+    const profile = await sp.profiles.myProperties.get(); // This uses the configured base URL
+
+    console.log('✅ SharePoint User Profile data:', profile);
+
+    // Extract user properties from UserProfileProperties
+    const getProperty = (key) => {
+      const prop = profile.UserProfileProperties?.results?.find(p => p.Key === key);
+      return prop ? prop.Value : null;
+    };
+
+    return {
+      userId: userId, // This userId comes from sp.web.currentUser.Id
+      staffId: getProperty('StaffId') || userId, // Assuming StaffId might be in UserProfileProperties
+      adUserId: profile.UserPrincipalName, // User Principal Name (e.g., user@domain.com)
+      displayName: profile.DisplayName,
+      email: profile.Email,
+      role: 'Staff', // Default role, can be refined based on actual roles
+      authenticated: true,
+      loginName: profile.LoginName,
+      jobTitle: getProperty('Title'), // Job Title from profile properties
+      department: getProperty('Department'), // Department from profile properties
+      source: 'SharePoint Profile'
+    };
+  } catch (err) {
+    console.warn('⚠️ Method 1 (SharePoint User Profile Service) failed:', err);
+    return null;
   }
 };
 
-// ✅ METHOD 2: Microsoft Graph API
-const getUserInfoFromGraphAPI = async (userId) => {
-  try {
-    console.log('👤 Method 2: Trying Microsoft Graph API...');
-    // Note: Graph API requires proper Azure AD app registration and permissions for your solution.
-    // For SPFx, these permissions are usually configured in the package-solution.json.
-    const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me', {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include'
-    });
 
-    if (graphResponse.ok) {
-      const graphData = await graphResponse.json();
-      console.log('✅ Microsoft Graph API data:', graphData);
-      return {
-        userId: userId, // Keep SharePoint's userId if needed for SP-specific operations
-        displayName: graphData.displayName || 'Unknown User',
-        email: graphData.mail || graphData.userPrincipalName || 'unknown@hsbc.com', // Prioritize mail
-        loginName: graphData.userPrincipalName,
-        jobTitle: graphData.jobTitle,
-        department: graphData.department,
-        authenticated: true,
-        source: 'graph_api'
-      };
-    } else {
-      console.warn('⚠️ Microsoft Graph API failed:', graphResponse.status, await graphResponse.text());
-      return null; // Return null to indicate failure
-    }
-  } catch (error) {
-    console.error('❌ Error getting Graph API user info:', error);
-    return null; // Return null on error
-  }
-};
+// Loading screen component (unchanged)
+const LoadingScreen = ({ message }) => (
+  <Box sx={{
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary'
+  }}>
+    <CircularProgress size={60} sx={{ mb: 2 }} />
+    <Typography variant="h6">{message}</Typography>
+  </Box>
+);
 
 export const SharePointProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -114,124 +103,64 @@ export const SharePointProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const [spContext, setSpContext] = useState(null);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      initializeWithAPIs();
+    }
+  }, []); // Run only once on mount
+
   const initializeWithAPIs = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Step 1: Get SharePoint Context (basic info like site URL and current user ID)
-      const contextResponse = await fetch('/_layouts/15/init.js', { credentials: 'include' });
-      if (!contextResponse.ok) throw new Error('Failed to load SharePoint context.');
+      // Ensure PnPjs is initialized with the correct base URL
+      const sp = getPnPjs(); // Call the helper to ensure PnPjs is configured
 
-      const scriptContent = await contextResponse.text();
-      const webAbsoluteUrlMatch = scriptContent.match(/_spPageContextInfo\.webAbsoluteUrl\s*=\s*\"([^\"]+)\"/);
-      const siteAbsoluteUrlMatch = scriptContent.match(/_spPageContextInfo\.siteAbsoluteUrl\s*=\s*\"([^\"]+)\"/);
-      const userIdMatch = scriptContent.match(/_spPageContextInfo\.userId\s*=\s*\"([^\"]+)\"/);
+      // Get current web info from PnPjs (this will use the configured base URL)
+      const webInfo = await sp.web();
+      const webAbsoluteUrl = webInfo.Url; // This should now be SHAREPOINT_BASE_URL if configured correctly
+      const currentUserId = webInfo.CurrentUser.Id;
+      const currentUserEmail = webInfo.CurrentUser.Email;
+      const currentDisplayName = webInfo.CurrentUser.Title;
 
-      const webAbsoluteUrl = webAbsoluteUrlMatch ? webAbsoluteUrlMatch[1] : '';
-      const siteAbsoluteUrl = siteAbsoluteUrlMatch ? siteAbsoluteUrlMatch[1] : '';
-      const currentUserId = userIdMatch ? userIdMatch[1] : '';
+      setSpContext({ webAbsoluteUrl, currentUserId, isDevelopment: false });
 
-      setSpContext({
-        webAbsoluteUrl,
-        siteAbsoluteUrl,
-        userId: currentUserId,
-        isDevelopment: window.location.hostname === 'localhost' || window.location.hostname.startsWith('192.168.')
-      });
+      // Try fetching user profile using the PnPjs instance
+      let userProfile = await getUserProfileFromSharePoint(webAbsoluteUrl, currentUserId);
 
-      // Step 2: Try to get user profile from SharePoint API first
-      let userData = await getUserProfileFromSharePoint(webAbsoluteUrl, currentUserId);
-
-      // Step 3: If SharePoint API returns generic email or fails, try Graph API
-      // If SharePoint API returned 'unknown@hsbc.com' or was null/error, try Graph
-      if (!userData || userData.email === 'unknown@hsbc.com') {
-        console.log('⚠️ SharePoint profile generic/failed, trying Graph API...');
-        const graphUserData = await getUserInfoFromGraphAPI(currentUserId);
-        if (graphUserData) {
-            // Merge Graph API data, prioritizing Graph for key profile fields like email and display name
-            userData = { ...userData, ...graphUserData, userId: currentUserId }; // Keep SharePoint's userId
-        }
+      if (!userProfile) {
+        // Fallback to basic user info if profile service fails or is not robust enough
+        console.warn('⚠️ Could not retrieve full user profile, falling back to basic SharePoint web context user info.');
+        userProfile = {
+          userId: currentUserId,
+          adUserId: currentUserEmail, // Using email as a fallback for AD User ID
+          displayName: currentDisplayName,
+          email: currentUserEmail,
+          role: 'Staff', // Default role if not retrieved from profile
+          authenticated: true,
+          loginName: webInfo.CurrentUser.LoginName,
+          source: 'SharePoint Web Context'
+        };
       }
 
-      if (!userData || !userData.authenticated) {
-        setError('Authentication failed. Please ensure you are logged into SharePoint and have necessary permissions.');
-        setUser(null);
-        return;
+      // Basic role assignment logic (example)
+      if (userProfile.email && userProfile.email.includes('@hsbc.com')) {
+        userProfile.role = 'user';
       }
-      
-      // Use cleanClaimsId for adUserId for a cleaner display/storage of the login name
+      // Example admin role check (adjust as per your actual admin determination)
+      if (userProfile.email && userProfile.email.toLowerCase() === 'youradminemail@hsbc.com') { // Replace with your actual admin email
+        userProfile.role = 'admin';
+      }
+
       setUser({
-        ...userData,
-        adUserId: cleanClaimsId(userData.loginName || userData.adUserId), // Apply cleanup here
+        ...userProfile,
+        authenticated: true,
+        environment: spContext?.isDevelopment ? 'development' : 'sharepoint',
+        source: userProfile.source
       });
 
     } catch (err) {
       console.error('❌ API initialization error:', err);
       setError(`API authentication failed: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    // Only run this client-side
-    if (typeof window !== 'undefined') {
-      initializeWithAPIs();
-    }
-  }, []);
-
-  const value = {
-    user,
-    loading,
-    error,
-    refreshUser: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
-    logout: () => setUser(null),
-    manualLogin: () => { if (typeof window !== 'undefined') initializeWithAPIs(); },
-    isAdmin: user?.role === 'admin', // Ensure role is being set correctly elsewhere if needed
-    isAuthenticated: !!user,
-    
-    spContext,
-    siteUrl: spContext?.webAbsoluteUrl,
-    adUserId: user?.adUserId, // Cleaned version of login name
-    displayName: user?.displayName,
-    
-    getUserInfo: () => ({
-      staffId: user?.staffId, // Assuming this is set elsewhere
-      adUserId: user?.adUserId,
-      displayName: user?.displayName,
-      email: user?.email,
-      role: user?.role,
-      authenticated: user?.authenticated,
-      loginName: user?.loginName,
-      jobTitle: user?.jobTitle,
-      department: user?.department
-    }),
-    
-    cleanClaimsId: cleanClaimsId, // Expose the utility function for other components
-    
-    authStatus: {
-      loading,
-      authenticated: !!user,
-      error,
-      environment: spContext?.isDevelopment ? 'development' : 'sharepoint',
-      source: user?.source
-    }
-  };
-
-  if (loading) {
-    return <LoadingScreen message="Fetching user profile from Microsoft APIs..." />;\
-  }
-
-  return (
-    <SharePointContext.Provider value={value}>
-      {children}
-    </SharePointContext.Provider>
-  );
-};
-
-// Assuming LoadingScreen is defined elsewhere or needs to be included here
-const LoadingScreen = ({ message }) => (
-  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-    <CircularProgress />
-    <Typography variant="h6" sx={{ mt: 2 }}>{message}</Typography>
-  </Box>
-);
+      // Set an unauthenticated user state on error to avoid loading spinners indefinitely
+      setUser({ authenticated: false, role: 'guest', source: 'Error',
