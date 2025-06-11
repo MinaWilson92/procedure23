@@ -1,4 +1,4 @@
-// src/SharePointContext.js - Updated for PnPjs v2 CDN compatibility
+// src/SharePointContext.js - Further Updated for PnPjs v2 CDN compatibility
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
@@ -17,18 +17,18 @@ export const useSharePoint = () => {
 // Define the base URL explicitly
 const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
 
-// Helper function to initialize and get the PnPjs instance (UPDATED FOR V2)
+// Helper function to initialize and get the PnPjs instance (UPDATED AGAIN FOR V2)
 const getPnPjs = () => {
-  // Ensure PnPjs v2 global 'pnp' object is available after CDN loads
-  if (typeof window.pnp === 'undefined') {
-    console.error("PnPjs v2 global 'pnp' object not found.");
+  // Ensure PnPjs v2 global 'pnp' object and its 'sp' property are available
+  if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
+    console.error("PnPjs v2 global 'pnp.sp' object not found.");
     console.error("Please ensure PnPjs v2 CDN script (pnp.min.js) is loaded correctly in index.html.");
-    throw new Error("PnPjs v2 library not loaded. Check index.html CDN links and script order.");
+    throw new Error("PnPjs v2 library not loaded. Check index.html CDN link and script order.");
   }
 
-  // In PnPjs v2, the `window.pnp` object itself is often the spfi instance
-  // or contains the main methods directly.
-  const sp = window.pnp;
+  // >>> CRITICAL CHANGE HERE <<<
+  // In PnPjs v2 rollup, 'window.pnp.sp' is the actual spfi instance
+  const sp = window.pnp.sp;
 
   // Set up the base URL only once for the sp instance
   if (!sp.__pnpjs_setup_done__) { // Using a custom flag to prevent re-running setup
