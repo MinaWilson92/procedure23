@@ -1,8 +1,8 @@
-// src/SharePointContext.js - Using SharePoint User Profile APIs with explicit base URL (CDN-compatible)
+// src/SharePointContext.js - Updated for PnPjs v2 CDN compatibility
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { CircularProgress, Box, Typography, Button, Alert } from '@mui/material';
 
-// REMOVED PnPjs IMPORTS - PnPjs is now expected to be loaded globally via CDN in index.html
+// PnPjs is loaded globally via CDN in index.html, so no imports are needed here.
 
 const SharePointContext = createContext();
 
@@ -14,41 +14,41 @@ export const useSharePoint = () => {
   return context;
 };
 
-// ✅ DEFINING THE BASE URL EXPLICITLY HERE
+// Define the base URL explicitly
 const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng';
 
-// Helper function to initialize and get the PnPjs instance
+// Helper function to initialize and get the PnPjs instance (UPDATED FOR V2)
 const getPnPjs = () => {
-  // Ensure PnPjs global object is available
-  if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
-    console.error("PnPjs global 'pnp' object not found. Please ensure CDN scripts are loaded correctly in index.html.");
-    // Throw an error or return null to prevent further execution without PnPjs
-    throw new Error("PnPjs library not loaded. Check index.html CDN links.");
+  // Ensure PnPjs v2 global 'pnp' object is available after CDN loads
+  if (typeof window.pnp === 'undefined') {
+    console.error("PnPjs v2 global 'pnp' object not found.");
+    console.error("Please ensure PnPjs v2 CDN script (pnp.min.js) is loaded correctly in index.html.");
+    throw new Error("PnPjs v2 library not loaded. Check index.html CDN links and script order.");
   }
 
-  // Access the globally available PnPjs sp object
-  const sp = window.pnp.sp;
+  // In PnPjs v2, the `window.pnp` object itself is often the spfi instance
+  // or contains the main methods directly.
+  const sp = window.pnp;
 
-  // Ensure setup is done only once, or re-setup if base URL needs changing
-  // Using a custom flag to avoid re-running setup on every call to getPnPjs
-  if (!sp.__pnpjs_setup_done__) {
+  // Set up the base URL only once for the sp instance
+  if (!sp.__pnpjs_setup_done__) { // Using a custom flag to prevent re-running setup
     sp.setup({
       baseUrl: SHAREPOINT_BASE_URL
     });
     sp.__pnpjs_setup_done__ = true; // Mark as setup
-    console.log(`✅ PnPjs base URL set to: ${SHAREPOINT_BASE_URL}`);
+    console.log(`✅ PnPjs v2 base URL set to: ${SHAREPOINT_BASE_URL}`);
   }
   return sp;
 };
 
 
-// ✅ METHOD 1: SharePoint User Profile Service
+// METHOD 1: SharePoint User Profile Service (API calls generally compatible with v2)
 const getUserProfileFromSharePoint = async (siteUrl, userId) => {
   try {
     console.log('👤 Method 1: Trying SharePoint User Profile Service...');
 
     // Use the explicitly configured PnPjs instance for profile calls
-    const sp = getPnPjs(); // This will return the globally configured sp object
+    const sp = getPnPjs(); // This will return the globally configured sp object for v2
     const profile = await sp.profiles.myProperties.get(); // This uses the configured base URL
 
     console.log('✅ SharePoint User Profile data:', profile);
@@ -60,16 +60,16 @@ const getUserProfileFromSharePoint = async (siteUrl, userId) => {
     };
 
     return {
-      userId: userId, // This userId comes from sp.web.currentUser.Id
-      staffId: getProperty('StaffId') || userId, // Assuming StaffId might be in UserProfileProperties
-      adUserId: profile.UserPrincipalName, // User Principal Name (e.g., user@domain.com)
+      userId: userId,
+      staffId: getProperty('StaffId') || userId,
+      adUserId: profile.UserPrincipalName,
       displayName: profile.DisplayName,
       email: profile.Email,
-      role: 'Staff', // Default role, can be refined based on actual roles
+      role: 'Staff',
       authenticated: true,
       loginName: profile.LoginName,
-      jobTitle: getProperty('Title'), // Job Title from profile properties
-      department: getProperty('Department'), // Department from profile properties
+      jobTitle: getProperty('Title'),
+      department: getProperty('Department'),
       source: 'SharePoint Profile'
     };
   } catch (err) {
@@ -100,18 +100,18 @@ export const SharePointProvider = ({ children }) => {
     if (typeof window !== 'undefined') {
       initializeWithAPIs();
     }
-  }, []); // Run only once on mount
+  }, []);
 
   const initializeWithAPIs = async () => {
     setLoading(true);
     setError(null);
     try {
       // Ensure PnPjs is initialized with the correct base URL
-      const sp = getPnPjs(); // Call the helper to ensure PnPjs is configured
+      const sp = getPnPjs(); // Call the helper to ensure PnPjs is configured for v2
 
       // Get current web info from PnPjs (this will use the configured base URL)
       const webInfo = await sp.web();
-      const webAbsoluteUrl = webInfo.Url; // This should now be SHAREPOINT_BASE_URL if configured correctly
+      const webAbsoluteUrl = webInfo.Url;
       const currentUserId = webInfo.CurrentUser.Id;
       const currentUserEmail = webInfo.CurrentUser.Email;
       const currentDisplayName = webInfo.CurrentUser.Title;
@@ -122,14 +122,13 @@ export const SharePointProvider = ({ children }) => {
       let userProfile = await getUserProfileFromSharePoint(webAbsoluteUrl, currentUserId);
 
       if (!userProfile) {
-        // Fallback to basic user info if profile service fails or is not robust enough
         console.warn('⚠️ Could not retrieve full user profile, falling back to basic SharePoint web context user info.');
         userProfile = {
           userId: currentUserId,
-          adUserId: currentUserEmail, // Using email as a fallback for AD User ID
+          adUserId: currentUserEmail,
           displayName: currentDisplayName,
           email: currentUserEmail,
-          role: 'Staff', // Default role if not retrieved from profile
+          role: 'Staff',
           authenticated: true,
           loginName: webInfo.CurrentUser.LoginName,
           source: 'SharePoint Web Context'
@@ -140,7 +139,6 @@ export const SharePointProvider = ({ children }) => {
       if (userProfile.email && userProfile.email.includes('@hsbc.com')) {
         userProfile.role = 'user';
       }
-      // Example admin role check (adjust as per your actual admin determination)
       if (userProfile.email && userProfile.email.toLowerCase() === 'youradminemail@hsbc.com') { // Replace with your actual admin email
         userProfile.role = 'admin';
       }
@@ -155,7 +153,6 @@ export const SharePointProvider = ({ children }) => {
     } catch (err) {
       console.error('❌ API initialization error:', err);
       setError(`API authentication failed: ${err.message}`);
-      // Set an unauthenticated user state on error to avoid loading spinners indefinitely
       setUser({ authenticated: false, role: 'guest', source: 'Error', displayName: 'Guest' });
     } finally {
       setLoading(false);
