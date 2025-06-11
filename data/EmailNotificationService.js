@@ -1,4 +1,4 @@
-// services/EmailNotificationService.js - COMPLETE FIX - NO MORE UNDEFINED!
+// services/EmailNotificationService.js - COMPLETE VERSION WITH ALL METHODS
 class EmailNotificationService {
   constructor() {
     this.baseUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
@@ -7,7 +7,7 @@ class EmailNotificationService {
     this.lastCheckTime = null;
   }
 
-  // ✅ SIMPLE: Get fresh request digest
+  // ✅ Get fresh request digest
   async getFreshRequestDigest() {
     try {
       const digestUrl = `${this.baseUrl}/_api/contextinfo`;
@@ -33,10 +33,10 @@ class EmailNotificationService {
     }
   }
 
-  // ✅ SIMPLE: Get procedures - NO FANCY VALIDATION
+  // ✅ Get procedures from SharePoint
   async getProcedures() {
     try {
-      console.log('📋 Loading procedures...');
+      console.log('📋 Loading procedures from SharePoint...');
       
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('Procedures')/items?$select=*&$top=1000`,
@@ -61,26 +61,28 @@ class EmailNotificationService {
           status: item.Status || 'Active'
         }));
         
-        console.log('✅ Procedures loaded:', procedures.length);
+        console.log('✅ Procedures loaded from SharePoint:', procedures.length);
         return procedures;
       } else {
-        console.error('Failed to load procedures:', response.status);
+        console.error('❌ Failed to load procedures:', response.status);
         return [];
       }
     } catch (error) {
-      console.error('Error loading procedures:', error);
+      console.error('❌ Error loading procedures:', error);
       return [];
     }
   }
 
-  // ✅ SIMPLE: Get expiring procedures - FIXED UNDEFINED
+  // ✅ FIXED: Get expiring procedures - THIS WAS MISSING!
   async getExpiringProcedures() {
     try {
-      console.log('📅 Loading expiring procedures...');
+      console.log('📅 Loading expiring procedures from SharePoint...');
       
       const procedures = await this.getProcedures();
       const now = new Date();
       const expiring = [];
+      
+      console.log(`📋 Got ${procedures.length} procedures, filtering for expiring...`);
       
       for (const procedure of procedures) {
         if (procedure.expiry) {
@@ -89,7 +91,8 @@ class EmailNotificationService {
             if (!isNaN(expiry.getTime())) {
               const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
               
-              if (daysLeft <= 30) {
+              // Include procedures expiring within 30 days OR already expired (up to 30 days overdue)
+              if (daysLeft <= 30 && daysLeft >= -30) {
                 expiring.push({
                   id: procedure.id,
                   name: procedure.name,
@@ -99,31 +102,33 @@ class EmailNotificationService {
                   daysLeft: daysLeft,
                   status: daysLeft <= 0 ? 'expired' : daysLeft <= 7 ? 'urgent' : 'warning',
                   lob: procedure.lob,
-                  lastNotificationSent: '',
-                  willSendNotification: true
+                  lastNotificationSent: '', // Will be populated if needed
+                  willSendNotification: this.shouldSendNotificationSync(daysLeft)
                 });
+                console.log(`📅 Added expiring procedure: ${procedure.name} (${daysLeft} days)`);
               }
             }
           } catch (dateError) {
-            console.warn('Invalid date for procedure:', procedure.name);
+            console.warn('⚠️ Invalid date for procedure:', procedure.name, procedure.expiry);
             continue;
           }
         }
       }
       
-      console.log('✅ Expiring procedures loaded:', expiring.length);
-      return expiring.sort((a, b) => a.daysLeft - b.daysLeft);
+      const sortedExpiring = expiring.sort((a, b) => a.daysLeft - b.daysLeft);
+      console.log(`✅ Expiring procedures loaded: ${sortedExpiring.length} found`);
+      return sortedExpiring;
       
     } catch (error) {
-      console.error('Error loading expiring procedures:', error);
+      console.error('❌ Error loading expiring procedures:', error);
       return [];
     }
   }
 
-  // ✅ SIMPLE: Get email activity log - FIXED UNDEFINED
+  // ✅ FIXED: Get email activity log - THIS WAS MISSING!
   async getEmailActivityLog(limit = 50) {
     try {
-      console.log('📧 Loading email activity log...');
+      console.log('📧 Loading email activity log from SharePoint...');
       
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('EmailActivityLog')/items?$select=*&$orderby=Id desc&$top=${limit}`,
@@ -135,6 +140,8 @@ class EmailNotificationService {
 
       if (response.ok) {
         const data = await response.json();
+        console.log(`📧 Got ${data.d.results.length} email activity records from SharePoint`);
+        
         const activities = data.d.results.map(item => {
           const details = this.safeJsonParse(item.ActivityDetails, {});
           
@@ -149,28 +156,30 @@ class EmailNotificationService {
           };
         });
         
-        console.log('✅ Email activity log loaded:', activities.length);
+        console.log('✅ Email activity log processed:', activities.length, 'entries');
         return activities;
       } else {
-        console.error('Failed to load email activity log:', response.status);
+        console.error('❌ Failed to load email activity log:', response.status);
         return [];
       }
       
     } catch (error) {
-      console.error('Error loading email activity log:', error);
+      console.error('❌ Error loading email activity log:', error);
       return [];
     }
   }
 
-  // ✅ FIXED: No more undefined in readable activity
+  // ✅ FIXED: Readable activity with NO undefined values
   getReadableActivity(activityType, details) {
     // Ensure details is always an object
     const safeDetails = details || {};
     
+    console.log('🔍 Processing activity:', activityType, safeDetails);
+    
     switch (activityType) {
       case 'PROCEDURE_EXPIRY_NOTIFICATION':
         const procedureName = safeDetails.procedureName || 'Unknown Procedure';
-        const daysLeft = safeDetails.daysLeft || 'Unknown';
+        const daysLeft = safeDetails.daysLeft !== undefined ? safeDetails.daysLeft : 'Unknown';
         return `Expiry notification sent for: ${procedureName} (${daysLeft} days)`;
         
       case 'ACCESS_GRANTED_NOTIFICATION':
@@ -195,8 +204,8 @@ class EmailNotificationService {
         return `New procedure uploaded: ${uploadProcedure} (${lob})`;
         
       case 'AUTOMATED_CHECK':
-        const checked = safeDetails.proceduresChecked || 0;
-        const sent = safeDetails.notificationsSent || 0;
+        const checked = safeDetails.proceduresChecked !== undefined ? safeDetails.proceduresChecked : 0;
+        const sent = safeDetails.notificationsSent !== undefined ? safeDetails.notificationsSent : 0;
         return `Automated check: ${checked} procedures checked, ${sent} notifications sent`;
         
       case 'AUTOMATED_CHECK_FAILED':
@@ -204,11 +213,18 @@ class EmailNotificationService {
         return `Automated check failed: ${error}`;
         
       default:
-        return activityType.replace(/_/g, ' ').toLowerCase() || 'Unknown activity';
+        const fallback = activityType ? activityType.replace(/_/g, ' ').toLowerCase() : 'unknown activity';
+        return fallback;
     }
   }
 
-  // ✅ SIMPLE: Check and send notifications - FIXED UNDEFINED
+  // ✅ Helper method for sync notification checking
+  shouldSendNotificationSync(daysLeft) {
+    // Simple logic - would send if expired, within 7 days, or within 30 days
+    return daysLeft <= 30;
+  }
+
+  // ✅ Check and send notifications - FIXED UNDEFINED VALUES
   async checkAndSendNotifications() {
     try {
       // Prevent rapid checks
@@ -219,49 +235,74 @@ class EmailNotificationService {
       }
       this.lastCheckTime = now;
 
-      console.log('🔍 Starting automated notification check...');
+      console.log('🔍 ========== STARTING AUTOMATED NOTIFICATION CHECK ==========');
       
       const procedures = await this.getProcedures();
       console.log(`📋 Procedures loaded: ${procedures.length}`);
       
       if (procedures.length === 0) {
-        console.log('⚠️ No procedures found');
+        console.log('⚠️ No procedures found in SharePoint');
         await this.logEmailActivity('AUTOMATED_CHECK', 'System', {
           proceduresChecked: 0,
+          validProceduresFound: 0,
           notificationsSent: 0,
-          message: 'No procedures found',
+          message: 'No procedures found in SharePoint',
           timestamp: new Date().toISOString()
         });
         return;
       }
       
-      // Simple notification logic - only send if we have valid procedures with expiry
-      let notificationsSent = 0;
-      const validProcedures = procedures.filter(p => p.expiry && p.name);
+      // Filter for procedures with valid expiry dates
+      const validProcedures = procedures.filter(p => {
+        if (!p.expiry) return false;
+        const expiry = new Date(p.expiry);
+        return !isNaN(expiry.getTime());
+      });
       
-      console.log(`📊 Valid procedures with expiry: ${validProcedures.length}`);
+      console.log(`📊 Valid procedures with expiry dates: ${validProcedures.length}`);
+      
+      if (validProcedures.length === 0) {
+        console.log('⚠️ No procedures with valid expiry dates found');
+        await this.logEmailActivity('AUTOMATED_CHECK', 'System', {
+          proceduresChecked: procedures.length,
+          validProceduresFound: 0,
+          notificationsSent: 0,
+          message: 'No procedures with valid expiry dates',
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
+      // Check each valid procedure for notifications
+      let notificationsSent = 0;
       
       for (const procedure of validProcedures) {
         try {
           const expiry = new Date(procedure.expiry);
-          if (!isNaN(expiry.getTime())) {
-            const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+          const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+          
+          console.log(`🔍 Checking procedure: ${procedure.name} - ${daysLeft} days left`);
+          
+          // Simple logic - check if expiring within 30 days
+          if (daysLeft <= 30 && daysLeft > -30) { // Not too old
+            const shouldSend = await this.shouldSendNotification(procedure, daysLeft);
             
-            // Simple logic - check if expiring within 30 days
-            if (daysLeft <= 30 && daysLeft > -30) { // Not too old
-              const shouldSend = await this.shouldSendNotification(procedure, daysLeft);
-              
-              if (shouldSend) {
-                const result = await this.sendSimpleNotification(procedure, daysLeft);
-                if (result.success) {
-                  notificationsSent++;
-                  await this.markNotificationSent(procedure, daysLeft);
-                }
+            if (shouldSend) {
+              console.log(`📧 Sending notification for: ${procedure.name}`);
+              const result = await this.sendSimpleNotification(procedure, daysLeft);
+              if (result.success) {
+                notificationsSent++;
+                await this.markNotificationSent(procedure, daysLeft);
+                console.log(`✅ Notification sent successfully`);
+              } else {
+                console.log(`❌ Notification failed: ${result.message}`);
               }
+            } else {
+              console.log(`⏭️ Notification already sent for: ${procedure.name}`);
             }
           }
         } catch (error) {
-          console.warn('Error processing procedure:', procedure.name, error);
+          console.warn('⚠️ Error processing procedure:', procedure.name, error);
           continue;
         }
       }
@@ -275,22 +316,24 @@ class EmailNotificationService {
         systemStatus: notificationsSent > 0 ? 'NOTIFICATIONS_SENT' : 'NO_NOTIFICATIONS_NEEDED'
       });
       
-      console.log(`✅ Check complete: ${procedures.length} checked, ${notificationsSent} sent`);
+      console.log(`✅ ========== CHECK COMPLETE: ${procedures.length} checked, ${notificationsSent} sent ==========`);
       
     } catch (error) {
-      console.error('❌ Check failed:', error);
+      console.error('❌ ========== CHECK FAILED ==========', error);
       await this.logEmailActivity('AUTOMATED_CHECK_FAILED', 'System', {
         error: error.message || 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        errorType: error.name || 'Error'
       });
     }
   }
 
-  // ✅ SIMPLE: Should send notification check
+  // ✅ Should send notification check
   async shouldSendNotification(procedure, daysLeft) {
     try {
-      // Simple check - has this procedure/days combo been sent before?
-      const key = `${procedure.id}_${procedure.expiry}_${daysLeft <= 0 ? 'expired' : daysLeft <= 7 ? '7day' : '30day'}`;
+      // Create a simple key based on procedure and notification type
+      const notificationType = daysLeft <= 0 ? 'expired' : daysLeft <= 7 ? '7day' : '30day';
+      const key = `${procedure.id}_${procedure.expiry}_${notificationType}`;
       
       const response = await fetch(
         `${this.baseUrl}/_api/web/lists/getbytitle('NotificationLog')/items?$filter=NotificationKey eq '${key}'&$top=1`,
@@ -302,28 +345,32 @@ class EmailNotificationService {
 
       if (response.ok) {
         const data = await response.json();
-        return data.d.results.length === 0; // Send if not found
+        const alreadySent = data.d.results.length > 0;
+        console.log(`🔍 Notification check for ${procedure.name} (${notificationType}): ${alreadySent ? 'Already sent' : 'Not sent'}`);
+        return !alreadySent;
       }
       
       return true; // Default to send if we can't check
     } catch (error) {
-      console.error('Error checking notification history:', error);
+      console.error('❌ Error checking notification history:', error);
       return true;
     }
   }
 
-  // ✅ SIMPLE: Send notification
+  // ✅ Send simple notification
   async sendSimpleNotification(procedure, daysLeft) {
     try {
       const recipients = this.getValidRecipients(procedure);
       
       if (recipients.length === 0) {
+        console.log('❌ No valid recipients found');
         return { success: false, message: 'No valid recipients' };
       }
 
       const subject = `[HSBC] ${procedure.name} - ${daysLeft <= 0 ? 'EXPIRED' : 'EXPIRING'} (${Math.abs(daysLeft)} days)`;
       const body = this.generateSimpleEmailBody(procedure, daysLeft);
 
+      console.log(`📧 Sending email to: ${recipients.join(', ')}`);
       const result = await this.sendEmailViaSharePoint({
         to: recipients,
         subject: subject,
@@ -331,7 +378,7 @@ class EmailNotificationService {
       });
 
       if (result.success) {
-        // Log the notification with NO undefined values
+        // Log the notification with complete details
         await this.logEmailActivity('PROCEDURE_EXPIRY_NOTIFICATION', 'System', {
           procedureName: procedure.name,
           procedureId: procedure.id,
@@ -348,22 +395,23 @@ class EmailNotificationService {
 
       return result;
     } catch (error) {
-      console.error('Error sending notification:', error);
+      console.error('❌ Error sending notification:', error);
       return { success: false, message: error.message };
     }
   }
 
-  // ✅ SIMPLE: Mark notification as sent
+  // ✅ Mark notification as sent
   async markNotificationSent(procedure, daysLeft) {
     try {
       const requestDigest = await this.getFreshRequestDigest();
-      const key = `${procedure.id}_${procedure.expiry}_${daysLeft <= 0 ? 'expired' : daysLeft <= 7 ? '7day' : '30day'}`;
+      const notificationType = daysLeft <= 0 ? 'expired' : daysLeft <= 7 ? '7day' : '30day';
+      const key = `${procedure.id}_${procedure.expiry}_${notificationType}`;
       
       const logData = {
         __metadata: { type: 'SP.Data.NotificationLogListItem' },
-        Title: `${procedure.name}_${new Date().toISOString()}`,
+        Title: `${procedure.name}_${notificationType}_${new Date().toISOString()}`,
         NotificationKey: key,
-        NotificationType: daysLeft <= 0 ? 'expired' : daysLeft <= 7 ? '7day' : '30day',
+        NotificationType: notificationType,
         SentDate: new Date().toISOString(),
         Status: 'SENT'
       };
@@ -381,8 +429,10 @@ class EmailNotificationService {
           body: JSON.stringify(logData)
         }
       );
+      
+      console.log(`✅ Marked notification as sent: ${key}`);
     } catch (error) {
-      console.error('Error marking notification sent:', error);
+      console.error('❌ Error marking notification sent:', error);
     }
   }
 
@@ -391,18 +441,20 @@ class EmailNotificationService {
     try {
       const requestDigest = await this.getFreshRequestDigest();
       
-      // Ensure NO undefined values
+      // Ensure NO undefined values - provide defaults for everything
       const safeDetails = {
         procedureName: details.procedureName || 'System Action',
         procedureId: details.procedureId || 'N/A',
         notificationType: details.notificationType || 'System',
-        proceduresChecked: details.proceduresChecked || 0,
-        notificationsSent: details.notificationsSent || 0,
-        validProceduresFound: details.validProceduresFound || 0,
+        proceduresChecked: details.proceduresChecked !== undefined ? details.proceduresChecked : 0,
+        notificationsSent: details.notificationsSent !== undefined ? details.notificationsSent : 0,
+        validProceduresFound: details.validProceduresFound !== undefined ? details.validProceduresFound : 0,
         timestamp: details.timestamp || new Date().toISOString(),
-        systemVersion: 'EmailNotificationService v4.0',
-        ...details // Add other details but safe defaults come first
+        systemVersion: 'EmailNotificationService v5.0',
+        ...details // Spread other details but safe defaults come first
       };
+      
+      console.log('📝 Logging email activity:', activityType, safeDetails);
       
       const logData = {
         __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
@@ -430,6 +482,8 @@ class EmailNotificationService {
 
       if (response.ok) {
         console.log(`✅ Email activity logged: ${activityType}`);
+      } else {
+        console.warn('⚠️ Could not log email activity:', response.status);
       }
       
     } catch (error) {
@@ -437,7 +491,7 @@ class EmailNotificationService {
     }
   }
 
-  // ✅ SIMPLE: Send email via SharePoint
+  // ✅ Send email via SharePoint
   async sendEmailViaSharePoint(emailData) {
     try {
       const requestDigest = await this.getFreshRequestDigest();
@@ -468,10 +522,11 @@ class EmailNotificationService {
       );
 
       if (response.ok) {
-        console.log('✅ Email sent successfully');
+        console.log('✅ Email sent successfully via SharePoint');
         return { success: true, message: 'Email sent' };
       } else {
-        console.error('❌ Email failed:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Email failed:', response.status, errorText);
         return { success: false, message: `Failed: ${response.status}` };
       }
       
@@ -529,6 +584,7 @@ class EmailNotificationService {
     try {
       return jsonString ? JSON.parse(jsonString) : defaultValue;
     } catch (error) {
+      console.warn('⚠️ JSON parse error:', error);
       return defaultValue;
     }
   }
