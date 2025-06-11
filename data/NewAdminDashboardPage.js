@@ -27,6 +27,11 @@ import { useNavigation } from '../contexts/NavigationContext';
 import EmailManagement from '../components/EmailManagement';
 import EmailNotificationService from '../services/EmailNotificationService';
 
+// --- FINAL FIX ---
+// Declare pnp from the global window object. This satisfies the build process
+// by creating a local constant, while still using the CDN-loaded library at runtime.
+const { pnp } = window;
+
 const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const { user, getUserInfo, siteUrl, authStatus, refreshUser } = useSharePoint();
   const { navigateTo } = useNavigation();
@@ -74,10 +79,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     setLoading(true);
     setError(null);
     try {
-      // --- FIX for CDN ---
-      // Use pnp.Web(siteUrl) to create a web object with the correct site URL,
-      // instead of the default window.pnp.sp.web which is relative to the page.
-const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
+      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
       const items = await sp.items.select('*,Approver/Title,Reviewer/Title').expand('Approver,Reviewer').get();
       setAllProcedures(items);
       processProcedures(items);
@@ -179,8 +181,7 @@ const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
   const handleAddProcedure = async () => {
     setLoading(true);
     try {
-      // --- FIX for CDN ---
-const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
+      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
       const itemAddResult = await sp.items.add({
         Title: newProcedure.Title,
         Description: newProcedure.Description,
@@ -207,8 +208,7 @@ const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
   const handleEditProcedure = async (procedure) => {
     setLoading(true);
     try {
-      // --- FIX for CDN ---
-const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
+      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
       await sp.items.getById(procedure.ID).update({
         Title: procedure.Title,
         Description: procedure.Description,
@@ -234,8 +234,7 @@ const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
     setLoading(true);
     setDeleteDialog({ open: false, procedure: null }); // Close dialog immediately
     try {
-      // --- FIX for CDN ---
-const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
+      const sp = pnp.Web(siteUrl).lists.getByTitle('Procedures');
       await sp.items.getById(procedure.ID).delete();
       setNotification({ type: 'success', message: `Procedure "${procedure.name}" deleted successfully!` });
       onDataRefresh(); // Refresh data in parent component
@@ -554,7 +553,7 @@ const sp = window.pnp.Web(siteUrl).lists.getByTitle('Procedures');
                   <Typography variant="body2" color="text.secondary">No procedures expiring soon.</Typography>
                 )}
               </Paper>
-            </Grid>
+            </ग्Grid>
 
             {/* Overdue Procedures */}
             <Grid item xs={12} md={6}>
