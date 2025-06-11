@@ -331,11 +331,17 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     }
   };
 
-  const filteredProcedures = allProcedures.filter(p =>
-    (p.Title && p.Title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (p.Category && p.Category.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (p.Status && p.Status.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // FINAL FIX: This function now safely handles null or undefined values from SharePoint.
+  const filteredProcedures = allProcedures.filter(p => {
+    const title = p.Title || '';
+    const category = p.Category || '';
+    const status = p.Status || '';
+    const term = searchTerm.toLowerCase();
+
+    return title.toLowerCase().includes(term) ||
+           category.toLowerCase().includes(term) ||
+           status.toLowerCase().includes(term);
+  });
 
   function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -586,7 +592,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                         <ListItemIcon>
                           {log.ActivityType === 'WARNING' && <Warning color="warning" />}
                           {log.ActivityType === 'CRITICAL' && <ErrorIcon color="error" />}
-                          {log.ActivityType.includes('ACCESS') && <Security color="info" />}
+                          {(log.ActivityType && log.ActivityType.includes('ACCESS')) && <Security color="info" />}
                         </ListItemIcon>
                         <ListItemText
                           primary={`${log.ActivityType} - ${log.RecipientEmail || log.PerformedBy}`}
@@ -671,22 +677,22 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
               {editProcedure && (
                 <Grid container spacing={2} sx={{ mt: 1 }}>
                   <Grid item xs={12}>
-                    <TextField fullWidth label="Title" value={editProcedure.Title} onChange={(e) => setEditProcedure({ ...editProcedure, Title: e.target.value })} />
+                    <TextField fullWidth label="Title" value={editProcedure.Title || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Title: e.target.value })} />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField fullWidth label="Description" multiline rows={4} value={editProcedure.Description} onChange={(e) => setEditProcedure({ ...editProcedure, Description: e.target.value })} />
+                    <TextField fullWidth label="Description" multiline rows={4} value={editProcedure.Description || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Description: e.target.value })} />
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField fullWidth label="Category" value={editProcedure.Category} onChange={(e) => setEditProcedure({ ...editProcedure, Category: e.target.value })} />
+                    <TextField fullWidth label="Category" value={editProcedure.Category || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Category: e.target.value })} />
                   </Grid>
                   <Grid item xs={6}>
-                    <TextField fullWidth label="Tags (comma-separated)" value={editProcedure.Tags} onChange={(e) => setEditProcedure({ ...editProcedure, Tags: e.target.value })} />
+                    <TextField fullWidth label="Tags (comma-separated)" value={editProcedure.Tags || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Tags: e.target.value })} />
                   </Grid>
                   <Grid item xs={6}>
-                     <TextField fullWidth label="Primary Owner" value={editProcedure.PrimaryOwner} onChange={(e) => setEditProcedure({ ...editProcedure, PrimaryOwner: e.target.value })} />
+                     <TextField fullWidth label="Primary Owner" value={editProcedure.PrimaryOwner || ''} onChange={(e) => setEditProcedure({ ...editProcedure, PrimaryOwner: e.target.value })} />
                   </Grid>
                   <Grid item xs={6}>
-                     <TextField fullWidth label="Secondary Owner" value={editProcedure.SecondaryOwner} onChange={(e) => setEditProcedure({ ...editProcedure, SecondaryOwner: e.target.value })} />
+                     <TextField fullWidth label="Secondary Owner" value={editProcedure.SecondaryOwner || ''} onChange={(e) => setEditProcedure({ ...editProcedure, SecondaryOwner: e.target.value })} />
                   </Grid>
                   <Grid item xs={6}>
                     <TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure.ExpiryDate ? new Date(editProcedure.ExpiryDate).toISOString().split('T')[0] : ''} onChange={(e) => setEditProcedure({ ...editProcedure, ExpiryDate: e.target.value })} />
@@ -694,7 +700,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                   <Grid item xs={6}>
                     <FormControl fullWidth>
                       <InputLabel>Status</InputLabel>
-                      <Select value={editProcedure.Status} label="Status" onChange={(e) => setEditProcedure({ ...editProcedure, Status: e.target.value })} >
+                      <Select value={editProcedure.Status || ''} label="Status" onChange={(e) => setEditProcedure({ ...editProcedure, Status: e.target.value })} >
                         <MenuItem value="Draft">Draft</MenuItem>
                         <MenuItem value="Pending Review">Pending Review</MenuItem>
                         <MenuItem value="Active">Active</MenuItem>
