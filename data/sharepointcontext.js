@@ -17,7 +17,7 @@ export const useSharePoint = () => {
 // Define the base URL explicitly (ADDED TRAILING SLASH)
 const SHAREPOINT_BASE_URL = 'https://teams.global.hsbc/sites/EmployeeEng/';
 
-// Helper function to initialize and get the PnPjs instance (PnPjs v2) - FIXED
+// Helper function to initialize and get the PnPjs instance (PnPjs v2) - FIXED URL ISSUE
 const getPnPjs = () => {
   // Ensure PnPjs v2 global 'pnp' object and its 'sp' property are available
   if (typeof window.pnp === 'undefined' || typeof window.pnp.sp === 'undefined') {
@@ -28,19 +28,13 @@ const getPnPjs = () => {
 
   const sp = window.pnp.sp;
 
-  // Set up the base URL only once for the sp instance
-  if (!sp.__pnpjs_setup_done__) { // Using a custom flag to prevent re-running setup
-    sp.setup({
-      baseUrl: SHAREPOINT_BASE_URL
-    });
-    sp.__pnpjs_setup_done__ = true; // Mark as setup
-    console.log(`✅ PnPjs v2 base URL set to: ${SHAREPOINT_BASE_URL}`);
-  }
-
-  // ✅ FIXED: Removed the problematic diagnostic line that was causing the error
-  // The sp.to["_options"] structure doesn't exist in PnPjs v2
-  console.log('✅ PnPjs v2 configured and ready');
-  console.log('🔧 Target SharePoint site:', SHAREPOINT_BASE_URL);
+  // FORCE the correct base URL every time (don't rely on setup flags)
+  sp.setup({
+    baseUrl: SHAREPOINT_BASE_URL.replace(/\/$/, '') // Remove trailing slash to avoid double slashes
+  });
+  
+  console.log(`✅ PnPjs v2 base URL FORCED to: ${SHAREPOINT_BASE_URL.replace(/\/$/, '')}`);
+  console.log('🔧 Expected API calls should go to:', `${SHAREPOINT_BASE_URL.replace(/\/$/, '')}/_api/`);
 
   return sp;
 };
