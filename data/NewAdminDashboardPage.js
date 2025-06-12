@@ -202,7 +202,84 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   };
   
   const handleUpdateUserRole = async () => {
-    // ...
+    if (!selectedUser || !selectedRole) {
+      setNotification({ type: 'error', message: 'Please select a user and a role.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log(`Updating role for ${selectedUser.name} to ${selectedRole}`);
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, role: selectedRole } : u));
+      if (emailService && typeof emailService.triggerUserRoleChangeNotification === 'function') {
+        await emailService.triggerUserRoleChangeNotification(selectedUser.name, selectedUser.email, selectedRole, getUserInfo().displayName);
+      }
+      setNotification({ type: 'success', message: `Role updated for ${selectedUser.name} to ${selectedRole}.` });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      setNotification({ type: 'error', message: 'Failed to update user role.' });
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+      setSelectedRole('');
+    }
+  };
+
+  const handleGrantAccess = async () => {
+    if (!selectedUser) {
+      setNotification({ type: 'error', message: 'Please select a user to grant access.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log(`Granting access to ${selectedUser.name}`);
+      if (emailService && typeof emailService.triggerUserAccessNotification === 'function') {
+        await emailService.triggerUserAccessNotification(selectedUser.name, selectedUser.email, getUserInfo().displayName);
+      }
+      setNotification({ type: 'success', message: `Access granted for ${selectedUser.name}. Notification sent.` });
+    } catch (error) {
+      console.error('Error granting access:', error);
+      setNotification({ type: 'error', message: 'Failed to grant access.' });
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+    }
+  };
+
+  const handleRevokeAccess = async () => {
+    if (!selectedUser) {
+      setNotification({ type: 'error', message: 'Please select a user to revoke access.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log(`Revoking access from ${selectedUser.name}`);
+      if (emailService && typeof emailService.triggerUserAccessRevokedNotification === 'function') {
+        await emailService.triggerUserAccessRevokedNotification(selectedUser.name, selectedUser.email, getUserInfo().displayName);
+      }
+      setNotification({ type: 'success', message: `Access revoked for ${selectedUser.name}. Notification sent.` });
+    } catch (error) {
+      console.error('Error revoking access:', error);
+      setNotification({ type: 'error', message: 'Failed to revoke access.' });
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+    }
+  };
+
+  // FIX: Function restored
+  const handleToggleEmailMonitoring = async () => {
+    if (emailService) {
+      if (isEmailMonitoringRunning) {
+        await emailService.stopEmailMonitoring();
+        setNotification({ type: 'info', message: 'Email monitoring stopped.' });
+      } else {
+        await emailService.startEmailMonitoring();
+        setNotification({ type: 'success', message: 'Email monitoring started. Checks every 24 hours.' });
+      }
+      setIsEmailMonitoringRunning(emailService.isRunning);
+    } else {
+      setNotification({ type: 'error', message: 'Email service not initialized.' });
+    }
   };
   
   const handleNavigateWithDisclaimer = (url) => {
@@ -417,7 +494,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
             <Box mb={3}><Grid container spacing={2} alignItems="center">
               <Grid item xs={12} sm={6} md={4}><Autocomplete fullWidth options={users} getOptionLabel={(option) => option.name || ""} renderInput={(params) => <TextField {...params} label="Select User" />} onChange={(event, newValue) => setSelectedUser(newValue)} value={selectedUser} /></Grid>
               <Grid item xs={12} sm={6} md={3}><FormControl fullWidth><InputLabel>Assign Role</InputLabel><Select value={selectedRole} label="Assign Role" onChange={(e) => setSelectedRole(e.target.value)} disabled={!selectedUser}>{userRoles.map(role => (<MenuItem key={role} value={role}>{role}</MenuItem>))}</Select></FormControl></Grid>
-              <Grid item xs={12} sm={6} md={5}><Button variant="contained" color="primary" startIcon={<Save />} onClick={handleUpdateUserRole} disabled={loading || !selectedUser || !selectedRole} sx={{ mr: 1 }}>Update Role</Button><Button variant="contained" color="success" startIcon={<PersonAdd />} sx={{ mr: 1 }}>Grant Access</Button><Button variant="contained" color="error" startIcon={<Delete />}>Revoke Access</Button></Grid>
+              <Grid item xs={12} sm={6} md={5}><Button variant="contained" color="primary" startIcon={<Save />} onClick={handleUpdateUserRole} disabled={loading || !selectedUser || !selectedRole} sx={{ mr: 1 }}>Update Role</Button><Button variant="contained" color="success" startIcon={<PersonAdd />} onClick={handleGrantAccess} sx={{ mr: 1 }}>Grant Access</Button><Button variant="contained" color="error" startIcon={<Delete />} onClick={handleRevokeAccess}>Revoke Access</Button></Grid>
             </Grid></Box>
             <TableContainer><Table><TableHead><TableRow><TableCell>User</TableCell><TableCell>Email</TableCell><TableCell>Role</TableCell><TableCell>Actions</TableCell></TableRow></TableHead><TableBody>{users.map(user => (
               <TableRow key={user.id}><TableCell><Box display="flex" alignItems="center"><Avatar sx={{ mr: 1 }}>{user.name.charAt(0)}</Avatar>{user.name}</Box></TableCell><TableCell>{user.email}</TableCell><TableCell><Chip label={user.role} color={user.role === 'Admin' ? 'primary' : 'default'} size="small" /></TableCell><TableCell><IconButton size="small" onClick={() => setSelectedUser(user)}><Edit /></IconButton></TableCell></TableRow>
