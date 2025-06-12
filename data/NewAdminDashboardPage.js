@@ -29,6 +29,8 @@ import EmailNotificationService from '../services/EmailNotificationService';
 
 const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const { user, getUserInfo, siteUrl, authStatus, refreshUser } = useSharePoint();
+  // Although navigateTo is broken in the context, we'll keep the hook in case it's fixed later,
+  // but we will override its usage with a direct window.open call.
   const { navigateTo } = useNavigation();
   const theme = useTheme();
 
@@ -524,7 +526,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                         secondaryAction={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip label={new Date(p.Created).toLocaleDateString()} size="small" />
-                            <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                            {/* FIX: Replaced broken navigateTo with a direct link to the item's display form */}
+                            <IconButton size="small" onClick={() => window.open(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`, '_blank')}>
                               <OpenInNew />
                             </IconButton>
                           </Box>
@@ -559,7 +562,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                           primary={p.Title}
                           secondary={`Status: ${p.Status}`}
                         />
-                        <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                        <IconButton size="small" onClick={() => window.open(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`, '_blank')}>
                           <OpenInNew />
                         </IconButton>
                       </ListItem>
@@ -587,7 +590,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                           primary={p.Title}
                           secondary={`Status: ${p.Status}`}
                         />
-                        <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                        <IconButton size="small" onClick={() => window.open(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`, '_blank')}>
                           <OpenInNew />
                         </IconButton>
                       </ListItem>
@@ -693,7 +696,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                       <IconButton color="error" size="small" onClick={() => setDeleteDialog({ open: true, procedure: { id: p.ID, name: p.Title } })}>
                         <Delete />
                       </IconButton>
-                      <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                      {/* FIX: Replaced broken navigateTo with a direct link to the item's display form */}
+                      <IconButton size="small" onClick={() => window.open(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`, '_blank')}>
                         <Visibility />
                       </IconButton>
                     </TableCell>
