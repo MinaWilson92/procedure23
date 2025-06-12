@@ -19,7 +19,8 @@ import {
   Settings, BarChart, PieChart, Timeline, AdminPanelSettings,
   Security, Refresh, Add, Edit, Delete, Visibility, Send,
   Group, People, Save, Cancel, Search, Clear, PersonAdd,
-  BugReport, VpnKey, Policy, LockOpen, HowToReg
+  BugReport, VpnKey, Policy, LockOpen, HowToReg,
+  Info // Restored missing Info icon import
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useSharePoint } from '../SharePointContext';
@@ -113,7 +114,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const loadAuditLog = async () => {
     try {
         const sp = window.pnp.sp.web.lists.getByTitle('AuditLog');
-        const items = await sp.items.select('Title,LogTimestamp,UserID,ActionType,LOB,ProcedureName,Status,ID').orderBy("LogTimestamp", false).get();
+        const items = await sp.items.select('Title,LogTimestamp,UserID,ActionType,LOB,ProcedureName,Status,ID,Details').orderBy("LogTimestamp", false).get();
         setAuditLog(items);
     } catch (err) {
         console.error("Error loading Audit Log:", err);
@@ -211,7 +212,6 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     const logEntry = {
         Title: actionType,
         LogTimestamp: new Date().toISOString(),
-        // FIX: Corrected column name from TargetUserID to TargetUserId
         TargetUserId: targetUser.Title,
         TargetUserName: targetUser.DisplayName,
         PerformedBy: performedById,
@@ -401,28 +401,28 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Upload sx={{ mr: 1 }} />Recent Uploads</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {recentUploads.length > 0 ? <List>{recentUploads.map(p => (<ListItem key={p.ID} secondaryAction={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Chip label={new Date(p.Created).toLocaleDateString()} size="small" /><IconButton size="small" onClick={() => handleNavigateWithDisclaimer(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`)}><OpenInNew /></IconButton></Box>}><ListItemText primary={p.Title} secondary={`LOB: ${p.LOB || 'N/A'}`} /></ListItem>))}</List> : <Typography>No recent uploads.</Typography>}
+                {recentUploads.length > 0 ? <List>{recentUploads.map(p => (<ListItem key={p.ID} secondaryAction={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Chip label={new Date(p.Created).toLocaleDateString()} size="small" /><IconButton size="small" onClick={() => handleNavigateWithDisclaimer(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`)}><OpenInNew /></IconButton></Box>}><ListItemText primary={p.Title} secondary={`LOB: ${p.LOB || 'N/A'}`} /></ListItem>))}</List> : <Typography variant="body2" color="text.secondary">No recent uploads.</Typography>}
               </Paper>
             </Grid>
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Schedule sx={{ mr: 1 }} />Expiring Soon</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {expiringSoon.length > 0 ? <List>{expiringSoon.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expires: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="warning" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography>No procedures expiring soon.</Typography>}
+                {expiringSoon.length > 0 ? <List>{expiringSoon.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expires: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="warning" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography variant="body2" color="text.secondary">No procedures expiring soon.</Typography>}
               </Paper>
             </Grid>
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><ErrorIcon sx={{ mr: 1 }} color="error" />Overdue Procedures</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {overdue.length > 0 ? <List>{overdue.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expired: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="error" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography>No overdue procedures.</Typography>}
+                {overdue.length > 0 ? <List>{overdue.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expired: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="error" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography variant="body2" color="text.secondary">No overdue procedures.</Typography>}
               </Paper>
             </Grid>
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Notifications sx={{ mr: 1 }} />Recent Notifications</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {notificationLog.length > 0 ? <List>{notificationLog.map((log, index) => (<ListItem key={log.ID || index} secondaryAction={<Chip label={new Date(log.Created).toLocaleDateString()} size="small" />}><ListItemIcon>{log.ActivityType === 'WARNING' ? <Warning color="warning" /> : <Info color="info" />}</ListItemIcon><ListItemText primary={log.Title} secondary={`Procedure: ${log.ProcedureName}`} /></ListItem>))}</List> : <Typography>No recent notifications.</Typography>}
+                {notificationLog.length > 0 ? <List>{notificationLog.map((log, index) => (<ListItem key={log.ID || index} secondaryAction={<Chip label={new Date(log.Created).toLocaleDateString()} size="small" />}><ListItemIcon>{log.ActivityType === 'WARNING' ? <Warning color="warning" /> : <Info color="info" />}</ListItemIcon><ListItemText primary={log.NotificationType || 'Notification'} secondary={`Procedure: ${log.ProcedureName}`} /></ListItem>))}</List> : <Typography variant="body2" color="text.secondary">No recent notifications.</Typography>}
               </Paper>
             </Grid>
           </Grid>
@@ -463,7 +463,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
             <Typography variant="h5" sx={{ my: 3 }}>Procedure Change History</Typography>
             <TableContainer component={Paper} elevation={0}>
                 <Table><TableHead><TableRow>
-                    <TableCell>Timestamp</TableCell><TableCell>Action</TableCell><TableCell>Procedure Name</TableCell><TableCell>User</TableCell><TableCell>Details</TableCell>
+                    <TableCell>Timestamp</TableCell><TableCell>Action</TableCell><TableCell>Procedure Name</TableCell><TableCell>User</TableCell><TableCell>LOB</TableCell><TableCell>Status</TableCell>
                 </TableRow></TableHead>
                 <TableBody>{auditLog.map((log) => (
                     <TableRow key={log.ID}>
@@ -471,7 +471,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                         <TableCell><Chip label={log.ActionType} color={log.ActionType.includes('Deleted') ? 'error' : 'warning'} size="small"/></TableCell>
                         <TableCell>{log.ProcedureName}</TableCell>
                         <TableCell>{log.UserID}</TableCell>
-                        <TableCell>{log.Details}</TableCell>
+                        <TableCell>{log.LOB}</TableCell>
+                        <TableCell><Chip label={log.Status} color={log.Status === 'Success' ? 'success' : 'error'} size="small" /></TableCell>
                     </TableRow>
                 ))}</TableBody>
                 </Table>
@@ -597,8 +598,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
         <DialogActions><Button onClick={() => setEditProcedure(null)}>Cancel</Button><Button onClick={handleEditProcedure} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
       </Dialog>
       
-      <Dialog open={disclaimerDialog.open} onClose={() => setDisclaimerDialog({ open: false, url: '' })}>{/* ... Disclaimer Dialog ... */}</Dialog>
-      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, procedure: null })}>{/* ... Delete Dialog ... */}</Dialog>
+      <Dialog open={disclaimerDialog.open} onClose={() => setDisclaimerDialog({ open: false, url: '' })}><DialogTitle><VpnKey color="primary" sx={{ mr: 1 }} />Backend Access</DialogTitle><DialogContent><Typography>You are about to navigate to the SharePoint backend. Changes made there are not audited by this panel.</Typography></DialogContent><DialogActions><Button onClick={() => setDisclaimerDialog({open:false})}>Cancel</Button><Button onClick={proceedToBackend}>Proceed</Button></DialogActions></Dialog>
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, procedure: null })}><DialogTitle><Warning color="error" sx={{ mr: 1 }} />Confirm Delete</DialogTitle><DialogContent><Typography>Are you sure you want to delete <strong>"{deleteDialog.procedure?.name}"</strong>?</Typography></DialogContent><DialogActions><Button onClick={()=>setDeleteDialog({open:false})}>Cancel</Button><Button color="error" variant="contained" onClick={() => handleDeleteProcedure(deleteDialog.procedure)}>Delete</Button></DialogActions></Dialog>
       <Snackbar open={!!notification} autoHideDuration={6000} onClose={() => setNotification(null)}><Alert onClose={() => setNotification(null)} severity={notification?.type} sx={{ width: '100%' }}>{notification?.message}</Alert></Snackbar>
     </Container>
   );
