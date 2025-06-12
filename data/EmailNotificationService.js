@@ -464,7 +464,7 @@ class EmailNotificationService {
         notificationsSent: details.notificationsSent !== undefined ? details.notificationsSent : 0,
         validProceduresFound: details.validProceduresFound !== undefined ? details.validProceduresFound : 0,
         timestamp: details.timestamp || new Date().toISOString(),
-        systemVersion: 'EmailNotificationService v5.1', // Updated version for this fix
+        systemVersion: 'EmailNotificationService v5.2', // Updated version for this fix
         ...details // Spread other details but safe defaults come first
       };
 
@@ -623,6 +623,34 @@ class EmailNotificationService {
     if (!email || typeof email !== 'string') return false;
     return email.includes('@') && email.includes('.');
   }
+  
+  // Generic email body template
+  generateNotificationEmailBody(title, details) {
+    let detailsHtml = '';
+    for (const [key, value] of Object.entries(details)) {
+        if (value) {
+            const formattedKey = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+            detailsHtml += `<p><strong>${formattedKey}:</strong> ${value}</p>`;
+        }
+    }
+
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #d40000; padding: 20px; color: white;">
+          <h1>HSBC Procedures Hub</h1>
+          <p>Automated Notification</p>
+        </div>
+        <div style="padding: 20px;">
+          <h2>${title}</h2>
+          <div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #d40000;">
+            ${detailsHtml}
+          </div>
+          <p>This is an automated notification. Please check the Admin Dashboard for more details.</p>
+        </div>
+      </div>
+    `;
+  }
+
 
   generateSimpleEmailBody(procedure, daysLeft) {
     return `
@@ -645,7 +673,7 @@ class EmailNotificationService {
       </div>
     `;
   }
-
+  
   // Start/stop methods
   async startEmailMonitoring() {
     if (this.isRunning) {
@@ -684,11 +712,78 @@ class EmailNotificationService {
     console.log('⏹️ Email monitoring stopped');
   }
 
-  // Stub methods for compatibility
-  async triggerUserAccessNotification() { return { success: true }; }
-  async triggerUserRoleChangeNotification() { return { success: true }; }
-  async triggerUserAccessRevokedNotification() { return { success: true }; }
-  async triggerProcedureUploadNotification() { return { success: true }; }
+  // ============== NEWLY IMPLEMENTED METHODS ==============
+  /**
+   * Triggers a notification for a change in a user's access or role.
+   * @param {string} recipientEmail - The email address of the user affected.
+   * @param {object} logEntry - The audit log entry detailing the change.
+   */
+  async triggerUserChangeNotification(recipientEmail, logEntry) {
+    try {
+        console.log("🚀 Triggering User Change Notification for:", logEntry.TargetUserName);
+        const subject = `[HSBC] Access Update: Your Role/Status has Changed`;
+        const title = `User Access Notification`;
+        const details = {
+            Action: (logEntry.Title || 'Update').replace(/_/g, ' '),
+            'Target User': logEntry.TargetUserName,
+            'Performed By': logEntry.PerformedByName,
+            'Change Details': logEntry.Reason,
+            Timestamp: new Date(logEntry.LogTimestamp).toLocaleString()
+        };
+        const body = this.generateNotificationEmailBody(title, details);
+        
+        const result = await this.sendEmailViaSharePoint({ to: [recipientEmail], subject, body });
+
+        if (result.success) {
+            console.log("✅ User change notification sent successfully.");
+            await this.logEmailActivity('USER_CHANGE_NOTIFICATION', 'System', { ...details, recipient: recipientEmail });
+        }
+        return result;
+
+    } catch (error) {
+        console.error("❌ Failed to trigger user change notification:", error);
+        return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Triggers a notification for a procedure being edited or deleted.
+   * @param {string[]} recipients - An array of email addresses to notify.
+   * @param {object} logEntry - The audit log entry detailing the change.
+   */
+  async triggerChangeNotification(recipients, logEntry) {
+    try {
+        console.log("🚀 Triggering Procedure Change Notification for:", logEntry.ProcedureName);
+        if (!recipients || recipients.length === 0) {
+            console.warn("⚠️ No recipients for procedure change notification. Skipping.");
+            return { success: false, message: "No recipients provided" };
+        }
+
+        const subject = `[HSBC] Procedure Update: ${logEntry.ActionType} - ${logEntry.ProcedureName}`;
+        const title = `Procedure Change Notification`;
+        const details = {
+            Action: logEntry.ActionType,
+            Procedure: logEntry.ProcedureName,
+            'Line of Business (LOB)': logEntry.LOB,
+            'Performed By': logEntry.UserID,
+            'Change Summary': logEntry.Details,
+            Timestamp: new Date(logEntry.LogTimestamp).toLocaleString()
+        };
+        const body = this.generateNotificationEmailBody(title, details);
+
+        const result = await this.sendEmailViaSharePoint({ to: recipients, subject, body });
+
+        if (result.success) {
+            console.log("✅ Procedure change notification sent successfully.");
+            await this.logEmailActivity('PROCEDURE_CHANGE_NOTIFICATION', 'System', { ...details, recipients: recipients });
+        }
+        return result;
+
+    } catch (error) {
+        console.error("❌ Failed to trigger procedure change notification:", error);
+        return { success: false, message: error.message };
+    }
+  }
 }
 
 export default EmailNotificationService;
