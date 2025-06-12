@@ -113,7 +113,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const loadAuditLog = async () => {
     try {
         const sp = window.pnp.sp.web.lists.getByTitle('AuditLog');
-        const items = await sp.items.select('*').orderBy("LogTimestamp", false).get();
+        const items = await sp.items.select('Title,LogTimestamp,UserID,ActionType,LOB,ProcedureName,Status,ID').orderBy("LogTimestamp", false).get();
         setAuditLog(items);
     } catch (err) {
         console.error("Error loading Audit Log:", err);
@@ -145,16 +145,15 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   
   const processProcedures = (proceduresData) => {
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const recent = [], expiring = [], overdueList = [];
     let activeCount = 0, pendingCount = 0, expiredCount = 0;
 
     proceduresData.forEach(p => {
         const created = new Date(p.Created);
         const expiry = p.ExpiryDate ? new Date(p.ExpiryDate) : null;
-        if (created >= new Date().setDate(new Date().getDate() - 7)) recent.push(p);
-        if (expiry && expiry > today && Math.ceil(Math.abs(expiry - today) / 86400000) <= 30) expiring.push(p);
-        if (expiry && expiry <= today) { overdueList.push(p); expiredCount++; }
+        if (created >= new Date(new Date().setDate(new Date().getDate() - 7))) recent.push(p);
+        if (expiry && expiry > now && Math.ceil(Math.abs(expiry - now) / 86400000) <= 30) expiring.push(p);
+        if (expiry && expiry <= now) { overdueList.push(p); expiredCount++; }
         if (p.Status === 'Active') activeCount++;
         else if (p.Status === 'Draft' || p.Status === 'Pending Review') pendingCount++;
     });
@@ -206,13 +205,14 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
 
   const logUserAction = async ({ actionType, targetUser, oldValue = '', newValue = '' }) => {
     const performedBy = user.displayName;
-    const performedById = user.Title; // Assuming user context has UserID as Title
+    const performedById = user.Title; 
     const details = `Action: ${actionType}, Target: ${targetUser.DisplayName} (${targetUser.Title}), Performed By: ${performedBy} (${performedById})`;
     const reason = `${actionType.replace(/_/g, ' ')} for ${targetUser.DisplayName} by ${performedBy}`;
     const logEntry = {
         Title: actionType,
         LogTimestamp: new Date().toISOString(),
-        TargetUserID: targetUser.Title,
+        // FIX: Corrected column name from TargetUserID to TargetUserId
+        TargetUserId: targetUser.Title,
         TargetUserName: targetUser.DisplayName,
         PerformedBy: performedById,
         PerformedByName: performedBy,
@@ -392,7 +392,40 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
         </Box>
 
         <TabPanel value={activeTab} index={0}>
-            {/* Overview Content */}
+            <Grid container spacing={3}>
+            <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><FolderOpen color="primary" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.total}</Typography></Box><Typography color="text.secondary">Total Procedures</Typography></CardContent></Card></Grid>
+            <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><CheckCircle color="success" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.active}</Typography></Box><Typography color="text.secondary">Active Procedures</Typography></CardContent></Card></Grid>
+            <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><TrendingUp color="info" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.pendingReview}</Typography></Box><Typography color="text.secondary">Pending Review</Typography></CardContent></Card></Grid>
+            <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><TrendingDown color="error" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.expired}</Typography></Box><Typography color="text.secondary">Expired Procedures</Typography></CardContent></Card></Grid>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Upload sx={{ mr: 1 }} />Recent Uploads</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {recentUploads.length > 0 ? <List>{recentUploads.map(p => (<ListItem key={p.ID} secondaryAction={<Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Chip label={new Date(p.Created).toLocaleDateString()} size="small" /><IconButton size="small" onClick={() => handleNavigateWithDisclaimer(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`)}><OpenInNew /></IconButton></Box>}><ListItemText primary={p.Title} secondary={`LOB: ${p.LOB || 'N/A'}`} /></ListItem>))}</List> : <Typography>No recent uploads.</Typography>}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Schedule sx={{ mr: 1 }} />Expiring Soon</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {expiringSoon.length > 0 ? <List>{expiringSoon.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expires: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="warning" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography>No procedures expiring soon.</Typography>}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom display="flex" alignItems="center"><ErrorIcon sx={{ mr: 1 }} color="error" />Overdue Procedures</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {overdue.length > 0 ? <List>{overdue.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expired: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="error" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography>No overdue procedures.</Typography>}
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Notifications sx={{ mr: 1 }} />Recent Notifications</Typography>
+                <Divider sx={{ mb: 2 }} />
+                {notificationLog.length > 0 ? <List>{notificationLog.map((log, index) => (<ListItem key={log.ID || index} secondaryAction={<Chip label={new Date(log.Created).toLocaleDateString()} size="small" />}><ListItemIcon>{log.ActivityType === 'WARNING' ? <Warning color="warning" /> : <Info color="info" />}</ListItemIcon><ListItemText primary={log.Title} secondary={`Procedure: ${log.ProcedureName}`} /></ListItem>))}</List> : <Typography>No recent notifications.</Typography>}
+              </Paper>
+            </Grid>
+          </Grid>
         </TabPanel>
 
         <TabPanel value={activeTab} index={1}>
@@ -494,7 +527,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                         <TableRow key={log.ID}>
                             <TableCell>{new Date(log.LogTimestamp).toLocaleString()}</TableCell>
                             <TableCell><Chip label={log.Title} color={log.Title.includes('REVOKED') ? 'error' : log.Title.includes('GRANTED') ? 'success' : 'info'} size="small"/></TableCell>
-                            <TableCell>{log.TargetUserName} ({log.TargetUserID})</TableCell>
+                            <TableCell>{log.TargetUserName} ({log.TargetUserId})</TableCell>
                             <TableCell>{log.PerformedByName}</TableCell>
                             <TableCell><b>From:</b> {log.OldValue || 'N/A'} <br/> <b>To:</b> {log.NewValue || 'N/A'}</TableCell>
                             <TableCell>{log.Reason}</TableCell>
@@ -507,7 +540,13 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
 
         <TabPanel value={activeTab} index={4}><EmailManagement emailService={emailService} /></TabPanel>
         <TabPanel value={activeTab} index={5}>
-            {/* Settings Content */}
+            <Typography variant="h5" gutterBottom>Settings</Typography>
+            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <FormControlLabel control={<Switch checked={isEmailMonitoringRunning} onChange={handleToggleEmailMonitoring} />} label="Enable Automated Email Notifications" />
+                <Divider sx={{my: 2}} />
+                <Typography variant="h6">App Info</Typography>
+                <Typography>Site URL: {siteUrl}</Typography>
+            </Paper>
         </TabPanel>
       </motion.div>
       
@@ -537,7 +576,27 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
         </Grid></DialogContent>
         <DialogActions><Button onClick={() => setEditUser(null)}>Cancel</Button><Button onClick={handleUpdateUser} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
       </Dialog>
-
+      
+      <Dialog open={!!editProcedure} onClose={() => setEditProcedure(null)} fullWidth maxWidth="md">
+        <DialogTitle>Edit Procedure</DialogTitle>
+        <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
+            <Grid item xs={12}><TextField disabled fullWidth label="Title" value={editProcedure?.Title || ''} /></Grid>
+            <Grid item xs={12}><TextField disabled fullWidth multiline rows={2} label="Description" value={editProcedure?.Description || ''} /></Grid>
+            <Grid item xs={12}><Divider sx={{ my: 1 }}><Chip label="Editable Fields" /></Divider></Grid>
+            <Grid item xs={6}><TextField fullWidth label="Primary Owner Name" value={editProcedure?.PrimaryOwner || ''} onChange={e => setEditProcedure({...editProcedure, PrimaryOwner: e.target.value})} /></Grid>
+            <Grid item xs={6}><TextField fullWidth label="Primary Owner Email" value={editProcedure?.PrimaryOwnerEmail || ''} onChange={e => setEditProcedure({...editProcedure, PrimaryOwnerEmail: e.target.value})} /></Grid>
+            <Grid item xs={6}><TextField fullWidth label="Secondary Owner Name" value={editProcedure?.SecondaryOwner || ''} onChange={e => setEditProcedure({...editProcedure, SecondaryOwner: e.target.value})} /></Grid>
+            <Grid item xs={6}><TextField fullWidth label="Secondary Owner Email" value={editProcedure?.SecondaryOwnerEmail || ''} onChange={e => setEditProcedure({...editProcedure, SecondaryOwnerEmail: e.target.value})} /></Grid>
+            <Grid item xs={6}><TextField fullWidth label="Sign-Off Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure?.SignOffDate ? new Date(editProcedure.SignOffDate).toISOString().split('T')[0] : ''} onChange={e => setEditProcedure({...editProcedure, SignOffDate: e.target.value})} /></Grid>
+            <Grid item xs={6}><TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure?.ExpiryDate ? new Date(editProcedure.ExpiryDate).toISOString().split('T')[0] : ''} onChange={e => setEditProcedure({...editProcedure, ExpiryDate: e.target.value})} /></Grid>
+            <Grid item xs={12}><FormControl fullWidth><InputLabel>Status</InputLabel><Select value={editProcedure?.Status || ''} label="Status" onChange={e => setEditProcedure({...editProcedure, Status: e.target.value})}>
+                <MenuItem value="Draft">Draft</MenuItem><MenuItem value="Pending Review">Pending Review</MenuItem>
+                <MenuItem value="Active">Active</MenuItem><MenuItem value="Archived">Archived</MenuItem>
+            </Select></FormControl></Grid>
+        </Grid></DialogContent>
+        <DialogActions><Button onClick={() => setEditProcedure(null)}>Cancel</Button><Button onClick={handleEditProcedure} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
+      </Dialog>
+      
       <Dialog open={disclaimerDialog.open} onClose={() => setDisclaimerDialog({ open: false, url: '' })}>{/* ... Disclaimer Dialog ... */}</Dialog>
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, procedure: null })}>{/* ... Delete Dialog ... */}</Dialog>
       <Snackbar open={!!notification} autoHideDuration={6000} onClose={() => setNotification(null)}><Alert onClose={() => setNotification(null)} severity={notification?.type} sx={{ width: '100%' }}>{notification?.message}</Alert></Snackbar>
