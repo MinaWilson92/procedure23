@@ -270,7 +270,85 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     }
   };
   
-  // ... other handler functions ...
+  const handleUpdateUserRole = async () => {
+    if (!selectedUser || !selectedRole) {
+      setNotification({ type: 'error', message: 'Please select a user and a role.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log(`Updating role for ${selectedUser.name} to ${selectedRole}`);
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, role: selectedRole } : u));
+      if (emailService && typeof emailService.triggerUserRoleChangeNotification === 'function') {
+        await emailService.triggerUserRoleChangeNotification(selectedUser.name, selectedUser.email, selectedRole, getUserInfo().displayName);
+      }
+      setNotification({ type: 'success', message: `Role updated for ${selectedUser.name} to ${selectedRole}.` });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      setNotification({ type: 'error', message: 'Failed to update user role.' });
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+      setSelectedRole('');
+    }
+  };
+
+  const handleGrantAccess = async () => {
+    if (!selectedUser) {
+      setNotification({ type: 'error', message: 'Please select a user to grant access.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log(`Granting access to ${selectedUser.name}`);
+      if (emailService && typeof emailService.triggerUserAccessNotification === 'function') {
+        await emailService.triggerUserAccessNotification(selectedUser.name, selectedUser.email, getUserInfo().displayName);
+      }
+      setNotification({ type: 'success', message: `Access granted for ${selectedUser.name}. Notification sent.` });
+    } catch (error) {
+      console.error('Error granting access:', error);
+      setNotification({ type: 'error', message: 'Failed to grant access.' });
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+    }
+  };
+
+  const handleRevokeAccess = async () => {
+    if (!selectedUser) {
+      setNotification({ type: 'error', message: 'Please select a user to revoke access.' });
+      return;
+    }
+    setLoading(true);
+    try {
+      console.log(`Revoking access from ${selectedUser.name}`);
+      if (emailService && typeof emailService.triggerUserAccessRevokedNotification === 'function') {
+        await emailService.triggerUserAccessRevokedNotification(selectedUser.name, selectedUser.email, getUserInfo().displayName);
+      }
+      setNotification({ type: 'success', message: `Access revoked for ${selectedUser.name}. Notification sent.` });
+    } catch (error) {
+      console.error('Error revoking access:', error);
+      setNotification({ type: 'error', message: 'Failed to revoke access.' });
+    } finally {
+      setLoading(false);
+      setSelectedUser(null);
+    }
+  };
+
+  const handleToggleEmailMonitoring = async () => {
+    if (emailService) {
+      if (isEmailMonitoringRunning) {
+        await emailService.stopEmailMonitoring();
+        setNotification({ type: 'info', message: 'Email monitoring stopped.' });
+      } else {
+        await emailService.startEmailMonitoring();
+        setNotification({ type: 'success', message: 'Email monitoring started. Checks every 24 hours.' });
+      }
+      setIsEmailMonitoringRunning(emailService.isRunning);
+    } else {
+      setNotification({ type: 'error', message: 'Email service not initialized.' });
+    }
+  };
 
   const filteredProcedures = allProcedures.filter(p => {
     const title = p.Title || '';
@@ -310,6 +388,16 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
       <Container maxWidth="xl" sx={{ mt: 4 }}>
         <LinearProgress sx={{ mb: 2 }} />
         <Typography variant="h6" color="text.secondary" align="center">Loading Admin Dashboard...</Typography>
+        <Grid container spacing={3} sx={{ mt: 4 }}>
+          {Array.from(new Array(4)).map((_, index) => (
+            <Grid item xs={12} sm={6} md={3} key={index}>
+              <Skeleton variant="rectangular" height={150} sx={{ borderRadius: 2 }} />
+            </Grid>
+          ))}
+          <Grid item xs={12}>
+            <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 2 }} />
+          </Grid>
+        </Grid>
       </Container>
     );
   }
@@ -334,6 +422,11 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
         <Alert severity="warning">
           <Typography variant="h6" gutterBottom>Access Denied</Typography>
           <Typography>You must be logged in as an administrator to access this page.</Typography>
+          {!authStatus.authenticated && (
+            <Button variant="contained" sx={{ mt: 2 }} onClick={refreshUser}>
+              Log In
+            </Button>
+          )}
         </Alert>
       </Container>
     );
@@ -365,9 +458,59 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
 
         <TabPanel value={activeTab} index={0}>
           <Grid container spacing={3}>
-            {/* Stats Cards ... */}
-            
-            {/* Recent Uploads */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card component={motion.div} whileHover={{ scale: 1.02 }} elevation={2}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <FolderOpen color="primary" sx={{ fontSize: 40, mr: 1 }} />
+                    <Typography variant="h5" component="div">
+                      {procedureStats.total}
+                    </Typography>
+                  </Box>
+                  <Typography variant="subtitle1" color="text.secondary">Total Procedures</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card component={motion.div} whileHover={{ scale: 1.02 }} elevation={2}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <CheckCircle color="success" sx={{ fontSize: 40, mr: 1 }} />
+                    <Typography variant="h5" component="div">
+                      {procedureStats.active}
+                    </Typography>
+                  </Box>
+                  <Typography variant="subtitle1" color="text.secondary">Active Procedures</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card component={motion.div} whileHover={{ scale: 1.02 }} elevation={2}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TrendingUp color="info" sx={{ fontSize: 40, mr: 1 }} />
+                    <Typography variant="h5" component="div">
+                      {procedureStats.pendingReview}
+                    </Typography>
+                  </Box>
+                  <Typography variant="subtitle1" color="text.secondary">Pending Review</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card component={motion.div} whileHover={{ scale: 1.02 }} elevation={2}>
+                <CardContent>
+                  <Box display="flex" alignItems="center" mb={1}>
+                    <TrendingDown color="error" sx={{ fontSize: 40, mr: 1 }} />
+                    <Typography variant="h5" component="div">
+                      {procedureStats.expired}
+                    </Typography>
+                  </Box>
+                  <Typography variant="subtitle1" color="text.secondary">Expired Procedures</Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center">
@@ -400,9 +543,62 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
               </Paper>
             </Grid>
 
-            {/* Other cards: Expiring Soon, Overdue Procedures ... */}
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+                  <Schedule sx={{ mr: 1 }} /> Expiring Soon
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                {expiringSoon.length > 0 ? (
+                  <List>
+                    {expiringSoon.map(p => (
+                      <ListItem key={p.ID} secondaryAction={
+                        <Chip label={`Expires: ${p.ExpiryDate ? new Date(p.ExpiryDate).toLocaleDateString() : 'N/A'}`} color="warning" size="small" />
+                      }>
+                        <ListItemText
+                          primary={p.Title}
+                          secondary={`Status: ${p.Status}`}
+                        />
+                        <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                          <OpenInNew />
+                        </IconButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">No procedures expiring soon.</Typography>
+                )}
+              </Paper>
+            </Grid>
 
-            {/* Recent Notifications */}
+            <Grid item xs={12} md={6}>
+              <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+                <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+                  <ErrorIcon sx={{ mr: 1 }} color="error" /> Overdue Procedures
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+                {overdue.length > 0 ? (
+                  <List>
+                    {overdue.map(p => (
+                      <ListItem key={p.ID} secondaryAction={
+                        <Chip label={`Expired: ${p.ExpiryDate ? new Date(p.ExpiryDate).toLocaleDateString() : 'N/A'}`} color="error" size="small" />
+                      }>
+                        <ListItemText
+                          primary={p.Title}
+                          secondary={`Status: ${p.Status}`}
+                        />
+                        <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                          <OpenInNew />
+                        </IconButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">No overdue procedures.</Typography>
+                )}
+              </Paper>
+            </Grid>
+
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center">
@@ -415,7 +611,6 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                       <ListItem key={log.ID || index} 
                         secondaryAction={
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {/* FIX: Display notification status */}
                             <Chip 
                               label={log.Status || 'Unknown'} 
                               size="small"
@@ -432,7 +627,6 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                             {log.NotificationType === 'Procedure Deleted' && <Delete color="error" />}
                         </ListItemIcon>
                         <ListItemText
-                          // FIX: Changed to display NotificationType and ProcedureName
                           primary={log.NotificationType || 'Notification'}
                           secondary={log.ProcedureName ? `Procedure: ${log.ProcedureName}` : 'Details not available'}
                         />
@@ -447,9 +641,337 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
           </Grid>
         </TabPanel>
 
-        {/* Other Tab Panels ... */}
-        
+        <TabPanel value={activeTab} index={1}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h5">All Procedures</Typography>
+            <TextField
+              label="Search Procedures"
+              variant="outlined"
+              size="small"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                endAdornment: searchTerm && (
+                  <IconButton onClick={() => setSearchTerm('')} size="small">
+                    <Clear />
+                  </IconButton>
+                ),
+                startAdornment: <Search sx={{ mr: 1 }} />
+              }}
+            />
+          </Box>
+          <TableContainer component={Paper} elevation={0}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Title</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Primary Owner</TableCell>
+                  <TableCell>Secondary Owner</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredProcedures.map((p) => (
+                  <TableRow key={p.ID}>
+                    <TableCell>{p.Title}</TableCell>
+                    <TableCell>{p.Category}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={p.Status}
+                        color={p.Status === 'Active' ? 'success' : p.Status === 'Draft' ? 'default' : 'warning'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>{p.PrimaryOwner || 'N/A'}</TableCell>
+                    <TableCell>{p.SecondaryOwner || 'N/A'}</TableCell>
+                    <TableCell>
+                      <IconButton color="primary" size="small" onClick={() => setEditProcedure(p)}>
+                        <Edit />
+                      </IconButton>
+                      <IconButton color="error" size="small" onClick={() => setDeleteDialog({ open: true, procedure: { id: p.ID, name: p.Title } })}>
+                        <Delete />
+                      </IconButton>
+                      <IconButton size="small" onClick={() => navigateTo(`/procedures/${p.ID}`)}>
+                        <Visibility />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          <Dialog open={!!editProcedure} onClose={() => setEditProcedure(null)} fullWidth maxWidth="md">
+            <DialogTitle>Edit Procedure</DialogTitle>
+            <DialogContent>
+              {editProcedure && (
+                <Grid container spacing={2} sx={{ mt: 1 }}>
+                  <Grid item xs={12}>
+                    <TextField fullWidth label="Title" value={editProcedure.Title || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Title: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField fullWidth label="Description" multiline rows={4} value={editProcedure.Description || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Description: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField fullWidth label="Category" value={editProcedure.Category || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Category: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField fullWidth label="Tags (comma-separated)" value={editProcedure.Tags || ''} onChange={(e) => setEditProcedure({ ...editProcedure, Tags: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={6}>
+                     <TextField fullWidth label="Primary Owner" value={editProcedure.PrimaryOwner || ''} onChange={(e) => setEditProcedure({ ...editProcedure, PrimaryOwner: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={6}>
+                     <TextField fullWidth label="Secondary Owner" value={editProcedure.SecondaryOwner || ''} onChange={(e) => setEditProcedure({ ...editProcedure, SecondaryOwner: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure.ExpiryDate ? new Date(editProcedure.ExpiryDate).toISOString().split('T')[0] : ''} onChange={(e) => setEditProcedure({ ...editProcedure, ExpiryDate: e.target.value })} />
+                  </Grid>
+                  <Grid item xs={6}>
+                    <FormControl fullWidth>
+                      <InputLabel>Status</InputLabel>
+                      <Select value={editProcedure.Status || ''} label="Status" onChange={(e) => setEditProcedure({ ...editProcedure, Status: e.target.value })} >
+                        <MenuItem value="Draft">Draft</MenuItem>
+                        <MenuItem value="Pending Review">Pending Review</MenuItem>
+                        <MenuItem value="Active">Active</MenuItem>
+                        <MenuItem value="Archived">Archived</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setEditProcedure(null)}>Cancel</Button>
+              <Button onClick={() => handleEditProcedure(editProcedure)} variant="contained" color="primary" disabled={loading}>
+                {loading ? <CircularProgress size={24} /> : 'Save Changes'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Typography variant="h5" gutterBottom>Add New Procedure</Typography>
+          <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Title" value={newProcedure.Title} onChange={(e) => setNewProcedure({ ...newProcedure, Title: e.target.value })} />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField fullWidth label="Description" multiline rows={4} value={newProcedure.Description} onChange={(e) => setNewProcedure({ ...newProcedure, Description: e.target.value })} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Category" value={newProcedure.Category} onChange={(e) => setNewProcedure({ ...newProcedure, Category: e.target.value })} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Tags (comma-separated)" value={newProcedure.Tags} onChange={(e) => setNewProcedure({ ...newProcedure, Tags: e.target.value })} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Primary Owner" value={newProcedure.PrimaryOwner} onChange={(e) => setNewProcedure({ ...newProcedure, PrimaryOwner: e.target.value })} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Secondary Owner" value={newProcedure.SecondaryOwner} onChange={(e) => setNewProcedure({ ...newProcedure, SecondaryOwner: e.target.value })} />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} value={newProcedure.ExpiryDate || ''} onChange={(e) => setNewProcedure({ ...newProcedure, ExpiryDate: e.target.value })} />
+              </Grid>
+              <Grid item xs={6}>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select value={newProcedure.Status} label="Status" onChange={(e) => setNewProcedure({ ...newProcedure, Status: e.target.value })} >
+                    <MenuItem value="Draft">Draft</MenuItem>
+                    <MenuItem value="Pending Review">Pending Review</MenuItem>
+                    <MenuItem value="Active">Active</MenuItem>
+                    <MenuItem value="Archived">Archived</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12}>
+                <Button variant="contained" color="primary" startIcon={loading ? <CircularProgress size={20} /> : <Add />} onClick={handleAddProcedure} disabled={loading || !newProcedure.Title} >
+                  {loading ? 'Adding...' : 'Add Procedure'}
+                </Button>
+              </Grid>
+            </Grid>
+          </Paper>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={3}>
+          <Typography variant="h5" gutterBottom>User Management</Typography>
+          <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+            <Box mb={3}>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={12} sm={6} md={4}>
+                  <Autocomplete
+                    fullWidth
+                    options={users}
+                    getOptionLabel={(option) => option.name || ""}
+                    renderInput={(params) => <TextField {...params} label="Select User" />}
+                    onChange={(event, newValue) => setSelectedUser(newValue)}
+                    value={selectedUser}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <FormControl fullWidth>
+                    <InputLabel>Assign Role</InputLabel>
+                    <Select
+                      value={selectedRole}
+                      label="Assign Role"
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                      disabled={!selectedUser}
+                    >
+                      {userRoles.map(role => (
+                        <MenuItem key={role} value={role}>{role}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+                <Grid item xs={12} sm={6} md={5}>
+                  <Button variant="contained" color="primary" startIcon={<Save />} onClick={handleUpdateUserRole} disabled={loading || !selectedUser || !selectedRole} sx={{ mr: 1 }} >
+                    Update Role
+                  </Button>
+                  <Button variant="contained" color="success" startIcon={<PersonAdd />} onClick={handleGrantAccess} disabled={loading || !selectedUser} sx={{ mr: 1 }} >
+                    Grant Access
+                  </Button>
+                  <Button variant="contained" color="error" startIcon={<Delete />} onClick={handleRevokeAccess} disabled={loading || !selectedUser} >
+                    Revoke Access
+                  </Button>
+                </Grid>
+              </Grid>
+            </Box>
+
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>User</TableCell>
+                    <TableCell>Email</TableCell>
+                    <TableCell>Role</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {users.map(user => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <Box display="flex" alignItems="center">
+                          <Avatar sx={{ mr: 1 }}>{user.name.charAt(0)}</Avatar>
+                          {user.name}
+                        </Box>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Chip label={user.role} color={user.role === 'Admin' ? 'primary' : user.role === 'Reviewer' ? 'info' : 'default'} size="small" />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton size="small" onClick={() => setSelectedUser(user)}>
+                          <Edit />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={4}>
+          <EmailManagement emailService={emailService} />
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={5}>
+          <Typography variant="h5" gutterBottom>Settings</Typography>
+          <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isEmailMonitoringRunning}
+                  onChange={handleToggleEmailMonitoring}
+                  name="emailMonitoring"
+                  color="primary"
+                />
+              }
+              label="Enable Email Monitoring for Procedures"
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ ml: 4 }}>
+              Automatically sends email notifications for expiring procedures.
+            </Typography>
+            <Divider sx={{ my: 3 }} />
+            <Typography variant="h6" gutterBottom>Application Information</Typography>
+            <Typography variant="body2">
+              **Environment:** {authStatus.environment}
+            </Typography>
+            <Typography variant="body2">
+              **SharePoint Site URL:** {siteUrl || 'N/A'}
+            </Typography>
+            <Typography variant="body2">
+              **Current User:** {user?.displayName} ({user?.email}) - Role: {user?.role}
+            </Typography>
+            <Typography variant="body2">
+              **Auth Source:** {authStatus.source || 'N/A'}
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 2 }}>
+              If you encounter issues, please check the browser console for errors or contact support.
+            </Typography>
+          </Paper>
+        </TabPanel>
       </motion.div>
+
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog({ open: false, procedure: null })}
+        aria-labelledby="delete-dialog-title"
+      >
+        <DialogTitle id="delete-dialog-title">
+          <Box display="flex" alignItems="center">
+            <Warning color="error" sx={{ mr: 1 }} /> Confirm Delete
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" gutterBottom>
+            Are you sure you want to delete this procedure?
+          </Typography>
+          {deleteDialog.procedure && (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>"{deleteDialog.procedure.name}"</strong> will be permanently deleted from SharePoint.
+                This action cannot be undone.
+              </Typography>
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, procedure: null })}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => handleDeleteProcedure(deleteDialog.procedure)}
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={16} /> : <Delete />}
+          >
+            {loading ? 'Deleting...' : 'Delete Procedure'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={!!notification}
+        autoHideDuration={6000}
+        onClose={() => setNotification(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setNotification(null)}
+          severity={notification?.type}
+          sx={{ width: '100%' }}
+        >
+          {notification?.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
