@@ -210,65 +210,72 @@ class EmailNotificationService {
   }
 
   // ✅ FIXED: Enhanced user access notification
-  async triggerUserChangeNotification(userEmail, logEntry) {
-    try {
-      console.log('📧 Triggering user access change notification...');
-      
-      const notificationType = this.mapActionToNotificationType(logEntry.Title);
-      
-      // Get fresh recipients
-      const recipients = await this.getRecipientsForNotification(
-        notificationType,
-        'All' // Access management applies to all LOBs
-      );
+async triggerUserChangeNotification(userEmail, logEntry) {
+  try {
+    console.log('📧 Triggering user access change notification...');
+    
+    const notificationType = this.mapActionToNotificationType(logEntry.Title);
+    console.log('📧 Mapped notification type:', notificationType);
+    
+    // Get fresh recipients
+    const recipients = await this.getRecipientsForNotification(
+      notificationType,
+      'All' // Access management applies to all LOBs
+    );
 
-      // Add the affected user's email if it's a grant or update
-      if (logEntry.Title === 'USER_ACCESS_GRANTED' || logEntry.Title === 'USER_ROLE_UPDATED') {
-        if (userEmail && !recipients.includes(userEmail)) {
-          recipients.push(userEmail);
-        }
+    // Add the affected user's email if it's a grant or update
+    if (logEntry.Title === 'USER_ACCESS_GRANTED' || logEntry.Title === 'USER_ROLE_UPDATED') {
+      if (userEmail && !recipients.includes(userEmail)) {
+        recipients.push(userEmail);
       }
-
-      // Prepare email variables
-      const emailVariables = {
-        userName: logEntry.TargetUserName || 'Unknown User',
-        userId: logEntry.TargetUserId || 'Unknown ID',
-        performedBy: logEntry.PerformedByName || 'System',
-        changeDetails: logEntry.Details || 'No details available',
-        timestamp: new Date(logEntry.LogTimestamp).toLocaleString(),
-        oldValue: logEntry.OldValue || 'N/A',
-        newValue: logEntry.NewValue || 'N/A',
-        reason: logEntry.Reason || 'Administrative action'
-      };
-
-      // Send notification
-      const result = await this.emailService.sendNotificationEmail(
-        notificationType,
-        recipients,
-        emailVariables
-      );
-
-      // Log the activity
-      await this.logEmailActivity({
-        activityType: `${logEntry.Title}_NOTIFICATION`,
-        recipients: recipients,
-        targetUser: logEntry.TargetUserId,
-        success: result.success,
-        details: { 
-          actionType: logEntry.Title,
-          targetUserName: emailVariables.userName,
-          performedBy: emailVariables.performedBy
-        }
-      });
-
-      console.log('✅ User access notification completed:', result.success);
-      return result;
-      
-    } catch (error) {
-      console.error('❌ Failed to send user access notification:', error);
-      return { success: false, message: error.message };
     }
+
+    // Prepare email variables
+    const emailVariables = {
+      userName: logEntry.TargetUserName || 'Unknown User',
+      userId: logEntry.TargetUserId || 'Unknown ID',
+      performedBy: logEntry.PerformedByName || 'System',
+      changeDetails: logEntry.Details || 'No details available',
+      timestamp: new Date(logEntry.LogTimestamp).toLocaleString(),
+      oldValue: logEntry.OldValue || 'N/A',
+      newValue: logEntry.NewValue || 'N/A',
+      reason: logEntry.Reason || 'Administrative action'
+    };
+
+    console.log('📧 Email variables prepared:', emailVariables);
+    console.log('📧 Using template type:', notificationType);
+
+    // ✅ FIXED: Send notification with correct template
+    const result = await this.emailService.sendNotificationEmail(
+      notificationType,
+      recipients,
+      emailVariables
+    );
+
+    console.log('📧 Email send result:', result);
+
+    // Log the activity
+    await this.logEmailActivity({
+      activityType: `${logEntry.Title}_NOTIFICATION`,
+      recipients: recipients,
+      targetUser: logEntry.TargetUserId,
+      success: result.success,
+      details: { 
+        actionType: logEntry.Title,
+        targetUserName: emailVariables.userName,
+        performedBy: emailVariables.performedBy,
+        notificationType: notificationType
+      }
+    });
+
+    console.log('✅ User access notification completed:', result.success);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Failed to send user access notification:', error);
+    return { success: false, message: error.message };
   }
+}
 
   // Trigger expiry warning notification
   async triggerExpiryWarningNotification(procedureData) {
