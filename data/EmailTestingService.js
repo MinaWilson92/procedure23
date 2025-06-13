@@ -577,76 +577,140 @@ class EmailTestingService {
  // ===================================================================
 
  // Quick test for single notification type
- async quickTestNotification(notificationType, currentUser) {
-   console.log(`🧪 Quick test for ${notificationType}...`);
-   
-   const testData = {
-     'new-procedure-uploaded': {
-       procedure: {
-         name: 'Quick Test Procedure',
-         lob: 'IWPB',
-         primary_owner: 'Quick Test Owner',
-         primary_owner_email: 'quicktest@hsbc.com'
-       },
-       analysisResult: { score: 75 },
-       procedureId: 'QUICK_TEST_001'
-     },
-     'user-access-granted': {
-       userEmail: 'quicktest.user@hsbc.com',
-       logEntry: {
-         Title: 'USER_ACCESS_GRANTED',
-         TargetUserName: 'Quick Test User',
-         TargetUserId: 'QUICK_TEST_USER',
-         PerformedByName: currentUser?.displayName || 'Quick Test',
-         Details: 'Quick test access grant',
-         LogTimestamp: new Date().toISOString(),
-         OldValue: 'No Access',
-         NewValue: 'User',
-         Reason: 'Quick testing'
-       }
-     }
-   };
-
-   try {
-     let result;
-     
-     if (notificationType === 'new-procedure-uploaded') {
-       result = await this.emailNotification.triggerProcedureUploadNotification(testData[notificationType]);
-     } else if (notificationType === 'user-access-granted') {
-       const data = testData[notificationType];
-       result = await this.emailNotification.triggerUserChangeNotification(data.userEmail, data.logEntry);
-     }
-     
-     console.log(`✅ Quick test ${notificationType} result:`, result);
-     return result;
-     
-   } catch (error) {
-     console.error(`❌ Quick test ${notificationType} failed:`, error);
-     return { success: false, message: error.message };
-   }
- }
-
- // Test email configuration only
- async quickTestConfiguration() {
-   console.log('🧪 Quick configuration test...');
-   
-   try {
-     const config = await this.emailNotification.refreshConfiguration();
-     const testEmail = await this.emailNotification.testEmailSystem();
-     
-     return {
-       configLoaded: !!config,
-       testEmailSent: testEmail.success,
-       adminCount: config?.adminList?.length || 0,
-       globalCCCount: config?.globalCCList?.length || 0,
-       testEmailAddress: config?.testEmail || 'Not set'
-     };
-     
-   } catch (error) {
-     console.error('❌ Quick configuration test failed:', error);
-     return { error: error.message };
-   }
- }
+async quickTestNotification(notificationType, currentUser) {
+  console.log(`🧪 Quick test for ${notificationType}...`);
+  
+  try {
+    let result;
+    
+    if (notificationType === 'new-procedure-uploaded') {
+      // Test procedure upload notification
+      result = await this.emailNotification.triggerProcedureUploadNotification({
+        procedure: {
+          name: 'Quick Test Procedure - Email System',
+          lob: 'IWPB',
+          primary_owner: 'Quick Test Owner',
+          primary_owner_email: 'quicktest.owner@hsbc.com',
+          score: 85
+        },
+        analysisResult: { 
+          score: 85,
+          details: {},
+          aiRecommendations: [
+            { message: 'Test recommendation 1' },
+            { message: 'Test recommendation 2' }
+          ]
+        },
+        procedureId: 'QUICK_TEST_PROCEDURE_001'
+      });
+      
+    } else if (notificationType === 'user-access-granted') {
+      // ✅ FIXED: Test user access granted notification
+      console.log('🧪 Testing user access granted notification...');
+      
+      result = await this.emailNotification.triggerUserChangeNotification(
+        'quicktest.user@hsbc.com', // Target user email
+        {
+          Title: 'USER_ACCESS_GRANTED',
+          TargetUserName: 'Quick Test User',
+          TargetUserId: 'QUICK_TEST_USER_001',
+          PerformedByName: currentUser?.displayName || 'Email Test Admin',
+          Details: 'Access granted to HSBC Procedures Hub for email system testing',
+          LogTimestamp: new Date().toISOString(),
+          OldValue: 'No Access',
+          NewValue: 'User',
+          Reason: 'Quick email system test'
+        }
+      );
+      
+    } else if (notificationType === 'user-access-revoked') {
+      // ✅ ADDED: Test user access revoked notification
+      console.log('🧪 Testing user access revoked notification...');
+      
+      result = await this.emailNotification.triggerUserChangeNotification(
+        'quicktest.user@hsbc.com',
+        {
+          Title: 'USER_ACCESS_REVOKED',
+          TargetUserName: 'Quick Test User',
+          TargetUserId: 'QUICK_TEST_USER_001',
+          PerformedByName: currentUser?.displayName || 'Email Test Admin',
+          Details: 'Access revoked from HSBC Procedures Hub for email system testing',
+          LogTimestamp: new Date().toISOString(),
+          OldValue: 'User',
+          NewValue: 'No Access',
+          Reason: 'Quick email system test'
+        }
+      );
+      
+    } else if (notificationType === 'user-role-updated') {
+      // ✅ ADDED: Test user role updated notification
+      console.log('🧪 Testing user role updated notification...');
+      
+      result = await this.emailNotification.triggerUserChangeNotification(
+        'quicktest.user@hsbc.com',
+        {
+          Title: 'USER_ROLE_UPDATED',
+          TargetUserName: 'Quick Test User',
+          TargetUserId: 'QUICK_TEST_USER_001',
+          PerformedByName: currentUser?.displayName || 'Email Test Admin',
+          Details: 'User role updated from User to Admin for email system testing',
+          LogTimestamp: new Date().toISOString(),
+          OldValue: 'User',
+          NewValue: 'Admin',
+          Reason: 'Quick email system test'
+        }
+      );
+      
+    } else if (notificationType === 'procedure-expiring') {
+      // ✅ ADDED: Test procedure expiring notification
+      console.log('🧪 Testing procedure expiring notification...');
+      
+      result = await this.emailNotification.triggerExpiryWarningNotification({
+        id: 'QUICK_TEST_EXPIRING_001',
+        name: 'Quick Test Expiring Procedure',
+        lob: 'CIB',
+        primary_owner: 'Quick Test Owner',
+        primary_owner_email: 'quicktest.owner@hsbc.com',
+        expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
+      });
+      
+    } else if (notificationType === 'procedure-expired') {
+      // ✅ ADDED: Test procedure expired notification
+      console.log('🧪 Testing procedure expired notification...');
+      
+      result = await this.emailNotification.triggerExpiredProcedureNotification({
+        id: 'QUICK_TEST_EXPIRED_001',
+        name: 'Quick Test Expired Procedure',
+        lob: 'GCOO',
+        primary_owner: 'Quick Test Owner',
+        primary_owner_email: 'quicktest.owner@hsbc.com',
+        expiry: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString() // 10 days ago
+      });
+      
+    } else {
+      // ✅ FALLBACK: For any other notification type
+      console.log(`🧪 Testing ${notificationType} - using procedure upload as fallback...`);
+      
+      result = await this.emailNotification.triggerProcedureUploadNotification({
+        procedure: {
+          name: `Quick Test - ${notificationType}`,
+          lob: 'IWPB',
+          primary_owner: 'Quick Test Owner',
+          primary_owner_email: 'quicktest.owner@hsbc.com'
+        },
+        analysisResult: { score: 75 },
+        procedureId: `QUICK_TEST_${notificationType.toUpperCase()}_001`
+      });
+    }
+    
+    console.log(`✅ Quick test ${notificationType} result:`, result);
+    return result;
+    
+  } catch (error) {
+    console.error(`❌ Quick test ${notificationType} failed:`, error);
+    return { success: false, message: error.message };
+  }
+}
 }
 
 export default EmailTestingService;
