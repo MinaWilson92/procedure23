@@ -1,14 +1,13 @@
-// components/email/TemplateManagement.js - Complete Template Management
+// components/email/TemplateManagement.js - FIXED CLEAN VERSION
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, Switch,
   FormControlLabel, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, Alert, Chip, Accordion, AccordionSummary,
-  AccordionDetails
+  TableHead, TableRow, Alert, Chip
 } from '@mui/material';
 import {
-  Add, Edit, Delete, Save, Cancel, ExpandMore, Email, Send
+  Add, Edit, Delete, Save, Cancel
 } from '@mui/icons-material';
 
 const TemplateManagement = ({ emailService }) => {
@@ -28,7 +27,7 @@ const TemplateManagement = ({ emailService }) => {
     isActive: true
   });
 
-  // Default template types needed
+  // Required template types
   const requiredTemplates = [
     { type: 'new-procedure-uploaded', name: 'New Procedure Uploaded', icon: '📤' },
     { type: 'procedure-expiring', name: 'Procedure Expiring Soon', icon: '⏰' },
@@ -36,9 +35,7 @@ const TemplateManagement = ({ emailService }) => {
     { type: 'user-access-granted', name: 'User Access Granted', icon: '✅' },
     { type: 'user-access-revoked', name: 'User Access Revoked', icon: '❌' },
     { type: 'user-role-updated', name: 'User Role Updated', icon: '🔄' },
-    { type: 'low-quality-score', name: 'Low Quality Score Alert', icon: '📊' },
-    { type: 'broadcast-admin', name: 'Broadcast to Admins', icon: '📢' },
-    { type: 'broadcast-all', name: 'Broadcast to All Users', icon: '📡' }
+    { type: 'low-quality-score', name: 'Low Quality Score Alert', icon: '📊' }
   ];
 
   useEffect(() => {
@@ -127,23 +124,23 @@ const TemplateManagement = ({ emailService }) => {
         name: 'User Access Granted',
         subject: 'HSBC Procedures Hub - Access Granted: {{userName}}',
         htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #4caf50, #388e3c); padding: 20px; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Access Granted Notification</p>
-          </div>
-          <div style="padding: 30px; background: #f1f8e9;">
-            <h2 style="color: #2e7d32; margin-top: 0;">✅ Access Granted</h2>
-            <p style="color: #666; line-height: 1.6;">Welcome to the HSBC Procedures Hub! Your access has been granted.</p>
-            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0;">
-              <h3 style="margin: 0 0 10px 0; color: #2e7d32;">Account Details</h3>
-              <p style="margin: 5px 0; color: #666;"><strong>User:</strong> {{userName}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>User ID:</strong> {{userId}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Granted By:</strong> {{performedBy}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Access Level:</strong> {{newValue}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> {{timestamp}}</p>
-            </div>
-          </div>
-        </div>`,
+  <div style="background: linear-gradient(135deg, #4caf50, #388e3c); padding: 20px; color: white;">
+    <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+    <p style="margin: 5px 0 0 0; opacity: 0.9;">Access Granted Notification</p>
+  </div>
+  <div style="padding: 30px; background: #f1f8e9;">
+    <h2 style="color: #2e7d32; margin-top: 0;">✅ Access Granted</h2>
+    <p style="color: #666; line-height: 1.6;">Welcome to the HSBC Procedures Hub! Your access has been granted.</p>
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #4caf50; margin: 20px 0;">
+      <h3 style="margin: 0 0 10px 0; color: #2e7d32;">Account Details</h3>
+      <p style="margin: 5px 0; color: #666;"><strong>User:</strong> {{userName}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>User ID:</strong> {{userId}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Granted By:</strong> {{performedBy}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Access Level:</strong> {{newValue}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> {{timestamp}}</p>
+    </div>
+  </div>
+</div>`,
         textContent: 'Access granted to {{userName}} for HSBC Procedures Hub',
         isActive: true
       },
@@ -153,22 +150,22 @@ const TemplateManagement = ({ emailService }) => {
         name: 'User Access Revoked',
         subject: 'HSBC Procedures Hub - Access Revoked: {{userName}}',
         htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #f44336, #d32f2f); padding: 20px; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Access Revoked Notification</p>
-          </div>
-          <div style="padding: 30px; background: #ffebee;">
-            <h2 style="color: #c62828; margin-top: 0;">❌ Access Revoked</h2>
-            <p style="color: #666; line-height: 1.6;">Your access to the HSBC Procedures Hub has been revoked.</p>
-            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336; margin: 20px 0;">
-              <h3 style="margin: 0 0 10px 0; color: #c62828;">Revocation Details</h3>
-              <p style="margin: 5px 0; color: #666;"><strong>User:</strong> {{userName}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Previous Access:</strong> {{oldValue}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Revoked By:</strong> {{performedBy}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> {{timestamp}}</p>
-            </div>
-          </div>
-        </div>`,
+  <div style="background: linear-gradient(135deg, #f44336, #d32f2f); padding: 20px; color: white;">
+    <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+    <p style="margin: 5px 0 0 0; opacity: 0.9;">Access Revoked Notification</p>
+  </div>
+  <div style="padding: 30px; background: #ffebee;">
+    <h2 style="color: #c62828; margin-top: 0;">❌ Access Revoked</h2>
+    <p style="color: #666; line-height: 1.6;">Your access to the HSBC Procedures Hub has been revoked.</p>
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #f44336; margin: 20px 0;">
+      <h3 style="margin: 0 0 10px 0; color: #c62828;">Revocation Details</h3>
+      <p style="margin: 5px 0; color: #666;"><strong>User:</strong> {{userName}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Previous Access:</strong> {{oldValue}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Revoked By:</strong> {{performedBy}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Date:</strong> {{timestamp}}</p>
+    </div>
+  </div>
+</div>`,
         textContent: 'Access revoked for {{userName}} from HSBC Procedures Hub',
         isActive: true
       },
@@ -178,22 +175,22 @@ const TemplateManagement = ({ emailService }) => {
         name: 'User Role Updated',
         subject: 'HSBC Procedures Hub - Role Updated: {{userName}}',
         htmlContent: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #ff9800, #f57c00); padding: 20px; color: white;">
-            <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9;">Role Update Notification</p>
-          </div>
-          <div style="padding: 30px; background: #fff3e0;">
-            <h2 style="color: #e65100; margin-top: 0;">🔄 Role Updated</h2>
-            <p style="color: #666; line-height: 1.6;">Your role in the HSBC Procedures Hub has been updated.</p>
-            <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800; margin: 20px 0;">
-              <h3 style="margin: 0 0 10px 0; color: #e65100;">Role Change Details</h3>
-              <p style="margin: 5px 0; color: #666;"><strong>User:</strong> {{userName}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Previous Role:</strong> {{oldValue}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>New Role:</strong> {{newValue}}</p>
-              <p style="margin: 5px 0; color: #666;"><strong>Updated By:</strong> {{performedBy}}</p>
-            </div>
-          </div>
-        </div>`,
+  <div style="background: linear-gradient(135deg, #ff9800, #f57c00); padding: 20px; color: white;">
+    <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+    <p style="margin: 5px 0 0 0; opacity: 0.9;">Role Update Notification</p>
+  </div>
+  <div style="padding: 30px; background: #fff3e0;">
+    <h2 style="color: #e65100; margin-top: 0;">🔄 Role Updated</h2>
+    <p style="color: #666; line-height: 1.6;">Your role in the HSBC Procedures Hub has been updated.</p>
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9800; margin: 20px 0;">
+      <h3 style="margin: 0 0 10px 0; color: #e65100;">Role Change Details</h3>
+      <p style="margin: 5px 0; color: #666;"><strong>User:</strong> {{userName}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Previous Role:</strong> {{oldValue}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>New Role:</strong> {{newValue}}</p>
+      <p style="margin: 5px 0; color: #666;"><strong>Updated By:</strong> {{performedBy}}</p>
+    </div>
+  </div>
+</div>`,
         textContent: 'Role updated for {{userName}} in HSBC Procedures Hub',
         isActive: true
       }
