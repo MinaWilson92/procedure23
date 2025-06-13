@@ -246,6 +246,22 @@ const EmailControlPanel = ({ user, emailService }) => {
            </Card>
          </Grid>
 
+                 <Grid item xs={12} sm={6} md={4}>
+  <Button
+    fullWidth
+    variant="outlined"
+    startIcon={<Info />}
+    onClick={async () => {
+      const templates = await emailService.checkAvailableTemplates();
+      console.log('📧 Your available templates:', templates);
+      alert('Check console for available email templates');
+    }}
+    disabled={loading}
+    color="info"
+  >
+    🔍 Check Templates
+  </Button>
+</Grid>
          <Grid item xs={12} md={3}>
            <Card sx={{ bgcolor: 'secondary.main', color: 'white' }}>
              <CardContent sx={{ textAlign: 'center' }}>
