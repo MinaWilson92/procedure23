@@ -213,9 +213,10 @@ class EmailNotificationService {
 async triggerUserChangeNotification(userEmail, logEntry) {
   try {
     console.log('📧 Triggering user access change notification...');
+    console.log('📧 Log entry data:', logEntry);
     
     const notificationType = this.mapActionToNotificationType(logEntry.Title);
-    console.log('📧 Mapped notification type:', notificationType);
+    console.log('📧 Notification type:', notificationType);
     
     // Get fresh recipients
     const recipients = await this.getRecipientsForNotification(
@@ -230,22 +231,29 @@ async triggerUserChangeNotification(userEmail, logEntry) {
       }
     }
 
-    // Prepare email variables
+    // ✅ FIXED: Ensure all variables are properly formatted and not undefined
     const emailVariables = {
-      userName: logEntry.TargetUserName || 'Unknown User',
+      userName: logEntry.TargetUserName || userEmail || 'Unknown User',
       userId: logEntry.TargetUserId || 'Unknown ID',
-      performedBy: logEntry.PerformedByName || 'System',
-      changeDetails: logEntry.Details || 'No details available',
-      timestamp: new Date(logEntry.LogTimestamp).toLocaleString(),
-      oldValue: logEntry.OldValue || 'N/A',
-      newValue: logEntry.NewValue || 'N/A',
+      performedBy: logEntry.PerformedByName || 'System Administrator',
+      changeDetails: logEntry.Details || 'Access management action performed',
+      timestamp: logEntry.LogTimestamp ? new Date(logEntry.LogTimestamp).toLocaleString() : new Date().toLocaleString(),
+      oldValue: logEntry.OldValue || 'Previous State',
+      newValue: logEntry.NewValue || 'New State',
       reason: logEntry.Reason || 'Administrative action'
     };
 
-    console.log('📧 Email variables prepared:', emailVariables);
-    console.log('📧 Using template type:', notificationType);
+    console.log('📧 Final email variables:', emailVariables);
 
-    // ✅ FIXED: Send notification with correct template
+    // ✅ VERIFY: Check that template exists and has the right variable names
+    const template = await this.emailService.getEmailTemplate(notificationType);
+    if (template) {
+      console.log('📧 Template subject:', template.subject);
+      const templateVariables = template.htmlContent.match(/\{\{[^}]+\}\}/g);
+      console.log('📧 Variables expected in template:', templateVariables);
+    }
+
+    // Send notification with correct template
     const result = await this.emailService.sendNotificationEmail(
       notificationType,
       recipients,
@@ -264,7 +272,8 @@ async triggerUserChangeNotification(userEmail, logEntry) {
         actionType: logEntry.Title,
         targetUserName: emailVariables.userName,
         performedBy: emailVariables.performedBy,
-        notificationType: notificationType
+        notificationType: notificationType,
+        variablesUsed: Object.keys(emailVariables)
       }
     });
 
