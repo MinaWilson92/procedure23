@@ -66,7 +66,39 @@ class EmailIntegrationService {
       return { success: false, message: error.message };
     }
   }
+async getAdminEmailsFromUserRoles() {
+  try {
+    console.log('👑 Loading admin emails from UserRoles list...');
+    
+    const response = await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'UserRoles\')/items?$filter=UserRole eq \'admin\' and Status eq \'active\'&$select=Id,Title,Email,DisplayName,UserRole',
+      {
+        headers: { 'Accept': 'application/json; odata=verbose' },
+        credentials: 'same-origin'
+      }
+    );
 
+    if (response.ok) {
+      const data = await response.json();
+      const adminEmails = data.d.results.map(user => {
+        if (user.Email && user.Email.trim()) {
+          return user.Email.trim();
+        } else if (user.Title) {
+          return `${user.Title}@hsbc.com`;
+        }
+        return null;
+      }).filter(Boolean);
+      
+      console.log('✅ Admin emails loaded from UserRoles:', adminEmails);
+      return adminEmails.length > 0 ? adminEmails : ['minaantoun@hsbc.com'];
+    }
+    
+    return ['minaantoun@hsbc.com'];
+  } catch (error) {
+    console.error('❌ Failed to load admin emails:', error);
+    return ['minaantoun@hsbc.com'];
+  }
+}
   // Hook for procedure updates
   async onProcedureUpdated(procedureData, updateDetails, currentUser) {
     try {
