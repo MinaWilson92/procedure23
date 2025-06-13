@@ -287,6 +287,7 @@ const EmailManagement = ({ emailService }) => {
           <Tab label="Custom Templates" icon={<MailOutline />} {...a11yProps(1)} />
           <Tab label="Expiring Procedures" icon={<Schedule />} {...a11yProps(2)} />
           <Tab label="Email Activity Log" icon={<Timeline />} {...a11yProps(3)} />
+          <Tab label="Control Panel" icon={<Settings />} {...a11yProps(4)} />
         </Tabs>
       </Paper>
 
@@ -297,7 +298,10 @@ const EmailManagement = ({ emailService }) => {
           <ReadOnlyEmailManagement user={user} />
         )}
       </TabPanel>
-      
+      // Add this TabPanel
+<TabPanel value={activeTab} index={4}>
+  <EmailControlPanel user={user} emailService={emailService} />
+</TabPanel>
       <TabPanel value={activeTab} index={1}>
         <CustomTemplates />
       </TabPanel>
