@@ -666,7 +666,36 @@ async saveEmailConfig(config) {
       };
     }
   }
+async checkAvailableTemplates() {
+  try {
+    console.log('🔍 Checking available email templates...');
+    
+    const response = await fetch(
+      `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items?$select=TemplateType,Title,IsActive`,
+      {
+        headers: { 'Accept': 'application/json; odata=verbose' },
+        credentials: 'same-origin'
+      }
+    );
 
+    if (response.ok) {
+      const data = await response.json();
+      const templates = data.d.results;
+      console.log('📧 Available email templates:', templates);
+      
+      const templateTypes = templates.map(t => t.TemplateType).filter(Boolean);
+      console.log('📧 Available template types:', templateTypes);
+      
+      return templateTypes;
+    } else {
+      console.log('⚠️ Could not load email templates');
+      return [];
+    }
+  } catch (error) {
+    console.error('❌ Error checking templates:', error);
+    return [];
+  }
+}
   async sendEmailViaSharePoint(emailData) {
     try {
       console.log('📧 Sending email via SharePoint API...');
