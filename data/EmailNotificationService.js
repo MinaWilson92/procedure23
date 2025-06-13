@@ -543,50 +543,55 @@ class EmailNotificationService {
   }
 
   // Log email activity for audit trail
-  async logEmailActivity(activity) {
-    try {
-      const logEntry = {
-        __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
-        Title: activity.activityType,
-        ActivityType: activity.activityType,
-        Recipients: JSON.stringify(activity.recipients || []),
-        Success: activity.success || false,
-        Details: JSON.stringify(activity.details || {}),
-        Timestamp: new Date().toISOString(),
-        PerformedBy: activity.performedBy || 'System',
-        ProcedureId: activity.procedureId || null,
-        TargetUser: activity.targetUser || null
-      };
+async logEmailActivity(activity) {
+  try {
+    console.log('📝 Logging email activity:', activity);
+    
+    // Get fresh request digest
+    const requestDigest = await this.emailService.getFreshRequestDigest();
+    
+    // ✅ FIXED: Remove Recipients column, use only existing columns from your list
+    const logEntry = {
+      __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
+      Title: activity.activityType,
+      ActivityType: activity.activityType,
+      PerformedBy: activity.performedBy || 'System',
+      ActivityDetails: JSON.stringify({
+        ...activity.details,
+        recipients: activity.recipients || [] // Store recipients in details instead
+      }),
+      ActivityTimestamp: activity.timestamp || new Date().toISOString(),
+      Status: activity.success ? 'completed' : 'failed',
+      ProcedureName: activity.details?.procedureName || '',
+      ProcedureID: activity.procedureId || '',
+      NotificationType: activity.activityType
+    };
 
-      // Get fresh request digest
-      const requestDigest = await this.emailService.getFreshRequestDigest();
-
-      // Save to EmailActivityLog list
-      const response = await fetch(
-        'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailActivityLog\')/items',
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose',
-            'X-RequestDigest': requestDigest
-          },
-          credentials: 'include',
-          body: JSON.stringify(logEntry)
-        }
-      );
-
-      if (response.ok) {
-        console.log('✅ Email activity logged successfully');
-      } else {
-        const errorText = await response.text();
-        console.error('❌ Failed to log email activity:', response.status, errorText);
+    const response = await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailActivityLog\')/items',
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(logEntry)
       }
-      
-    } catch (error) {
-      console.error('❌ Failed to log email activity:', error);
+    );
+
+    if (response.ok) {
+      console.log('✅ Email activity logged successfully');
+    } else {
+      const errorText = await response.text();
+      console.error('❌ Failed to log email activity:', response.status, errorText);
     }
+    
+  } catch (error) {
+    console.error('❌ Error logging email activity:', error);
   }
+}
 
   // ===================================================================
   // MONITORING AND STATUS
