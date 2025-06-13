@@ -1,21 +1,19 @@
-// components/email/BroadcastEmail.js - Broadcast Email System
+// components/email/BroadcastEmail.js - FIXED CLEAN VERSION
 import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, Grid, TextField,
   FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel,
-  Alert, Chip, List, ListItem, ListItemText, Divider
+  Alert, List, ListItem, ListItemText
 } from '@mui/material';
 import {
-  Send, Group, Email, Refresh, Preview
+  Send, Refresh, Preview
 } from '@mui/icons-material';
 
 const BroadcastEmail = ({ emailService }) => {
   const [recipients, setRecipients] = useState({
     admins: false,
-    lobHeads: false,
     primaryOwners: false,
-    secondaryOwners: false,
-    custom: false
+    secondaryOwners: false
   });
   
   const [emailContent, setEmailContent] = useState({
@@ -115,18 +113,9 @@ const BroadcastEmail = ({ emailService }) => {
       if (result.success) {
         setMessage({ type: 'success', text: `Broadcast email sent to ${emailAddresses.length} recipients!` });
         
-        // Log broadcast activity
-        await logBroadcastActivity(emailAddresses.length);
-        
         // Reset form
         setEmailContent({ subject: '', message: '', priority: 'normal' });
-        setRecipients({
-          admins: false,
-          lobHeads: false,
-          primaryOwners: false,
-          secondaryOwners: false,
-          custom: false
-        });
+        setRecipients({ admins: false, primaryOwners: false, secondaryOwners: false });
         setRecipientList([]);
       } else {
         setMessage({ type: 'error', text: 'Failed to send broadcast email: ' + result.message });
@@ -135,75 +124,36 @@ const BroadcastEmail = ({ emailService }) => {
     } catch (error) {
       console.error('❌ Broadcast email failed:', error);
       setMessage({ type: 'error', text: 'Broadcast email failed: ' + error.message });
-   } finally {
-     setLoading(false);
-   }
- };
+    } finally {
+      setLoading(false);
+    }
+  };
 
- const generateBroadcastEmailHTML = (content) => {
-   return `
-     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-       <div style="background: linear-gradient(135deg, #d40000, #b30000); padding: 20px; color: white;">
-         <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
-         <p style="margin: 5px 0 0 0; opacity: 0.9;">Broadcast Message</p>
-       </div>
-       <div style="padding: 30px; background: #f9f9f9;">
-         <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #d40000; margin: 20px 0;">
-           <h2 style="margin: 0 0 15px 0; color: #d40000;">${content.subject}</h2>
-           <div style="color: #666; line-height: 1.6;">
-             ${content.message.replace(/\n/g, '<br>')}
-           </div>
-         </div>
-         <div style="text-align: center; margin-top: 30px; padding: 15px; background: #f0f0f0; border-radius: 4px;">
-           <p style="margin: 0; color: #666; font-size: 14px;">
-             This is a broadcast message from the HSBC Procedures Hub administration.
-           </p>
-           <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">
+  const generateBroadcastEmailHTML = (content) => {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #d40000, #b30000); padding: 20px; color: white;">
+          <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">Broadcast Message</p>
+        </div>
+        <div style="padding: 30px; background: #f9f9f9;">
+          <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #d40000; margin: 20px 0;">
+            <h2 style="margin: 0 0 15px 0; color: #d40000;">${content.subject}</h2>
+            <div style="color: #666; line-height: 1.6;">
+              ${content.message.replace(/\n/g, '<br>')}
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 30px; padding: 15px; background: #f0f0f0; border-radius: 4px;">
+            <p style="margin: 0; color: #666; font-size: 14px;">
+              This is a broadcast message from the HSBC Procedures Hub administration.
+            </p>
+            <p style="margin: 5px 0 0 0; color: #666; font-size: 12px;">
              Sent: ${new Date().toLocaleString()}
            </p>
          </div>
        </div>
      </div>
    `;
- };
-
- const logBroadcastActivity = async (recipientCount) => {
-   try {
-     const requestDigest = await emailService.getFreshRequestDigest();
-     
-     const logEntry = {
-       __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
-       Title: 'BROADCAST_EMAIL_SENT',
-       ActivityType: 'BROADCAST_EMAIL_SENT',
-       PerformedBy: 'Admin',
-       ActivityDetails: JSON.stringify({
-         subject: emailContent.subject,
-         recipientCount: recipientCount,
-         recipientTypes: Object.keys(recipients).filter(key => recipients[key]),
-         priority: emailContent.priority
-       }),
-       ActivityTimestamp: new Date().toISOString(),
-       Status: 'completed',
-       NotificationType: 'BROADCAST'
-     };
-
-     await fetch(
-       'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailActivityLog\')/items',
-       {
-         method: 'POST',
-         headers: {
-           'Accept': 'application/json; odata=verbose',
-           'Content-Type': 'application/json; odata=verbose',
-           'X-RequestDigest': requestDigest
-         },
-         credentials: 'same-origin',
-         body: JSON.stringify(logEntry)
-       }
-     );
-     
-   } catch (error) {
-     console.error('❌ Failed to log broadcast activity:', error);
-   }
  };
 
  useEffect(() => {
@@ -243,16 +193,6 @@ const BroadcastEmail = ({ emailService }) => {
                  />
                }
                label="🔑 System Admins"
-             />
-             
-             <FormControlLabel
-               control={
-                 <Checkbox
-                   checked={recipients.lobHeads}
-                   onChange={(e) => setRecipients({...recipients, lobHeads: e.target.checked})}
-                 />
-               }
-               label="🏢 LOB Heads"
              />
              
              <FormControlLabel
