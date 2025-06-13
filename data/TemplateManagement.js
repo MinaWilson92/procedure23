@@ -42,19 +42,51 @@ const TemplateManagement = ({ emailService }) => {
     loadTemplates();
   }, []);
 
-  const loadTemplates = async () => {
-    try {
-      setLoading(true);
-      const templates = await emailService.getEmailTemplates();
-      setTemplates(templates);
-      console.log('✅ Templates loaded:', templates);
-    } catch (error) {
-      console.error('❌ Failed to load templates:', error);
-      setMessage({ type: 'error', text: 'Failed to load templates: ' + error.message });
-    } finally {
-      setLoading(false);
+  
+const loadTemplates = async () => {
+  try {
+    setLoading(true);
+    setMessage(null);
+    
+    console.log('📧 Loading email templates...');
+    
+    // ✅ FIXED: Try different method paths
+    let templates;
+    
+    if (emailService.emailService && typeof emailService.emailService.getEmailTemplates === 'function') {
+      // If emailService is nested (EmailNotificationService -> EmailService)
+      templates = await emailService.emailService.getEmailTemplates();
+    } else if (typeof emailService.getEmailTemplates === 'function') {
+      // If emailService is direct
+      templates = await emailService.getEmailTemplates();
+    } else {
+      // ✅ FALLBACK: Load templates directly from SharePoint
+      console.log('⚠️ getEmailTemplates method not found, loading directly from SharePoint');
+      templates = await loadTemplatesDirectly();
     }
-  };
+    
+    setTemplates(templates);
+    console.log('✅ Templates loaded:', templates);
+    
+  } catch (error) {
+    console.error('❌ Failed to load templates:', error);
+    setMessage({ type: 'error', text: 'Failed to load templates: ' + error.message });
+    
+    // ✅ FALLBACK: Try loading directly from SharePoint
+    try {
+      console.log('🔄 Trying fallback template loading...');
+      const fallbackTemplates = await loadTemplatesDirectly();
+      setTemplates(fallbackTemplates);
+      setMessage({ type: 'warning', text: 'Templates loaded using fallback method' });
+    } catch (fallbackError) {
+      console.error('❌ Fallback template loading failed:', fallbackError);
+      setMessage({ type: 'error', text: 'Cannot load templates from SharePoint' });
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleEditTemplate = (template) => {
     setTemplateForm({
