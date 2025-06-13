@@ -86,7 +86,41 @@ const loadTemplates = async () => {
     setLoading(false);
   }
 };
+const loadTemplatesDirectly = async () => {
+  try {
+    console.log('📧 Loading templates directly from SharePoint...');
+    
+    const response = await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailTemplates\')/items?$select=*&$orderby=TemplateType',
+      {
+        headers: { 'Accept': 'application/json; odata=verbose' },
+        credentials: 'same-origin'
+      }
+    );
 
+    if (!response.ok) {
+      throw new Error(`SharePoint request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('✅ Raw SharePoint template data:', data.d.results);
+    
+    return data.d.results.map(item => ({
+      id: item.Id,
+      type: item.TemplateType,
+      name: item.Title,
+      subject: item.Subject || '',
+      htmlContent: item.HTMLContent || '',
+      textContent: item.TextContent || '',
+      isActive: item.IsActive !== false,
+      lastModified: item.Modified
+    }));
+    
+  } catch (error) {
+    console.error('❌ Direct template loading failed:', error);
+    throw error;
+  }
+};
 
   const handleEditTemplate = (template) => {
     setTemplateForm({
