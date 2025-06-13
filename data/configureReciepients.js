@@ -22,88 +22,28 @@ const ConfigureRecipients = () => {
     testEmail: 'minaantoun@hsbc.com',
     lobConfigs: {
       'IWPB': {
-        'new-procedure-uploaded': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'procedure-expiring': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'procedure-expired': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'low-quality-score': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        }
+        'new-procedure-uploaded': { globalHeads: [], admins: [], procedureOwners: true },
+        'procedure-expiring': { globalHeads: [], admins: [], procedureOwners: true },
+        'procedure-expired': { globalHeads: [], admins: [], procedureOwners: true },
+        'low-quality-score': { globalHeads: [], admins: [], procedureOwners: true }
       },
       'CIB': {
-        'new-procedure-uploaded': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'procedure-expiring': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'procedure-expired': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'low-quality-score': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        }
+        'new-procedure-uploaded': { globalHeads: [], admins: [], procedureOwners: true },
+        'procedure-expiring': { globalHeads: [], admins: [], procedureOwners: true },
+        'procedure-expired': { globalHeads: [], admins: [], procedureOwners: true },
+        'low-quality-score': { globalHeads: [], admins: [], procedureOwners: true }
       },
       'GCOO': {
-        'new-procedure-uploaded': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'procedure-expiring': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'procedure-expired': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        },
-        'low-quality-score': {
-          globalHeads: [],
-          admins: [],
-          procedureOwners: true
-        }
+        'new-procedure-uploaded': { globalHeads: [], admins: [], procedureOwners: true },
+        'procedure-expiring': { globalHeads: [], admins: [], procedureOwners: true },
+        'procedure-expired': { globalHeads: [], admins: [], procedureOwners: true },
+        'low-quality-score': { globalHeads: [], admins: [], procedureOwners: true }
       }
     },
     accessManagement: {
-      'user-access-granted': {
-        newUserNotification: true,
-        adminNotification: true,
-        customRecipients: []
-      },
-      'user-access-revoked': {
-        userNotification: true,
-        adminNotification: true,
-        customRecipients: []
-      },
-      'user-role-updated': {
-        userNotification: true,
-        adminNotification: true,
-        customRecipients: []
-      }
+      'user-access-granted': { newUserNotification: true, adminNotification: true, customRecipients: [] },
+      'user-access-revoked': { userNotification: true, adminNotification: true, customRecipients: [] },
+      'user-role-updated': { userNotification: true, adminNotification: true, customRecipients: [] }
     }
   });
 
@@ -116,76 +56,27 @@ const ConfigureRecipients = () => {
   const [dialogConfig, setDialogConfig] = useState({ lob: '', template: '', type: '' });
   const [newEmail, setNewEmail] = useState({ email: '', name: '' });
   const [defaultAdmins, setDefaultAdmins] = useState([]);
-  const [availableOwners, setAvailableOwners] = useState([]);
-  const [loadingOwners, setLoadingOwners] = useState(false);
 
   // LOB Configuration
   const lobConfig = {
-    'IWPB': {
-      name: 'International Wealth and Premier Banking',
-      color: '#1976d2',
-      icon: '🏦'
-    },
-    'CIB': {
-      name: 'Commercial and Institutional Banking',
-      color: '#388e3c',
-      icon: '🏢'
-    },
-    'GCOO': {
-      name: 'Group Chief Operating Officer',
-      color: '#f57c00',
-      icon: '⚙️'
-    }
+    'IWPB': { name: 'International Wealth and Premier Banking', color: '#1976d2', icon: '🏦' },
+    'CIB': { name: 'Commercial and Institutional Banking', color: '#388e3c', icon: '🏢' },
+    'GCOO': { name: 'Group Chief Operating Officer', color: '#f57c00', icon: '⚙️' }
   };
 
   // Template Configuration
   const templateConfig = {
-    'new-procedure-uploaded': {
-      name: 'New Procedure Updates',
-      description: 'Automatic email sent when a new procedure is uploaded',
-      icon: '📤',
-      color: 'primary'
-    },
-    'procedure-expiring': {
-      name: 'Procedure Expiring Soon',
-      description: 'Automatic email sent when procedures are expiring',
-      icon: '⏰',
-      color: 'warning'
-    },
-    'procedure-expired': {
-      name: 'Procedure Expired',
-      description: 'Automatic email sent when procedures have expired',
-      icon: '🚨',
-      color: 'error'
-    },
-    'low-quality-score': {
-      name: 'Low Quality Score Alert',
-      description: 'Automatic email sent for low quality procedures',
-      icon: '📊',
-      color: 'info'
-    }
+    'new-procedure-uploaded': { name: 'New Procedure Updates', description: 'Automatic email sent when a new procedure is uploaded', icon: '📤', color: 'primary' },
+    'procedure-expiring': { name: 'Procedure Expiring Soon', description: 'Automatic email sent when procedures are expiring', icon: '⏰', color: 'warning' },
+    'procedure-expired': { name: 'Procedure Expired', description: 'Automatic email sent when procedures have expired', icon: '🚨', color: 'error' },
+    'low-quality-score': { name: 'Low Quality Score Alert', description: 'Automatic email sent for low quality procedures', icon: '📊', color: 'info' }
   };
 
   // Access Management Configuration
   const accessTemplateConfig = {
-    'user-access-granted': {
-      name: 'User Access Granted',
-      description: 'Email sent when new user access is granted',
-      icon: '✅',
-      color: 'success'
-    },
-    'user-access-revoked': {
-      name: 'User Access Revoked',
-      description: 'Email sent when user access is revoked',
-      icon: '❌',
-      color: 'error'
-    },
-    'user-role-updated': {
-      name: 'User Role Updated',
-      description: 'Email sent when user role is changed',
-      icon: '🔄',
-      color: 'info'
-    }
+    'user-access-granted': { name: 'User Access Granted', description: 'Email sent when new user access is granted', icon: '✅', color: 'success' },
+    'user-access-revoked': { name: 'User Access Revoked', description: 'Email sent when user access is revoked', icon: '❌', color: 'error' },
+    'user-role-updated': { name: 'User Role Updated', description: 'Email sent when user role is changed', icon: '🔄', color: 'info' }
   };
 
   // Initialize email service
@@ -222,7 +113,6 @@ const ConfigureRecipients = () => {
     try {
       console.log('👑 Loading default admin users...');
       
-      // Load from UserRoles list where role = admin
       const response = await fetch(
         `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('UserRoles')/items?$filter=UserRole eq 'admin' and Status eq 'active'&$select=*`,
         {
@@ -379,9 +269,11 @@ const ConfigureRecipients = () => {
       setMessage(null);
 
       console.log('💾 Saving enhanced email configuration...');
+      console.log('📋 Current config before save:', config);
       
       // Transform LOB-based config back to flat structure
       const flatConfig = transformFromLOBConfig(config);
+      console.log('📤 Flat config for saving:', flatConfig);
       
       const result = await emailService.saveEmailConfig(flatConfig);
       
@@ -392,6 +284,7 @@ const ConfigureRecipients = () => {
           text: `Configuration saved successfully: ${result.message}` 
         });
         
+        // Refresh the configuration to show updated data
         setTimeout(() => {
           loadEmailConfig();
         }, 1000);
@@ -479,10 +372,12 @@ const ConfigureRecipients = () => {
     Object.keys(lobConfig.accessManagement).forEach(templateKey => {
       const templateData = lobConfig.accessManagement[templateKey];
       
-      // Add custom recipients to customGroupsList
+      console.log(`🔄 Processing access management for ${templateKey}:`, templateData);
+      
+      // ✅ CRITICAL FIX: Add custom recipients to customGroupsList
       templateData.customRecipients?.forEach(recipient => {
         if (recipient.email) {
-          flatConfig.customGroupsList.push({
+          const customGroupItem = {
             id: recipient.id,
             email: recipient.email,
             name: recipient.name,
@@ -490,12 +385,20 @@ const ConfigureRecipients = () => {
             escalationType: templateKey,
             recipientRole: 'Custom',
             lob: 'All' // Access management applies to all LOBs
-          });
+          };
+          
+          flatConfig.customGroupsList.push(customGroupItem);
+          console.log(`✅ Added custom recipient to flat config:`, customGroupItem);
         }
       });
+      
+      // ✅ FIXED: Save notification settings as well
+      flatConfig[`${templateKey}_newUserNotification`] = templateData.newUserNotification;
+      flatConfig[`${templateKey}_userNotification`] = templateData.userNotification;
+      flatConfig[`${templateKey}_adminNotification`] = templateData.adminNotification;
     });
 
-    console.log('📤 Transformed flat config for saving:', flatConfig);
+    console.log('📤 Final transformed flat config:', flatConfig);
     return flatConfig;
   };
 
@@ -536,7 +439,7 @@ const ConfigureRecipients = () => {
 
     const { lob, template, type } = dialogConfig;
     const newRecipient = {
-      id: `${type}_${Date.now()}_${Math.random()}`, // ✅ FIXED: Unique ID generation
+      id: `${type}_${Date.now()}_${Math.random()}`,
       email: newEmail.email.trim(),
       name: newEmail.name.trim() || newEmail.email.trim(),
       active: true
@@ -576,7 +479,10 @@ const ConfigureRecipients = () => {
     }));
   };
 
+  // ✅ FIXED: Toggle recipient active status
   const handleToggleRecipient = (lob, template, type, recipientId) => {
+    console.log(`🔄 Toggling recipient: ${lob}/${template}/${type}/${recipientId}`);
+    
     setConfig(prev => ({
       ...prev,
       lobConfigs: {
@@ -585,9 +491,13 @@ const ConfigureRecipients = () => {
           ...prev.lobConfigs[lob],
           [template]: {
             ...prev.lobConfigs[lob][template],
-            [type]: prev.lobConfigs[lob][template][type].map(r => 
-              r.id === recipientId ? { ...r, active: !r.active } : r
-            )
+            [type]: prev.lobConfigs[lob][template][type].map(r => {
+              if (r.id === recipientId) {
+                console.log(`✅ Toggling ${r.email} from ${r.active} to ${!r.active}`);
+                return { ...r, active: !r.active };
+              }
+              return r;
+            })
           }
         }
       }
@@ -610,7 +520,10 @@ const ConfigureRecipients = () => {
     }));
   };
 
+  // ✅ FIXED: Toggle access notification settings
   const handleToggleAccessNotification = (template, type) => {
+    console.log(`🔄 Toggling access notification: ${template}/${type}`);
+    
     setConfig(prev => ({
       ...prev,
       accessManagement: {
@@ -618,6 +531,44 @@ const ConfigureRecipients = () => {
         [template]: {
           ...prev.accessManagement[template],
           [type]: !prev.accessManagement[template][type]
+        }
+      }
+    }));
+  };
+
+  // ✅ FIXED: Toggle access management custom recipient
+  const handleToggleAccessRecipient = (templateKey, recipientId) => {
+    console.log(`🔄 Toggling access recipient: ${templateKey}/${recipientId}`);
+    
+    setConfig(prev => ({
+      ...prev,
+      accessManagement: {
+        ...prev.accessManagement,
+        [templateKey]: {
+          ...prev.accessManagement[templateKey],
+          customRecipients: prev.accessManagement[templateKey].customRecipients.map(r => {
+            if (r.id === recipientId) {
+              console.log(`✅ Toggling access recipient ${r.email} from ${r.active} to ${!r.active}`);
+              return { ...r, active: !r.active };
+            }
+            return r;
+          })
+        }
+      }
+    }));
+  };
+
+  // ✅ FIXED: Remove access management custom recipient
+  const handleRemoveAccessRecipient = (templateKey, recipientId) => {
+    console.log(`🗑️ Removing access recipient: ${templateKey}/${recipientId}`);
+    
+    setConfig(prev => ({
+      ...prev,
+      accessManagement: {
+        ...prev.accessManagement,
+        [templateKey]: {
+          ...prev.accessManagement[templateKey],
+          customRecipients: prev.accessManagement[templateKey].customRecipients.filter(r => r.id !== recipientId)
         }
       }
     }));
@@ -726,7 +677,6 @@ const ConfigureRecipients = () => {
                   Default admin users (can remove or amend)
                 </Typography>
 
-                {/* Show default admins + custom ones */}
                 <List dense>
                   {defaultAdmins.map((admin) => (
                     <ListItem key={`default-${admin.id}`} sx={{ px: 0 }}>
@@ -787,54 +737,54 @@ const ConfigureRecipients = () => {
               <Paper sx={{ p: 2, bgcolor: '#4caf5010', border: '1px solid #4caf5030' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="subtitle1" fontWeight="bold" color="success.main">
-                    Primary & Secondary Owners
-                  </Typography>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={templateData.procedureOwners}
-                        onChange={() => handleToggleProcedureOwners(lob, templateKey)}
-                        color="success"
-                      />
-                    }
-                    label=""
-                  />
-                </Box>
-                
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Auto loaded from procedures list of newly uploaded procedure
-                </Typography>
+                   Primary & Secondary Owners
+                 </Typography>
+                 <FormControlLabel
+                   control={
+                     <Switch
+                       checked={templateData.procedureOwners}
+                       onChange={() => handleToggleProcedureOwners(lob, templateKey)}
+                       color="success"
+                     />
+                   }
+                   label=""
+                 />
+               </Box>
+               
+               <Typography variant="body2" color="text.secondary" gutterBottom>
+                 Auto loaded from procedures list of newly uploaded procedure
+               </Typography>
 
-                <Box sx={{ 
-                  textAlign: 'center', 
-                  py: 3, 
-                  color: templateData.procedureOwners ? 'success.main' : 'text.disabled'
-                }}>
-                  <Business sx={{ fontSize: 48, mb: 1 }} />
-                  <Typography variant="body2" fontWeight="bold">
-                    {templateData.procedureOwners ? 'Enabled' : 'Disabled'}
-                  </Typography>
-                  <Typography variant="caption" display="block">
-                    {templateData.procedureOwners 
-                      ? 'Procedure owners will receive notifications automatically' 
-                      : 'Procedure owners will not receive notifications'
-                    }
-                  </Typography>
-                </Box>
-              </Paper>
-            </Grid>
-          </Grid>
-        </CardContent>
-      </Card>
-    );
-  };
+               <Box sx={{ 
+                 textAlign: 'center', 
+                 py: 3, 
+                 color: templateData.procedureOwners ? 'success.main' : 'text.disabled'
+               }}>
+                 <Business sx={{ fontSize: 48, mb: 1 }} />
+                 <Typography variant="body2" fontWeight="bold">
+                   {templateData.procedureOwners ? 'Enabled' : 'Disabled'}
+                 </Typography>
+                 <Typography variant="caption" display="block">
+                   {templateData.procedureOwners 
+                     ? 'Procedure owners will receive notifications automatically' 
+                     : 'Procedure owners will not receive notifications'
+                   }
+                 </Typography>
+               </Box>
+             </Paper>
+           </Grid>
+         </Grid>
+       </CardContent>
+     </Card>
+   );
+ };
 
-  // Render Access Management Template
-  const renderAccessTemplate = (templateKey, templateConf) => {
-    const templateData = config.accessManagement[templateKey];
+ // ✅ FIXED: Render Access Management Template with proper toggle handling
+ const renderAccessTemplate = (templateKey, templateConf) => {
+   const templateData = config.accessManagement[templateKey];
 
-    return (
-<Card key={templateKey} sx={{ mb: 2, border: `2px solid ${templateConf.color === 'success' ? '#4caf50' : templateConf.color === 'error' ? '#f44336' : '#2196f3'}20` }}>
+   return (
+     <Card key={templateKey} sx={{ mb: 2, border: `2px solid ${templateConf.color === 'success' ? '#4caf50' : templateConf.color === 'error' ? '#f44336' : '#2196f3'}20` }}>
        <CardContent>
          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
            <Typography variant="h4">{templateConf.icon}</Typography>
@@ -961,7 +911,7 @@ const ConfigureRecipients = () => {
              </Paper>
            </Grid>
 
-           {/* Custom Recipients */}
+           {/* ✅ FIXED: Custom Recipients with proper toggle and remove functionality */}
            <Grid item xs={12} md={4}>
              <Paper sx={{ p: 2, bgcolor: '#21969610', border: '1px solid #21969630' }}>
                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -1008,36 +958,12 @@ const ConfigureRecipients = () => {
                         <Switch
                           size="small"
                           checked={recipient.active}
-                          onChange={() => {
-                            setConfig(prev => ({
-                              ...prev,
-                              accessManagement: {
-                                ...prev.accessManagement,
-                                [templateKey]: {
-                                  ...prev.accessManagement[templateKey],
-                                  customRecipients: prev.accessManagement[templateKey].customRecipients.map(r => 
-                                    r.id === recipient.id ? { ...r, active: !r.active } : r
-                                  )
-                                }
-                              }
-                            }));
-                          }}
+                          onChange={() => handleToggleAccessRecipient(templateKey, recipient.id)}
                         />
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => {
-                            setConfig(prev => ({
-                              ...prev,
-                              accessManagement: {
-                                ...prev.accessManagement,
-                                [templateKey]: {
-                                  ...prev.accessManagement[templateKey],
-                                  customRecipients: prev.accessManagement[templateKey].customRecipients.filter(r => r.id !== recipient.id)
-                                }
-                              }
-                            }));
-                          }}
+                          onClick={() => handleRemoveAccessRecipient(templateKey, recipient.id)}
                         >
                           <Delete fontSize="small" />
                         </IconButton>
@@ -1281,7 +1207,7 @@ return (
       </CardContent>
     </Card>
 
-    {/* Add Recipient Dialog */}
+    {/* ✅ FIXED: Add Recipient Dialog with proper handling for access management */}
     <Dialog 
       open={showAddDialog} 
       onClose={() => setShowAddDialog(false)}
@@ -1297,6 +1223,13 @@ return (
               label={dialogConfig.lob} 
               size="small" 
               sx={{ backgroundColor: lobConfig[dialogConfig.lob]?.color + '20' }}
+            />
+          )}
+          {dialogConfig.lob === 'access' && (
+            <Chip 
+              label="Access Management" 
+              size="small" 
+              color="info"
             />
           )}
         </Box>
@@ -1335,7 +1268,7 @@ return (
         <Button 
           onClick={() => {
             if (dialogConfig.lob === 'access') {
-              // ✅ FIXED: Handle access management recipients
+              // ✅ FIXED: Handle access management recipients properly
               const { template, type } = dialogConfig;
               const newRecipient = {
                 id: `custom_${Date.now()}_${Math.random()}`,
@@ -1343,6 +1276,8 @@ return (
                 name: newEmail.name.trim() || newEmail.email.trim(),
                 active: true
               };
+
+              console.log(`✅ Adding access management recipient:`, newRecipient);
 
               setConfig(prev => ({
                 ...prev,
