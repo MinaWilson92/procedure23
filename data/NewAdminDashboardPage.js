@@ -588,6 +588,74 @@ const getReadableActivity = (activityType, detailsJson) => {
                 {overdue.length > 0 ? <List>{overdue.map(p => (<ListItem key={p.ID} secondaryAction={<Chip label={`Expired: ${new Date(p.ExpiryDate).toLocaleDateString()}`} color="error" size="small" />}><ListItemText primary={p.Title} secondary={`Status: ${p.Status}`} /></ListItem>))}</List> : <Typography variant="body2" color="text.secondary">No overdue procedures.</Typography>}
               </Paper>
             </Grid>
+                  <Grid item xs={12} md={6}>
+  <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+    <Typography variant="h6" gutterBottom display="flex" alignItems="center">
+      <Notifications sx={{ mr: 1 }} />Recent Notifications
+    </Typography>
+    <Divider sx={{ mb: 2 }} />
+    {notificationLog.length > 0 ? (
+      <List>
+        {notificationLog.map((log, index) => (
+          <ListItem key={log.id || index} secondaryAction={
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip 
+                label={new Date(log.timestamp).toLocaleDateString()} 
+                size="small" 
+                color="info"
+              />
+              <Chip 
+                label={new Date(log.timestamp).toLocaleTimeString()} 
+                size="small" 
+                variant="outlined"
+              />
+            </Box>
+          }>
+            <ListItemIcon>
+              {log.activityType?.includes('FAILED') ? <ErrorIcon color="error" /> :
+               log.activityType?.includes('EXPIRY') || log.activityType?.includes('EXPIRED') ? <Warning color="warning" /> :
+               log.activityType?.includes('GRANTED') || log.activityType?.includes('NEW_PROCEDURE') ? <CheckCircle color="success" /> :
+               log.activityType?.includes('REVOKED') ? <ErrorIcon color="error" /> :
+               <Info color="info" />}
+            </ListItemIcon>
+            <ListItemText 
+              primary={log.readableActivity}
+              secondary={
+                <Box sx={{ mt: 0.5 }}>
+                  {log.details?.procedureName && (
+                    <Chip label={`Procedure: ${log.details.procedureName}`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                  )}
+                  {log.details?.userName && (
+                    <Chip label={`User: ${log.details.userName}`} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
+                  )}
+                  {log.details?.lob && (
+                    <Chip label={`LOB: ${log.details.lob}`} size="small" color="primary" sx={{ mr: 0.5, mb: 0.5 }} />
+                  )}
+                  {log.details?.qualityScore && (
+                    <Chip 
+                      label={`Score: ${log.details.qualityScore}%`} 
+                      size="small" 
+                      color={log.details.qualityScore >= 80 ? 'success' : log.details.qualityScore >= 60 ? 'warning' : 'error'} 
+                      sx={{ mr: 0.5, mb: 0.5 }} 
+                    />
+                  )}
+                </Box>
+              }
+            />
+          </ListItem>
+        ))}
+      </List>
+    ) : (
+      <Box sx={{ textAlign: 'center', py: 3, color: 'text.secondary' }}>
+        <Notifications sx={{ fontSize: 48, opacity: 0.3, mb: 1 }} />
+        <Typography variant="body2">No recent notifications</Typography>
+        <Typography variant="caption" display="block">
+          Email activities will appear here once notifications are sent
+        </Typography>
+      </Box>
+    )}
+  </Paper>
+</Grid>
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Notifications sx={{ mr: 1 }} />Recent Notifications</Typography>
