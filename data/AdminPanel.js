@@ -82,60 +82,6 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     });
   };
 
-  // ✅ ENHANCED: Your existing procedure upload handler
-  const handleProcedureUpload = async (procedureData, analysisResult, fileUploadResult) => {
-    try {
-      setLoading(true);
-      
-      // 1. Your existing SharePoint procedure creation code
-      const createResult = await sharePointService.createProcedure(
-        procedureData, 
-        analysisResult, 
-        fileUploadResult
-      );
-      
-      if (createResult.success) {
-        console.log('✅ Procedure created successfully in SharePoint');
-        
-        // 2. ✅ NEW: Trigger email notification after successful upload
-        try {
-          await emailNotificationService.triggerProcedureUploadNotification(
-            procedureData, 
-            analysisResult
-          );
-          
-          setNotification({ 
-            type: 'success', 
-            message: `✅ Procedure "${procedureData.name}" uploaded successfully - Notification emails sent to configured recipients` 
-          });
-          
-        } catch (emailError) {
-          console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
-          setNotification({ 
-            type: 'warning', 
-            message: `✅ Procedure uploaded successfully, but email notification failed: ${emailError.message}` 
-          });
-        }
-        
-        // 3. Your existing success handling
-        onDataRefresh(); // Refresh the procedures list
-        resetForm(); // Reset the upload form
-        
-      } else {
-        throw new Error(createResult.message || 'Failed to create procedure');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error uploading procedure:', error);
-      setNotification({ 
-        type: 'error', 
-        message: 'Failed to upload procedure: ' + error.message 
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // ✅ NEW: Show Success Dialog - Prominent success notification
   const showSuccessDialog = (title, message, details = null) => {
     setSuccessDialog({
@@ -172,8 +118,8 @@ const AdminPanelPage = ({ onDataRefresh }) => {
   const steps = [
     { label: 'Procedure Details', description: 'Enter procedure information' },
     { label: 'Document Upload', description: 'Upload and validate document' },
-    { label: 'AI Analysis', description: 'AI quality analysis and scoring' },
-    { label: 'Upload to SharePoint', description: 'Final upload if score ≥ 80%' }
+    { label: 'InHouse AI Analysis', description: 'InHouse AI quality analysis and scoring' },
+    { label: 'Upload to SharePoint', description: 'Final upload if score ≥ 85%' }
   ];
 
   // Check admin access on component mount
@@ -260,9 +206,9 @@ const AdminPanelPage = ({ onDataRefresh }) => {
 
     try {
       setSubmitStatus('analyzing');
-      showSnackbar('Starting AI document analysis...', 'info');
+      showSnackbar('Starting InHouse AI document analysis...', 'info');
 
-      console.log('🔍 Starting AI document analysis...');
+      console.log('🔍 Starting InHouse AI document analysis...');
 
       const analysisResult = await documentAnalyzer.analyzeDocument(selectedFile, {
         name: formData.name,
@@ -278,14 +224,14 @@ const AdminPanelPage = ({ onDataRefresh }) => {
         // ✅ PROMINENT SUCCESS DIALOG
         showSuccessDialog(
           'Document Analysis Completed! ✅',
-          `Your document achieved a quality score of ${analysisResult.score}% which meets the 80% minimum requirement.`,
+          `Your document achieved a quality score of ${analysisResult.score}% which meets the 85% minimum requirement.`,
           'The document is ready for upload to SharePoint.'
         );
       } else {
         // ✅ PROMINENT ERROR DIALOG for failed analysis
         showErrorDialog(
           'Document Quality Score Too Low ❌',
-          `Your document scored ${analysisResult.score}% but requires at least 80% to proceed.`,
+          `Your document scored ${analysisResult.score}% but requires at least 85% to proceed.`,
           `Please review the AI recommendations and improve your document. Missing elements: ${analysisResult.details.missingElements?.length || 0}`
         );
       }
@@ -337,7 +283,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     if (!documentAnalysis?.accepted) {
       showErrorDialog(
         'Upload Not Allowed',
-        'Document must achieve at least 80% quality score before upload.',
+        'Document must achieve at least 85% quality score before upload.',
         `Current score: ${documentAnalysis?.score || 0}%. Please improve your document and re-analyze.`
       );
       return;
@@ -374,12 +320,20 @@ const AdminPanelPage = ({ onDataRefresh }) => {
           `Procedure ID: ${result.procedureId}\nQuality Score: ${documentAnalysis.score}%\nUploaded by: ${user?.displayName}`
         );
         setSubmitStatus('success');
-        
         setTimeout(() => {
           handleReset();
           if (onDataRefresh) onDataRefresh();
         }, 3000);
         
+                try {
+          await emailNotificationService.triggerProcedureUploadNotification( 
+            result,
+          );
+          
+      
+        } catch (emailError) {
+          console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
+        }
       } else {
         // ✅ PROMINENT ERROR DIALOG for upload failure
         showErrorDialog(
@@ -905,7 +859,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
                   </Box>
                 )}
 
-                {/* Step 3: AI Analysis Results */}
+                {/* Step 3:InHouse AI Analysis Results */}
                 {activeStep >= 2 && documentAnalysis && (
                   <Box sx={{ mb: 4 }}>
                     <Divider sx={{ my: 3 }} />
@@ -929,7 +883,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
                          </Typography>
                          <Box sx={{ flex: 1 }}>
                            <Typography variant="body2" color="text.secondary" gutterBottom>
-                             Quality Score (Minimum Required: 80%)
+                             Quality Score (Minimum Required: 85%)
                            </Typography>
                            <LinearProgress 
                              variant="determinate" 
@@ -1104,7 +1058,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
                         <Accordion>
                           <AccordionSummary expandIcon={<ExpandMore />}>
                             <Typography variant="h6">
-                              🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
+                              🤖 InHouse AI Recommendations ({documentAnalysis.aiRecommendations.length})
                             </Typography>
                           </AccordionSummary>
                           <AccordionDetails>
@@ -1142,35 +1096,35 @@ const AdminPanelPage = ({ onDataRefresh }) => {
                     </CardContent>
                   </Card>
 
-           {/* Upload Button */}
-<Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-  <Button
-    variant="outlined"
-    onClick={handleReset}
-    startIcon={<Refresh />}
-    disabled={loading}
-  >
-    Reset Form
-  </Button>
-  <Button
-    variant="contained"
-    onClick={handleUploadToSharePoint}
-    disabled={loading || !documentAnalysis.accepted}
-    startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-    size="large"
-    sx={{ minWidth: 200 }}
-  >
-    {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
-  </Button>
-</Box>
+                  {/* Upload Button */}
+                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleReset}
+                      startIcon={<Refresh />}
+                      disabled={loading}
+                    >
+                      Reset Form
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={handleUploadToSharePoint}
+                      disabled={loading || !documentAnalysis.accepted}
+                      startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                      size="large"
+                      sx={{ minWidth: 200 }}
+                    >
+                      {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
+                    </Button>
+                  </Box>
 
                   {!documentAnalysis.accepted && (
                     <Alert severity="warning" sx={{ mt: 2 }}>
                       <Typography variant="body2" fontWeight="bold">
-                        ⚠️ Upload Blocked: Document must achieve at least 80% quality score before upload.
+                        ⚠️ Upload Blocked: Document must achieve at least 85% quality score before upload.
                       </Typography>
                       <Typography variant="body2">
-                        Please address the AI recommendations above and re-analyze your document.
+                        Please address the InHouse AI recommendations above and re-analyze your document.
                       </Typography>
                     </Alert>
                   )}
@@ -1341,7 +1295,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
                 <ListItem>
                   <ListItemIcon><Assessment fontSize="small" /></ListItemIcon>
                   <ListItemText 
-                    primary="Minimum Score: 80%"
+                    primary="Minimum Score: 85%"
                     secondary="Required for SharePoint upload"
                   />
                 </ListItem>
