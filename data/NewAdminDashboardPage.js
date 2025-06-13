@@ -1,4 +1,4 @@
-// pages/AdminDashboard.js - Final Combined & Corrected Version with Full Audit Logs
+// pages/AdminDashboardPage.js - Full Final Version with Embedded AdminPanel
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, Typography, Grid, Paper, Card, CardContent,
@@ -27,8 +27,7 @@ import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import EmailManagement from '../components/EmailManagement';
 import EmailNotificationService from '../services/EmailNotificationService';
-import AdminPanel from '../components/AdminPanel';
-
+import AdminPanelPage from './AdminPanelPage'; // ✅ Corrected import
 
 const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const { user, getUserInfo, siteUrl, authStatus, refreshUser } = useSharePoint();
@@ -169,6 +168,11 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
   const handleTabChange = (event, newValue) => setActiveTab(newValue);
   const handleManageProceduresTabChange = (event, newValue) => setManageProceduresTab(newValue);
   const handleManageUsersTabChange = (event, newValue) => setManageUsersTab(newValue);
+
+  // ✅ NEW: Handle switch to Add Procedure tab
+  const handleSwitchToAddProcedure = () => {
+    setActiveTab(2); // Switch to "Add Procedure" tab (index 2)
+  };
 
   const getAdminEmails = async () => {
     try {
@@ -399,6 +403,43 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
             <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><CheckCircle color="success" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.active}</Typography></Box><Typography color="text.secondary">Active Procedures</Typography></CardContent></Card></Grid>
             <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><TrendingUp color="info" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.pendingReview}</Typography></Box><Typography color="text.secondary">Pending Review</Typography></CardContent></Card></Grid>
             <Grid item xs={12} sm={6} md={3}><Card component={motion.div} whileHover={{ scale: 1.02 }}><CardContent><Box display="flex" alignItems="center" mb={1}><TrendingDown color="error" sx={{ fontSize: 40, mr: 1 }} /><Typography variant="h5">{procedureStats.expired}</Typography></Box><Typography color="text.secondary">Expired Procedures</Typography></CardContent></Card></Grid>
+            
+            {/* ✅ NEW: Quick Action Card to Add Procedure */}
+            <Grid item xs={12} md={12}>
+              <Card 
+                sx={{ 
+                  background: 'linear-gradient(135deg, #1976d2 0%, #1565c0 100%)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 12px 32px rgba(25,118,210,0.4)'
+                  }
+                }}
+                onClick={handleSwitchToAddProcedure}
+                component={motion.div}
+                whileHover={{ scale: 1.02 }}
+              >
+                <CardContent sx={{ p: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Add sx={{ fontSize: 48 }} />
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h5" fontWeight="bold" gutterBottom>
+                        Add New Procedure
+                      </Typography>
+                      <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                        Upload a new procedure with AI-powered quality analysis
+                      </Typography>
+                    </Box>
+                    <Typography variant="h3" sx={{ opacity: 0.7 }}>
+                      +
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+            
             <Grid item xs={12} md={6}>
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Upload sx={{ mr: 1 }} />Recent Uploads</Typography>
@@ -450,172 +491,175 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
           <TabPanel value={manageProceduresTab} index={0}>
             <Box display="flex" justifyContent="space-between" alignItems="center" my={3}>
                 <Typography variant="h5">Procedures</Typography>
-                <TextField label="Search Procedures" variant="outlined" size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} InputProps={{startAdornment: <Search sx={{ mr: 1 }} />}}/>
-            </Box>
-            <TableContainer component={Paper} elevation={0}>
-                <Table><TableHead><TableRow>
-                    <TableCell>Title</TableCell><TableCell>Status</TableCell><TableCell>Primary Owner</TableCell><TableCell>Actions</TableCell>
-                </TableRow></TableHead>
-                <TableBody>{filteredProcedures.map((p) => (
-                    <TableRow key={p.ID}>
-                        <TableCell>{p.Title}</TableCell>
-                        <TableCell><Chip label={p.Status} color={p.Status === 'Active' ? 'success' : 'default'} size="small" /></TableCell>
-                        <TableCell>{p.PrimaryOwner}</TableCell>
-                        <TableCell>
-                            <IconButton color="primary" size="small" onClick={() => setEditProcedure(p)}><Edit /></IconButton>
-                            <IconButton color="error" size="small" onClick={() => setDeleteDialog({ open: true, procedure: { id: p.ID, name: p.Title } })}><Delete /></IconButton>
-                            <IconButton size="small" onClick={() => handleNavigateWithDisclaimer(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`)}><Visibility /></IconButton>
-                        </TableCell>
-                    </TableRow>
-                ))}</TableBody>
-                </Table>
-            </TableContainer>
-          </TabPanel>
-          <TabPanel value={manageProceduresTab} index={1}>
-            <Typography variant="h5" sx={{ my: 3 }}>Procedure Change History</Typography>
-            <TableContainer component={Paper} elevation={0}>
-                <Table><TableHead><TableRow>
-                    <TableCell>Timestamp</TableCell><TableCell>Action</TableCell><TableCell>Procedure Name</TableCell><TableCell>User</TableCell><TableCell>LOB</TableCell><TableCell>Status</TableCell>
-                </TableRow></TableHead>
-                <TableBody>{auditLog.map((log) => (
-                    <TableRow key={log.ID}>
-                        <TableCell>{new Date(log.LogTimestamp).toLocaleString()}</TableCell>
-                        <TableCell><Chip label={log.ActionType} color={log.ActionType.includes('Deleted') ? 'error' : 'warning'} size="small"/></TableCell>
-                        <TableCell>{log.ProcedureName}</TableCell>
-                        {/* ✅ BUG FIX 2: Changed from log.UserID to log.UserId */}
-                        <TableCell>{log.UserId}</TableCell>
-                        <TableCell>{log.LOB}</TableCell>
-                        <TableCell><Chip label={log.Status} color={log.Status === 'Success' ? 'success' : 'error'} size="small" /></TableCell>
-                    </TableRow>
-                ))}</TableBody>
-                </Table>
-            </TableContainer>
-          </TabPanel>
-        </TabPanel>
-        
-        <TabPanel value={activeTab} index={2}> <AdminPanel onDataRefresh={loadDashboardData} /> </TabPanel>
-        
-        <TabPanel value={activeTab} index={3}>
-          <Typography variant="h5" gutterBottom>User Management</Typography>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={manageUsersTab} onChange={handleManageUsersTabChange}>
-              <Tab label="System Users" icon={<People />} {...a11yProps(0)} />
-              <Tab label="Access Audit Log" icon={<Security />} {...a11yProps(1)} />
-            </Tabs>
-          </Box>
-          <TabPanel value={manageUsersTab} index={0}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" my={3}>
-                <Typography variant="h5">Users & Roles</Typography>
-                <TextField label="Search Users" variant="outlined" size="small" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} InputProps={{startAdornment: <Search sx={{ mr: 1 }} />}}/>
-                <Button variant="contained" startIcon={<PersonAdd />} onClick={() => setAddUser(true)}>Grant New Access</Button>
-            </Box>
-            <TableContainer component={Paper} elevation={0}>
-              <Table><TableHead><TableRow>
-                  <TableCell>Display Name</TableCell><TableCell>User ID (Title)</TableCell><TableCell>Email</TableCell>
-                  <TableCell>Role</TableCell><TableCell>Status</TableCell><TableCell>Granted By</TableCell>
-                  <TableCell>Last Login</TableCell><TableCell>Actions</TableCell>
-              </TableRow></TableHead>
-                <TableBody>{filteredUsers.map((u) => (
-                  <TableRow key={u.ID}>
-                    <TableCell>{u.DisplayName}</TableCell><TableCell>{u.Title}</TableCell><TableCell>{u.Email}</TableCell>
-                    <TableCell><Chip label={u.UserRole} color={u.UserRole === 'Admin' ? 'primary' : 'default'} size="small"/></TableCell>
-                    <TableCell><Chip label={u.Status} color={u.Status === 'Active' ? 'success' : 'error'} size="small"/></TableCell>
-                    <TableCell>{u.GrantedBy}</TableCell><TableCell>{u.LastLogin ? new Date(u.LastLogin).toLocaleString() : 'N/A'}</TableCell>
-                    <TableCell>
-                      <IconButton color="primary" size="small" onClick={() => setEditUser(u)}><Edit /></IconButton>
-                      {u.Status === 'Active' && <IconButton title="Revoke Access" color="error" size="small" onClick={() => handleRevokeAccess(u)}><LockOpen /></IconButton>}
-                    </TableCell>
-                  </TableRow>
-                ))}</TableBody>
-              </Table>
-            </TableContainer>
-          </TabPanel>
-          <TabPanel value={manageUsersTab} index={1}>
-            <Typography variant="h5" sx={{ my: 3 }}>User Access Change History</Typography>
-            <TableContainer component={Paper} elevation={0}>
-                <Table><TableHead><TableRow>
-                    <TableCell>Timestamp</TableCell><TableCell>Action</TableCell><TableCell>Target User</TableCell>
-                    <TableCell>Performed By</TableCell><TableCell>Change Details</TableCell><TableCell>Reason</TableCell>
-                </TableRow></TableHead>
-                    <TableBody>{accessAuditLog.map((log) => (
-                        <TableRow key={log.ID}>
-                            <TableCell>{new Date(log.LogTimestamp).toLocaleString()}</TableCell>
-                            <TableCell><Chip label={log.Title} color={log.Title.includes('REVOKED') ? 'error' : log.Title.includes('GRANTED') ? 'success' : 'info'} size="small"/></TableCell>
-                            <TableCell>{log.TargetUserName} ({log.TargetUserId})</TableCell>
-                            <TableCell>{log.PerformedByName}</TableCell>
-                            <TableCell><b>From:</b> {log.OldValue || 'N/A'} <br/> <b>To:</b> {log.NewValue || 'N/A'}</TableCell>
-                            <TableCell>{log.Reason}</TableCell>
-                        </TableRow>
-                    ))}</TableBody>
-                </Table>
-            </TableContainer>
-          </TabPanel>
-        </TabPanel>
+<TextField label="Search Procedures" variant="outlined" size="small" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} InputProps={{startAdornment: <Search sx={{ mr: 1 }} />}}/>
+           </Box>
+           <TableContainer component={Paper} elevation={0}>
+               <Table><TableHead><TableRow>
+                   <TableCell>Title</TableCell><TableCell>Status</TableCell><TableCell>Primary Owner</TableCell><TableCell>Actions</TableCell>
+               </TableRow></TableHead>
+               <TableBody>{filteredProcedures.map((p) => (
+                   <TableRow key={p.ID}>
+                       <TableCell>{p.Title}</TableCell>
+                       <TableCell><Chip label={p.Status} color={p.Status === 'Active' ? 'success' : 'default'} size="small" /></TableCell>
+                       <TableCell>{p.PrimaryOwner}</TableCell>
+                       <TableCell>
+                           <IconButton color="primary" size="small" onClick={() => setEditProcedure(p)}><Edit /></IconButton>
+                           <IconButton color="error" size="small" onClick={() => setDeleteDialog({ open: true, procedure: { id: p.ID, name: p.Title } })}><Delete /></IconButton>
+                           <IconButton size="small" onClick={() => handleNavigateWithDisclaimer(`${siteUrl}/Lists/Procedures/DispForm.aspx?ID=${p.ID}`)}><Visibility /></IconButton>
+                       </TableCell>
+                   </TableRow>
+               ))}</TableBody>
+               </Table>
+           </TableContainer>
+         </TabPanel>
+         <TabPanel value={manageProceduresTab} index={1}>
+           <Typography variant="h5" sx={{ my: 3 }}>Procedure Change History</Typography>
+           <TableContainer component={Paper} elevation={0}>
+               <Table><TableHead><TableRow>
+                   <TableCell>Timestamp</TableCell><TableCell>Action</TableCell><TableCell>Procedure Name</TableCell><TableCell>User</TableCell><TableCell>LOB</TableCell><TableCell>Status</TableCell>
+               </TableRow></TableHead>
+               <TableBody>{auditLog.map((log) => (
+                   <TableRow key={log.ID}>
+                       <TableCell>{new Date(log.LogTimestamp).toLocaleString()}</TableCell>
+                       <TableCell><Chip label={log.ActionType} color={log.ActionType.includes('Deleted') ? 'error' : 'warning'} size="small"/></TableCell>
+                       <TableCell>{log.ProcedureName}</TableCell>
+                       {/* ✅ BUG FIX 2: Changed from log.UserID to log.UserId */}
+                       <TableCell>{log.UserId}</TableCell>
+                       <TableCell>{log.LOB}</TableCell>
+                       <TableCell><Chip label={log.Status} color={log.Status === 'Success' ? 'success' : 'error'} size="small" /></TableCell>
+                   </TableRow>
+               ))}</TableBody>
+               </Table>
+           </TableContainer>
+         </TabPanel>
+       </TabPanel>
+       
+       {/* ✅ EMBEDDED ADMIN PANEL - This is where the magic happens! */}
+       <TabPanel value={activeTab} index={2}>
+         <AdminPanelPage onDataRefresh={loadDashboardData} />
+       </TabPanel>
+       
+       <TabPanel value={activeTab} index={3}>
+         <Typography variant="h5" gutterBottom>User Management</Typography>
+         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+           <Tabs value={manageUsersTab} onChange={handleManageUsersTabChange}>
+             <Tab label="System Users" icon={<People />} {...a11yProps(0)} />
+             <Tab label="Access Audit Log" icon={<Security />} {...a11yProps(1)} />
+           </Tabs>
+         </Box>
+         <TabPanel value={manageUsersTab} index={0}>
+           <Box display="flex" justifyContent="space-between" alignItems="center" my={3}>
+               <Typography variant="h5">Users & Roles</Typography>
+               <TextField label="Search Users" variant="outlined" size="small" value={userSearchTerm} onChange={(e) => setUserSearchTerm(e.target.value)} InputProps={{startAdornment: <Search sx={{ mr: 1 }} />}}/>
+               <Button variant="contained" startIcon={<PersonAdd />} onClick={() => setAddUser(true)}>Grant New Access</Button>
+           </Box>
+           <TableContainer component={Paper} elevation={0}>
+             <Table><TableHead><TableRow>
+                 <TableCell>Display Name</TableCell><TableCell>User ID (Title)</TableCell><TableCell>Email</TableCell>
+                 <TableCell>Role</TableCell><TableCell>Status</TableCell><TableCell>Granted By</TableCell>
+                 <TableCell>Last Login</TableCell><TableCell>Actions</TableCell>
+             </TableRow></TableHead>
+               <TableBody>{filteredUsers.map((u) => (
+                 <TableRow key={u.ID}>
+                   <TableCell>{u.DisplayName}</TableCell><TableCell>{u.Title}</TableCell><TableCell>{u.Email}</TableCell>
+                   <TableCell><Chip label={u.UserRole} color={u.UserRole === 'Admin' ? 'primary' : 'default'} size="small"/></TableCell>
+                   <TableCell><Chip label={u.Status} color={u.Status === 'Active' ? 'success' : 'error'} size="small"/></TableCell>
+                   <TableCell>{u.GrantedBy}</TableCell><TableCell>{u.LastLogin ? new Date(u.LastLogin).toLocaleString() : 'N/A'}</TableCell>
+                   <TableCell>
+                     <IconButton color="primary" size="small" onClick={() => setEditUser(u)}><Edit /></IconButton>
+                     {u.Status === 'Active' && <IconButton title="Revoke Access" color="error" size="small" onClick={() => handleRevokeAccess(u)}><LockOpen /></IconButton>}
+                   </TableCell>
+                 </TableRow>
+               ))}</TableBody>
+             </Table>
+           </TableContainer>
+         </TabPanel>
+         <TabPanel value={manageUsersTab} index={1}>
+           <Typography variant="h5" sx={{ my: 3 }}>User Access Change History</Typography>
+           <TableContainer component={Paper} elevation={0}>
+               <Table><TableHead><TableRow>
+                   <TableCell>Timestamp</TableCell><TableCell>Action</TableCell><TableCell>Target User</TableCell>
+                   <TableCell>Performed By</TableCell><TableCell>Change Details</TableCell><TableCell>Reason</TableCell>
+               </TableRow></TableHead>
+                   <TableBody>{accessAuditLog.map((log) => (
+                       <TableRow key={log.ID}>
+                           <TableCell>{new Date(log.LogTimestamp).toLocaleString()}</TableCell>
+                           <TableCell><Chip label={log.Title} color={log.Title.includes('REVOKED') ? 'error' : log.Title.includes('GRANTED') ? 'success' : 'info'} size="small"/></TableCell>
+                           <TableCell>{log.TargetUserName} ({log.TargetUserId})</TableCell>
+                           <TableCell>{log.PerformedByName}</TableCell>
+                           <TableCell><b>From:</b> {log.OldValue || 'N/A'} <br/> <b>To:</b> {log.NewValue || 'N/A'}</TableCell>
+                           <TableCell>{log.Reason}</TableCell>
+                       </TableRow>
+                   ))}</TableBody>
+               </Table>
+           </TableContainer>
+         </TabPanel>
+       </TabPanel>
 
-        <TabPanel value={activeTab} index={4}><EmailManagement emailService={emailService} /></TabPanel>
-        <TabPanel value={activeTab} index={5}>
-            <Typography variant="h5" gutterBottom>Settings</Typography>
-            <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
-                <FormControlLabel control={<Switch checked={isEmailMonitoringRunning} onChange={handleToggleEmailMonitoring} />} label="Enable Automated Email Notifications" />
-                <Divider sx={{my: 2}} />
-                <Typography variant="h6">App Info</Typography>
-                <Typography>Site URL: {siteUrl}</Typography>
-            </Paper>
-        </TabPanel>
-      </motion.div>
-      
-      {/* DIALOGS */}
-      <Dialog open={addUser} onClose={() => setAddUser(false)}>
-        <DialogTitle>Grant New User Access</DialogTitle>
-        <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
-            <Grid item xs={12}><TextField required fullWidth label="User ID (Title)" value={newUser.Title} onChange={e => setNewUser({...newUser, Title: e.target.value})} /></Grid>
-            <Grid item xs={12}><TextField required fullWidth label="Display Name" value={newUser.DisplayName} onChange={e => setNewUser({...newUser, DisplayName: e.target.value})} /></Grid>
-            <Grid item xs={12}><TextField required fullWidth label="Email" type="email" value={newUser.Email} onChange={e => setNewUser({...newUser, Email: e.target.value})} /></Grid>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>Role</InputLabel><Select value={newUser.UserRole} label="Role" onChange={e => setNewUser({...newUser, UserRole: e.target.value})}>
-                <MenuItem value="Admin">Admin</MenuItem><MenuItem value="Uploader">Uploader</MenuItem>
-            </Select></FormControl></Grid>
-        </Grid></DialogContent>
-        <DialogActions><Button onClick={() => setAddUser(false)}>Cancel</Button><Button onClick={handleAddUser} variant="contained" disabled={loading}>Grant Access</Button></DialogActions>
-      </Dialog>
-      
-      <Dialog open={!!editUser} onClose={() => setEditUser(null)}>
-        <DialogTitle>Edit User Details</DialogTitle>
-        <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
-            <Grid item xs={12}><TextField disabled fullWidth label="User ID (Title)" value={editUser?.Title || ''} /></Grid>
-            <Grid item xs={12}><TextField fullWidth label="Display Name" value={editUser?.DisplayName || ''} onChange={e => setEditUser({...editUser, DisplayName: e.target.value})} /></Grid>
-            <Grid item xs={12}><TextField fullWidth label="Email" type="email" value={editUser?.Email || ''} onChange={e => setEditUser({...editUser, Email: e.target.value})} /></Grid>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>Role</InputLabel><Select value={editUser?.UserRole || ''} label="Role" onChange={e => setEditUser({...editUser, UserRole: e.target.value})}>
-                <MenuItem value="Admin">Admin</MenuItem><MenuItem value="Uploader">Uploader</MenuItem>
-            </Select></FormControl></Grid>
-        </Grid></DialogContent>
-        <DialogActions><Button onClick={() => setEditUser(null)}>Cancel</Button><Button onClick={handleUpdateUser} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
-      </Dialog>
-      
-      <Dialog open={!!editProcedure} onClose={() => setEditProcedure(null)} fullWidth maxWidth="md">
-        <DialogTitle>Edit Procedure</DialogTitle>
-        <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
-            <Grid item xs={12}><TextField disabled fullWidth label="Title" value={editProcedure?.Title || ''} /></Grid>
-            <Grid item xs={12}><TextField disabled fullWidth multiline rows={2} label="Description" value={editProcedure?.Description || ''} /></Grid>
-            <Grid item xs={12}><Divider sx={{ my: 1 }}><Chip label="Editable Fields" /></Divider></Grid>
-            <Grid item xs={6}><TextField fullWidth label="Primary Owner Name" value={editProcedure?.PrimaryOwner || ''} onChange={e => setEditProcedure({...editProcedure, PrimaryOwner: e.target.value})} /></Grid>
-            <Grid item xs={6}><TextField fullWidth label="Primary Owner Email" value={editProcedure?.PrimaryOwnerEmail || ''} onChange={e => setEditProcedure({...editProcedure, PrimaryOwnerEmail: e.target.value})} /></Grid>
-            <Grid item xs={6}><TextField fullWidth label="Secondary Owner Name" value={editProcedure?.SecondaryOwner || ''} onChange={e => setEditProcedure({...editProcedure, SecondaryOwner: e.target.value})} /></Grid>
-            <Grid item xs={6}><TextField fullWidth label="Secondary Owner Email" value={editProcedure?.SecondaryOwnerEmail || ''} onChange={e => setEditProcedure({...editProcedure, SecondaryOwnerEmail: e.target.value})} /></Grid>
-            <Grid item xs={6}><TextField fullWidth label="Sign-Off Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure?.SignOffDate ? new Date(editProcedure.SignOffDate).toISOString().split('T')[0] : ''} onChange={e => setEditProcedure({...editProcedure, SignOffDate: e.target.value})} /></Grid>
-            <Grid item xs={6}><TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure?.ExpiryDate ? new Date(editProcedure.ExpiryDate).toISOString().split('T')[0] : ''} onChange={e => setEditProcedure({...editProcedure, ExpiryDate: e.target.value})} /></Grid>
-            <Grid item xs={12}><FormControl fullWidth><InputLabel>Status</InputLabel><Select value={editProcedure?.Status || ''} label="Status" onChange={e => setEditProcedure({...editProcedure, Status: e.target.value})}>
-                <MenuItem value="Draft">Draft</MenuItem><MenuItem value="Pending Review">Pending Review</MenuItem>
-                <MenuItem value="Active">Active</MenuItem><MenuItem value="Archived">Archived</MenuItem>
-            </Select></FormControl></Grid>
-        </Grid></DialogContent>
-        <DialogActions><Button onClick={() => setEditProcedure(null)}>Cancel</Button><Button onClick={handleEditProcedure} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
-      </Dialog>
-      
-      <Dialog open={disclaimerDialog.open} onClose={() => setDisclaimerDialog({ open: false, url: '' })}><DialogTitle><VpnKey color="primary" sx={{ mr: 1 }} />Backend Access</DialogTitle><DialogContent><Typography>You are about to navigate to the SharePoint backend. Changes made there are not audited by this panel.</Typography></DialogContent><DialogActions><Button onClick={() => setDisclaimerDialog({open:false})}>Cancel</Button><Button onClick={proceedToBackend}>Proceed</Button></DialogActions></Dialog>
-      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, procedure: null })}><DialogTitle><Warning color="error" sx={{ mr: 1 }} />Confirm Delete</DialogTitle><DialogContent><Typography>Are you sure you want to delete <strong>"{deleteDialog.procedure?.name}"</strong>?</Typography></DialogContent><DialogActions><Button onClick={()=>setDeleteDialog({open:false})}>Cancel</Button><Button color="error" variant="contained" onClick={() => handleDeleteProcedure(deleteDialog.procedure)}>Delete</Button></DialogActions></Dialog>
-      <Snackbar open={!!notification} autoHideDuration={6000} onClose={() => setNotification(null)}><Alert onClose={() => setNotification(null)} severity={notification?.type} sx={{ width: '100%' }}>{notification?.message}</Alert></Snackbar>
-    </Container>
-  );
+       <TabPanel value={activeTab} index={4}><EmailManagement emailService={emailService} /></TabPanel>
+       <TabPanel value={activeTab} index={5}>
+           <Typography variant="h5" gutterBottom>Settings</Typography>
+           <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
+               <FormControlLabel control={<Switch checked={isEmailMonitoringRunning} onChange={handleToggleEmailMonitoring} />} label="Enable Automated Email Notifications" />
+               <Divider sx={{my: 2}} />
+               <Typography variant="h6">App Info</Typography>
+               <Typography>Site URL: {siteUrl}</Typography>
+           </Paper>
+       </TabPanel>
+     </motion.div>
+     
+     {/* DIALOGS */}
+     <Dialog open={addUser} onClose={() => setAddUser(false)}>
+       <DialogTitle>Grant New User Access</DialogTitle>
+       <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
+           <Grid item xs={12}><TextField required fullWidth label="User ID (Title)" value={newUser.Title} onChange={e => setNewUser({...newUser, Title: e.target.value})} /></Grid>
+           <Grid item xs={12}><TextField required fullWidth label="Display Name" value={newUser.DisplayName} onChange={e => setNewUser({...newUser, DisplayName: e.target.value})} /></Grid>
+           <Grid item xs={12}><TextField required fullWidth label="Email" type="email" value={newUser.Email} onChange={e => setNewUser({...newUser, Email: e.target.value})} /></Grid>
+           <Grid item xs={12}><FormControl fullWidth><InputLabel>Role</InputLabel><Select value={newUser.UserRole} label="Role" onChange={e => setNewUser({...newUser, UserRole: e.target.value})}>
+               <MenuItem value="Admin">Admin</MenuItem><MenuItem value="Uploader">Uploader</MenuItem>
+           </Select></FormControl></Grid>
+       </Grid></DialogContent>
+       <DialogActions><Button onClick={() => setAddUser(false)}>Cancel</Button><Button onClick={handleAddUser} variant="contained" disabled={loading}>Grant Access</Button></DialogActions>
+     </Dialog>
+     
+     <Dialog open={!!editUser} onClose={() => setEditUser(null)}>
+       <DialogTitle>Edit User Details</DialogTitle>
+       <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
+           <Grid item xs={12}><TextField disabled fullWidth label="User ID (Title)" value={editUser?.Title || ''} /></Grid>
+           <Grid item xs={12}><TextField fullWidth label="Display Name" value={editUser?.DisplayName || ''} onChange={e => setEditUser({...editUser, DisplayName: e.target.value})} /></Grid>
+           <Grid item xs={12}><TextField fullWidth label="Email" type="email" value={editUser?.Email || ''} onChange={e => setEditUser({...editUser, Email: e.target.value})} /></Grid>
+           <Grid item xs={12}><FormControl fullWidth><InputLabel>Role</InputLabel><Select value={editUser?.UserRole || ''} label="Role" onChange={e => setEditUser({...editUser, UserRole: e.target.value})}>
+               <MenuItem value="Admin">Admin</MenuItem><MenuItem value="Uploader">Uploader</MenuItem>
+           </Select></FormControl></Grid>
+       </Grid></DialogContent>
+       <DialogActions><Button onClick={() => setEditUser(null)}>Cancel</Button><Button onClick={handleUpdateUser} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
+     </Dialog>
+     
+     <Dialog open={!!editProcedure} onClose={() => setEditProcedure(null)} fullWidth maxWidth="md">
+       <DialogTitle>Edit Procedure</DialogTitle>
+       <DialogContent><Grid container spacing={2} sx={{mt: 1}}>
+           <Grid item xs={12}><TextField disabled fullWidth label="Title" value={editProcedure?.Title || ''} /></Grid>
+           <Grid item xs={12}><TextField disabled fullWidth multiline rows={2} label="Description" value={editProcedure?.Description || ''} /></Grid>
+           <Grid item xs={12}><Divider sx={{ my: 1 }}><Chip label="Editable Fields" /></Divider></Grid>
+           <Grid item xs={6}><TextField fullWidth label="Primary Owner Name" value={editProcedure?.PrimaryOwner || ''} onChange={e => setEditProcedure({...editProcedure, PrimaryOwner: e.target.value})} /></Grid>
+           <Grid item xs={6}><TextField fullWidth label="Primary Owner Email" value={editProcedure?.PrimaryOwnerEmail || ''} onChange={e => setEditProcedure({...editProcedure, PrimaryOwnerEmail: e.target.value})} /></Grid>
+           <Grid item xs={6}><TextField fullWidth label="Secondary Owner Name" value={editProcedure?.SecondaryOwner || ''} onChange={e => setEditProcedure({...editProcedure, SecondaryOwner: e.target.value})} /></Grid>
+           <Grid item xs={6}><TextField fullWidth label="Secondary Owner Email" value={editProcedure?.SecondaryOwnerEmail || ''} onChange={e => setEditProcedure({...editProcedure, SecondaryOwnerEmail: e.target.value})} /></Grid>
+           <Grid item xs={6}><TextField fullWidth label="Sign-Off Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure?.SignOffDate ? new Date(editProcedure.SignOffDate).toISOString().split('T')[0] : ''} onChange={e => setEditProcedure({...editProcedure, SignOffDate: e.target.value})} /></Grid>
+           <Grid item xs={6}><TextField fullWidth label="Expiry Date" type="date" InputLabelProps={{ shrink: true }} value={editProcedure?.ExpiryDate ? new Date(editProcedure.ExpiryDate).toISOString().split('T')[0] : ''} onChange={e => setEditProcedure({...editProcedure, ExpiryDate: e.target.value})} /></Grid>
+           <Grid item xs={12}><FormControl fullWidth><InputLabel>Status</InputLabel><Select value={editProcedure?.Status || ''} label="Status" onChange={e => setEditProcedure({...editProcedure, Status: e.target.value})}>
+               <MenuItem value="Draft">Draft</MenuItem><MenuItem value="Pending Review">Pending Review</MenuItem>
+               <MenuItem value="Active">Active</MenuItem><MenuItem value="Archived">Archived</MenuItem>
+           </Select></FormControl></Grid>
+       </Grid></DialogContent>
+       <DialogActions><Button onClick={() => setEditProcedure(null)}>Cancel</Button><Button onClick={handleEditProcedure} variant="contained" disabled={loading}>Save Changes</Button></DialogActions>
+     </Dialog>
+     
+     <Dialog open={disclaimerDialog.open} onClose={() => setDisclaimerDialog({ open: false, url: '' })}><DialogTitle><VpnKey color="primary" sx={{ mr: 1 }} />Backend Access</DialogTitle><DialogContent><Typography>You are about to navigate to the SharePoint backend. Changes made there are not audited by this panel.</Typography></DialogContent><DialogActions><Button onClick={() => setDisclaimerDialog({open:false})}>Cancel</Button><Button onClick={proceedToBackend}>Proceed</Button></DialogActions></Dialog>
+     <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, procedure: null })}><DialogTitle><Warning color="error" sx={{ mr: 1 }} />Confirm Delete</DialogTitle><DialogContent><Typography>Are you sure you want to delete <strong>"{deleteDialog.procedure?.name}"</strong>?</Typography></DialogContent><DialogActions><Button onClick={()=>setDeleteDialog({open:false})}>Cancel</Button><Button color="error" variant="contained" onClick={() => handleDeleteProcedure(deleteDialog.procedure)}>Delete</Button></DialogActions></Dialog>
+     <Snackbar open={!!notification} autoHideDuration={6000} onClose={() => setNotification(null)}><Alert onClose={() => setNotification(null)} severity={notification?.type} sx={{ width: '100%' }}>{notification?.message}</Alert></Snackbar>
+   </Container>
+ );
 };
 
 export default AdminDashboard;
