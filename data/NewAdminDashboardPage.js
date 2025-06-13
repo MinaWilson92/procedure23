@@ -271,6 +271,47 @@ const loadNotificationLog = async () => {
     }
   };
 
+  const safeJsonParse = (jsonString, defaultValue = {}) => {
+  try {
+    return jsonString && typeof jsonString === 'string' ? JSON.parse(jsonString) : (jsonString || defaultValue);
+  } catch (error) {
+    console.warn('⚠️ JSON parse error:', error);
+    return defaultValue;
+  }
+};
+
+const getReadableActivity = (activityType, detailsJson) => {
+  try {
+    const details = safeJsonParse(detailsJson, {});
+    
+    switch (activityType) {
+      case 'NEW_PROCEDURE_NOTIFICATION':
+        return `Email sent for new procedure: ${details.procedureName || 'Unknown'} (${details.lob || 'Unknown LOB'})`;
+      case 'USER_ACCESS_GRANTED_NOTIFICATION':
+        return `Access granted notification sent to ${details.targetUserName || details.userName || 'user'}`;
+      case 'USER_ACCESS_REVOKED_NOTIFICATION':
+        return `Access revoked notification sent to ${details.targetUserName || details.userName || 'user'}`;
+      case 'USER_ROLE_UPDATED_NOTIFICATION':
+        return `User role update notification sent to ${details.targetUserName || details.userName || 'user'}`;
+      case 'PROCEDURE_EXPIRING_NOTIFICATION':
+        return `Expiry warning sent for procedure: ${details.procedureName || 'Unknown'} (${details.daysLeft || 0} days left)`;
+      case 'PROCEDURE_EXPIRED_NOTIFICATION':
+        return `Expired procedure notification sent for: ${details.procedureName || 'Unknown'} (${details.daysOverdue || 0} days overdue)`;
+      case 'LOW_QUALITY_SCORE_NOTIFICATION':
+        return `Low quality score alert sent for: ${details.procedureName || 'Unknown'} (Score: ${details.qualityScore || 0}%)`;
+      case 'EMAIL_SYSTEM_TEST':
+        return `Email system test completed - ${details.message || 'Test email sent'}`;
+      case 'EMAIL_MONITORING_STARTED':
+        return `Email monitoring system started`;
+      case 'EMAIL_MONITORING_STOPPED':
+        return `Email monitoring system stopped`;
+      default:
+        return `Email notification: ${activityType?.replace(/_/g, ' ') || 'System notification'}`;
+    }
+  } catch (error) {
+    return `Email notification: ${activityType || 'System notification'}`;
+  }
+};
   const logProcedureAction = async (actionType, procedure, changes = '', status = 'Success') => {
     const logEntry = {
         Title: `${actionType}: ${procedure.Title}`,
