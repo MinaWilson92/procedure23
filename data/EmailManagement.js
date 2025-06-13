@@ -16,6 +16,8 @@ import { useSharePoint } from '../SharePointContext';
 import ReadOnlyEmailManagement from './email/ReadOnlyEmailManagement';
 import GodModeEmailManagement from './email/GodModeEmailManagement';
 import CustomTemplates from './email/CustomTemplates';
+import EmailControlPanel from './email/EmailControlPanel';
+import { Settings } from '@mui/icons-material'; // Add Settings icon
 
 const EmailManagement = ({ emailService }) => {
   const { user } = useSharePoint();
