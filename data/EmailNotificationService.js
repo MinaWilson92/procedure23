@@ -41,40 +41,85 @@ class EmailNotificationService {
   // ===================================================================
 
   // ✅ FIXED: Get fresh recipients based on current configuration
-  async getRecipientsForNotification(notificationType, lob, procedureData = null) {
-    // Always load fresh config before determining recipients
-    await this.loadCurrentConfig();
+ async getRecipientsForNotification(notificationType, lob, procedureData = null) {
+  // Always load fresh config before determining recipients
+  await this.loadCurrentConfig();
+  
+  const recipients = new Set();
+
+  console.log(`📧 Getting recipients for: ${notificationType} - ${lob}`);
+
+  try {
+    // ✅ FIXED: Get admin emails from UserRoles list (Email column)
+    console.log('👑 Loading admin emails from UserRoles list...');
     
-    if (!this.currentConfig) {
-      console.warn('⚠️ No email configuration available, using fallback');
-      return ['minaantoun@hsbc.com']; // Fallback to your email
+    const userRolesResponse = await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'UserRoles\')/items?$filter=UserRole eq \'admin\' and Status eq \'active\'&$select=Id,Title,Email,DisplayName,UserRole,Status',
+      {
+        headers: { 'Accept': 'application/json; odata=verbose' },
+        credentials: 'same-origin'
+      }
+    );
+
+    if (userRolesResponse.ok) {
+      const userData = await userRolesResponse.json();
+      console.log('✅ UserRoles data loaded:', userData.d.results);
+      
+      // Add admin emails from UserRoles list
+      userData.d.results.forEach(user => {
+        if (user.Email && user.Email.trim()) {
+          recipients.add(user.Email.trim());
+          console.log(`✅ Added admin from UserRoles: ${user.Email}`);
+        } else if (user.Title) {
+          // If Email column is empty, construct email from Title (staffId)
+          const constructedEmail = `${user.Title}@hsbc.com`;
+          recipients.add(constructedEmail);
+          console.log(`✅ Added constructed admin email: ${constructedEmail}`);
+        }
+      });
+    } else {
+      console.warn('⚠️ Could not load UserRoles list, using fallback admin');
+      recipients.add('minaantoun@hsbc.com'); // Your email as fallback
     }
 
-    const recipients = new Set();
+    // ✅ Add LOB-specific recipients from EmailConfiguration if available
+    if (this.currentConfig) {
+      // Add LOB-specific global heads
+      this.currentConfig.globalCCList?.forEach(item => {
+        if (item.lob === lob && 
+            item.escalationType === notificationType && 
+            item.recipientRole === 'Head' &&
+            item.active !== false &&
+            item.email) {
+          recipients.add(item.email);
+          console.log(`✅ Added global head: ${item.email}`);
+        }
+      });
 
-    console.log(`📧 Getting recipients for: ${notificationType} - ${lob}`);
+      // Add LOB heads
+      this.currentConfig.lobHeadsList?.forEach(item => {
+        if (item.lob === lob &&
+            item.active !== false &&
+            item.email) {
+          recipients.add(item.email);
+          console.log(`✅ Added LOB head: ${item.email}`);
+        }
+      });
 
-    // Add LOB-specific global heads
-    this.currentConfig.globalCCList?.forEach(item => {
-      if (item.lob === lob && 
-          item.escalationType === notificationType && 
-          item.recipientRole === 'Head' &&
-          item.active !== false &&
-          item.email) {
-        recipients.add(item.email);
-        console.log(`✅ Added global head: ${item.email}`);
+      // Add custom groups for access management notifications
+      if (notificationType.includes('access') || notificationType.includes('user-')) {
+        this.currentConfig.customGroupsList?.forEach(item => {
+          if (item.escalationType === notificationType &&
+              item.active !== false &&
+              item.email) {
+            recipients.add(item.email);
+            console.log(`✅ Added custom recipient: ${item.email}`);
+          }
+        });
       }
-    });
+    }
 
-    // Add active admins for all notifications
-    this.currentConfig.adminList?.forEach(item => {
-      if (item.active !== false && item.email) {
-        recipients.add(item.email);
-        console.log(`✅ Added admin: ${item.email}`);
-      }
-    });
-
-    // Add procedure owners if available
+    // ✅ Add procedure owners if available
     if (procedureData) {
       if (procedureData.primary_owner_email) {
         recipients.add(procedureData.primary_owner_email);
@@ -86,33 +131,23 @@ class EmailNotificationService {
       }
     }
 
-    // Add access management custom recipients for user access notifications
-    if (notificationType.includes('access') || notificationType.includes('user-')) {
-      this.currentConfig.customGroupsList?.forEach(item => {
-        if (item.escalationType === notificationType &&
-            item.active !== false &&
-            item.email) {
-          recipients.add(item.email);
-          console.log(`✅ Added custom recipient: ${item.email}`);
-        }
-      });
-    }
-
-    // Add LOB heads for all procedure-related notifications
-    this.currentConfig.lobHeadsList?.forEach(item => {
-      if (item.lob === lob &&
-          item.active !== false &&
-          item.email) {
-        recipients.add(item.email);
-        console.log(`✅ Added LOB head: ${item.email}`);
-      }
-    });
-
     const recipientArray = Array.from(recipients);
     console.log(`📤 Final recipients for ${notificationType}:`, recipientArray);
     
-    return recipientArray.length > 0 ? recipientArray : ['minaantoun@hsbc.com'];
+    // ✅ Always ensure we have at least one valid recipient
+    if (recipientArray.length === 0) {
+      console.warn('⚠️ No recipients found, using fallback');
+      return ['minaantoun@hsbc.com'];
+    }
+    
+    return recipientArray;
+    
+  } catch (error) {
+    console.error('❌ Error getting recipients:', error);
+    // Fallback to your email
+    return ['minaantoun@hsbc.com'];
   }
+}
 
   // ===================================================================
   // NOTIFICATION TRIGGERS
