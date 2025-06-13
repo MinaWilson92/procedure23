@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import ConfigureRecipients from './ConfigureRecipients';
 import NotificationSettings from './NotificationSettings';
 import CustomTemplates from './CustomTemplates';
+import TemplateManagement from './TemplateManagement';
 
 const GodModeEmailManagement = ({ user, emailService }) => {
   const [showAccessDialog, setShowAccessDialog] = useState(false);
@@ -156,6 +157,25 @@ const GodModeEmailManagement = ({ user, emailService }) => {
 
       {/* Full Email Management Access */}
       <ConfigureRecipients emailService={emailService} />
+
+        // Add this to the return statement:
+<Box>
+  {/* Existing God Mode Header */}
+  
+  {/* Add Template Management */}
+  <Card sx={{ mb: 4 }}>
+    <CardContent>
+      <Typography variant="h5" gutterBottom>
+        📧 Email Template Management
+      </Typography>
+      <TemplateManagement emailService={emailService} />
+    </CardContent>
+  </Card>
+
+  {/* Existing ConfigureRecipients */}
+  <ConfigureRecipients emailService={emailService} />
+</Box>
+    
     </Box>
   );
 };
