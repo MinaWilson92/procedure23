@@ -109,51 +109,50 @@ const ConfigureRecipients = () => {
     }
   };
 
-  const loadDefaultAdmins = async () => {
-    try {
-      console.log('👑 Loading default admin users...');
-      
-      const response = await fetch(
-        `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('UserRoles')/items?$filter=UserRole eq 'admin' and Status eq 'active'&$select=*`,
-        {
-          headers: { 'Accept': 'application/json; odata=verbose' },
-          credentials: 'include'
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const admins = data.d.results.map(item => ({
-          id: item.Id,
-          email: `${item.Title}@hsbc.com`,
-          name: item.DisplayName || `User ${item.Title}`,
-          staffId: item.Title,
-          role: item.UserRole,
-          isDefault: true
-        }));
-        
-        setDefaultAdmins(admins);
-        console.log('✅ Default admins loaded:', admins.length);
-      } else {
-        console.log('⚠️ Could not load admin users, using fallback');
-        setDefaultAdmins([
-          {
-            id: 'default-1',
-            email: 'minaantoun@hsbc.com',
-            name: 'Mina Antoun',
-            staffId: '43898931',
-            role: 'admin',
-            isDefault: true
-          }
-        ]);
+const loadDefaultAdmins = async () => {
+  try {
+    console.log('👑 Loading default admin users from UserRoles...');
+    
+    const response = await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'UserRoles\')/items?$filter=UserRole eq \'admin\' and Status eq \'active\'&$select=Id,Title,Email,DisplayName,UserRole',
+      {
+        headers: { 'Accept': 'application/json; odata=verbose' },
+        credentials: 'same-origin'
       }
-      
-    } catch (error) {
-      console.error('❌ Error loading default admins:', error);
-      setDefaultAdmins([]);
-    }
-  };
+    );
 
+    if (response.ok) {
+      const data = await response.json();
+      const admins = data.d.results.map(item => ({
+        id: item.Id,
+        email: item.Email?.trim() || `${item.Title}@hsbc.com`,
+        name: item.DisplayName || `User ${item.Title}`,
+        staffId: item.Title,
+        role: item.UserRole,
+        isDefault: true
+      }));
+      
+      setDefaultAdmins(admins);
+      console.log('✅ Default admins loaded from UserRoles:', admins);
+    } else {
+      console.log('⚠️ Could not load admin users from UserRoles, using fallback');
+      setDefaultAdmins([
+        {
+          id: 'default-1',
+          email: 'minaantoun@hsbc.com',
+          name: 'Mina Antoun',
+          staffId: '43898931',
+          role: 'admin',
+          isDefault: true
+        }
+      ]);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error loading default admins from UserRoles:', error);
+    setDefaultAdmins([]);
+  }
+};
   // ✅ FIXED: Transform function to prevent duplicates and handle access management
   const transformToLOBConfig = (flatConfig) => {
     console.log('🔄 Transforming flat config to LOB config:', flatConfig);
