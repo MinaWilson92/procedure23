@@ -20,14 +20,14 @@ import {
   Security, Refresh, Add, Edit, Delete, Visibility, Send,
   Group, People, Save, Cancel, Search, Clear, PersonAdd,
   BugReport, VpnKey, Policy, LockOpen, HowToReg,
-  Info // Restored missing Info icon import
+  Info
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import EmailManagement from '../components/EmailManagement';
 import EmailNotificationService from '../services/EmailNotificationService';
-import AdminPanel from '../components/AdminPanel'; 
+import AdminPanel from '../components/AdminPanel';
 
 
 const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
@@ -100,10 +100,11 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     }
   };
   
+  // ✅ BUG FIX 1: Changed from getNotificationLog to getEmailActivityLog
   const loadNotificationLog = async () => {
     try {
-      if (emailService && typeof emailService.getNotificationLog === 'function') {
-        const log = await emailService.getNotificationLog();
+      if (emailService && typeof emailService.getEmailActivityLog === 'function') {
+        const log = await emailService.getEmailActivityLog(10); // Fetch latest 10 notifications
         setNotificationLog(log);
       }
     } catch (error) {
@@ -111,10 +112,11 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     }
   };
 
+  // ✅ BUG FIX 2: Changed UserID to UserId in the select query
   const loadAuditLog = async () => {
     try {
         const sp = window.pnp.sp.web.lists.getByTitle('AuditLog');
-        const items = await sp.items.select('Title,LogTimestamp,UserID,ActionType,LOB,ProcedureName,Status,ID,Details').orderBy("LogTimestamp", false).get();
+        const items = await sp.items.select('Title,LogTimestamp,UserId,ActionType,LOB,ProcedureName,Status,ID,Details').orderBy("LogTimestamp", false).get();
         setAuditLog(items);
     } catch (err) {
         console.error("Error loading Audit Log:", err);
@@ -183,7 +185,7 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
     const logEntry = {
         Title: `${actionType}: ${procedure.Title}`,
         LogTimestamp: new Date().toISOString(),
-        UserID: user.displayName,
+        UserId: user.displayName, // Corrected from UserID
         ActionType: actionType,
         LOB: procedure.LOB || 'N/A',
         ProcedureName: procedure.Title,
@@ -422,7 +424,17 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
               <Paper elevation={0} sx={{ p: 3, bgcolor: 'background.paper' }}>
                 <Typography variant="h6" gutterBottom display="flex" alignItems="center"><Notifications sx={{ mr: 1 }} />Recent Notifications</Typography>
                 <Divider sx={{ mb: 2 }} />
-                {notificationLog.length > 0 ? <List>{notificationLog.map((log, index) => (<ListItem key={log.ID || index} secondaryAction={<Chip label={new Date(log.Created).toLocaleDateString()} size="small" />}><ListItemIcon>{log.ActivityType === 'WARNING' ? <Warning color="warning" /> : <Info color="info" />}</ListItemIcon><ListItemText primary={log.NotificationType || 'Notification'} secondary={`Procedure: ${log.ProcedureName}`} /></ListItem>))}</List> : <Typography variant="body2" color="text.secondary">No recent notifications.</Typography>}
+                {/* ✅ BUG FIX 1: Correctly render the notificationLog data */}
+                {notificationLog.length > 0 ? <List>{notificationLog.map((log, index) => (
+                    <ListItem key={log.id || index} secondaryAction={<Chip label={new Date(log.timestamp).toLocaleDateString()} size="small" />}>
+                        <ListItemIcon>
+                            {log.activityType.includes('FAILED') ? <ErrorIcon color="error" /> :
+                             log.activityType.includes('EXPIRY') ? <Warning color="warning" /> :
+                             <Info color="info" />}
+                        </ListItemIcon>
+                        <ListItemText primary={log.readableActivity} />
+                    </ListItem>
+                ))}</List> : <Typography variant="body2" color="text.secondary">No recent notifications.</Typography>}
               </Paper>
             </Grid>
           </Grid>
@@ -470,7 +482,8 @@ const AdminDashboard = ({ procedures, onDataRefresh, sharePointAvailable }) => {
                         <TableCell>{new Date(log.LogTimestamp).toLocaleString()}</TableCell>
                         <TableCell><Chip label={log.ActionType} color={log.ActionType.includes('Deleted') ? 'error' : 'warning'} size="small"/></TableCell>
                         <TableCell>{log.ProcedureName}</TableCell>
-                        <TableCell>{log.UserID}</TableCell>
+                        {/* ✅ BUG FIX 2: Changed from log.UserID to log.UserId */}
+                        <TableCell>{log.UserId}</TableCell>
                         <TableCell>{log.LOB}</TableCell>
                         <TableCell><Chip label={log.Status} color={log.Status === 'Success' ? 'success' : 'error'} size="small" /></TableCell>
                     </TableRow>
