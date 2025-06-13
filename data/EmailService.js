@@ -774,45 +774,71 @@ async checkAvailableTemplates() {
   }
 
   async sendNotificationEmail(templateType, recipients, variables) {
-    try {
-      console.log('📧 Sending notification email:', templateType);
-      
-      const template = await this.getEmailTemplate(templateType);
-      
-      if (!template || !template.isActive) {
-        throw new Error(`Template ${templateType} not found or inactive`);
-      }
-
-      let subject = template.subject;
-      let htmlContent = template.htmlContent;
-      
-      Object.keys(variables).forEach(key => {
-        const placeholder = `{{${key}}}`;
-        subject = subject.replace(new RegExp(placeholder, 'g'), variables[key]);
-        htmlContent = htmlContent.replace(new RegExp(placeholder, 'g'), variables[key]);
-      });
-
-      const emailData = {
-        to: recipients,
-        subject: subject,
-        body: htmlContent
-      };
-
-      const result = await this.sendEmailViaSharePoint(emailData);
-      
-      if (result.success) {
-        console.log('✅ Notification email sent successfully');
-        return { success: true, message: 'Notification sent via SharePoint' };
-      } else {
-        throw new Error(result.message);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error sending notification email:', error);
-      return { success: false, message: error.message };
+  try {
+    console.log('📧 Sending notification email:', templateType);
+    console.log('📧 Recipients:', recipients);
+    console.log('📧 Variables for replacement:', variables);
+    
+    const template = await this.getEmailTemplate(templateType);
+    
+    if (!template || !template.isActive) {
+      throw new Error(`Template ${templateType} not found or inactive`);
     }
-  }
 
+    console.log('📧 Template found:', template.name);
+    console.log('📧 Original subject:', template.subject);
+    console.log('📧 Original HTML preview:', template.htmlContent?.substring(0, 200) + '...');
+
+    // ✅ FIXED: Robust variable replacement
+    let subject = template.subject || '';
+    let htmlContent = template.htmlContent || '';
+
+    // Replace variables in both subject and content
+    Object.keys(variables).forEach(key => {
+      const value = variables[key] || 'N/A'; // Use 'N/A' if value is undefined
+      const placeholder = `{{${key}}}`;
+      
+      console.log(`🔄 Replacing ${placeholder} with: ${value}`);
+      
+      // Replace in subject
+      subject = subject.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+      
+      // Replace in HTML content
+      htmlContent = htmlContent.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), value);
+    });
+
+    console.log('📧 Final subject:', subject);
+    console.log('📧 Final HTML preview:', htmlContent?.substring(0, 200) + '...');
+    console.log('📧 Variables after replacement check:');
+    
+    // ✅ DEBUG: Check if any variables remain unreplaced
+    const remainingVariables = htmlContent.match(/\{\{[^}]+\}\}/g);
+    if (remainingVariables) {
+      console.warn('⚠️ Unreplaced variables found:', remainingVariables);
+    } else {
+      console.log('✅ All variables replaced successfully');
+    }
+
+    const emailData = {
+      to: recipients,
+      subject: subject,
+      body: htmlContent
+    };
+
+    const result = await this.sendEmailViaSharePoint(emailData);
+    
+    if (result.success) {
+      console.log('✅ Notification email sent successfully');
+      return { success: true, message: 'Notification sent via SharePoint' };
+    } else {
+      throw new Error(result.message);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error sending notification email:', error);
+    return { success: false, message: error.message };
+  }
+}
   // ===================================================================
   // DEFAULT TEMPLATES (For Your SharePoint Structure)
   // ===================================================================
