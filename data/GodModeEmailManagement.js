@@ -12,6 +12,7 @@ import ConfigureRecipients from './ConfigureRecipients';
 import NotificationSettings from './NotificationSettings';
 import CustomTemplates from './CustomTemplates';
 import TemplateManagement from './TemplateManagement';
+import BroadcastEmail from './BroadcastEmail';
 
 const GodModeEmailManagement = ({ user, emailService }) => {
   const [showAccessDialog, setShowAccessDialog] = useState(false);
@@ -159,7 +160,34 @@ const GodModeEmailManagement = ({ user, emailService }) => {
       <ConfigureRecipients emailService={emailService} />
 
         // Add this to the return statement:
+
+        // Add this to the return statement after ConfigureRecipients:
 <Box>
+  {/* Existing content */}
+  
+  {/* Add Broadcast Email */}
+  <Card sx={{ mb: 4 }}>
+    <CardContent>
+      <BroadcastEmail emailService={emailService} />
+    </CardContent>
+  </Card>
+  
+  {/* Template Management */}
+  <Card sx={{ mb: 4 }}>
+    <CardContent>
+      <Typography variant="h5" gutterBottom>
+        📧 Email Template Management
+      </Typography>
+      <TemplateManagement emailService={emailService} />
+    </CardContent>
+  </Card>
+
+  {/* Existing ConfigureRecipients */}
+  <ConfigureRecipients emailService={emailService} />
+</Box>
+<Box>
+
+        
   {/* Existing God Mode Header */}
   
   {/* Add Template Management */}
