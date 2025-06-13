@@ -144,23 +144,40 @@ const loadTemplatesDirectly = async () => {
   };
 
   const handleSaveTemplate = async () => {
-    try {
-      setLoading(true);
-      const result = await emailService.saveEmailTemplate(templateForm);
-      
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Template saved successfully!' });
-        setShowDialog(false);
-        await loadTemplates();
-      } else {
-        setMessage({ type: 'error', text: 'Failed to save template: ' + result.message });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Error saving template: ' + error.message });
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    setMessage(null);
+    
+    console.log('💾 Saving template:', templateForm);
+    
+    let result;
+    
+    if (emailService.emailService && typeof emailService.emailService.saveEmailTemplate === 'function') {
+      // If emailService is nested
+      result = await emailService.emailService.saveEmailTemplate(templateForm);
+    } else if (typeof emailService.saveEmailTemplate === 'function') {
+      // If emailService is direct
+      result = await emailService.saveEmailTemplate(templateForm);
+    } else {
+      // ✅ FALLBACK: Save template directly to SharePoint
+      console.log('⚠️ saveEmailTemplate method not found, saving directly to SharePoint');
+      result = await saveTemplateDirectly(templateForm);
     }
-  };
+    
+    if (result.success) {
+      setMessage({ type: 'success', text: 'Template saved successfully!' });
+      setShowDialog(false);
+      await loadTemplates();
+    } else {
+      setMessage({ type: 'error', text: 'Failed to save template: ' + result.message });
+    }
+  } catch (error) {
+    console.error('❌ Error saving template:', error);
+    setMessage({ type: 'error', text: 'Error saving template: ' + error.message });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDeleteTemplate = async (templateId) => {
     if (window.confirm('Are you sure you want to delete this template?')) {
@@ -182,6 +199,91 @@ const loadTemplatesDirectly = async () => {
     }
   };
 
+// ✅ ADD: Direct SharePoint template saving method
+const saveTemplateDirectly = async (template) => {
+  try {
+    console.log('💾 Saving template directly to SharePoint...');
+    
+    // Get fresh request digest
+    const digestResponse = await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/contextinfo',
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        },
+        credentials: 'same-origin'
+      }
+    );
+    
+    if (!digestResponse.ok) {
+      throw new Error('Failed to get request digest');
+    }
+    
+    const digestData = await digestResponse.json();
+    const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+
+    const listItemData = {
+      __metadata: { type: 'SP.Data.EmailTemplatesListItem' },
+      Title: template.name,
+      TemplateType: template.type,
+      Subject: template.subject,
+      HTMLContent: template.htmlContent,
+      TextContent: template.textContent,
+      IsActive: template.isActive !== false
+    };
+
+    let response;
+    
+    if (template.id) {
+      // Update existing template
+      response = await fetch(
+        `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('EmailTemplates')/items(${template.id})`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest,
+            'IF-MATCH': '*',
+            'X-HTTP-Method': 'MERGE'
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(listItemData)
+        }
+      );
+    } else {
+      // Create new template
+      response = await fetch(
+        'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailTemplates\')/items',
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(listItemData)
+        }
+      );
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`SharePoint save failed: ${response.status} - ${errorText}`);
+    }
+
+    console.log('✅ Template saved directly to SharePoint');
+    return { success: true, message: 'Template saved successfully to SharePoint' };
+    
+  } catch (error) {
+    console.error('❌ Direct template save failed:', error);
+    return { success: false, message: error.message };
+  }
+};
+  
   const getDefaultTemplate = (templateType) => {
     const defaults = {
       'user-access-granted': {
