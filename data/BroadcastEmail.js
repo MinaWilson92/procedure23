@@ -83,52 +83,94 @@ const BroadcastEmail = ({ emailService }) => {
     }
   };
 
-  const sendBroadcastEmail = async () => {
-    try {
-      setLoading(true);
-      
-      if (recipientList.length === 0) {
-        setMessage({ type: 'error', text: 'No recipients selected' });
-        return;
-      }
-      
-      if (!emailContent.subject || !emailContent.message) {
-        setMessage({ type: 'error', text: 'Subject and message are required' });
-        return;
-      }
-      
-      // Extract email addresses from formatted strings
-      const emailAddresses = recipientList.map(recipient => {
-        const match = recipient.match(/<(.+)>/);
-        return match ? match[1] : recipient;
-      });
-      
-      // Send broadcast email
-      const result = await emailService.sendEmailViaSharePoint({
-        to: emailAddresses,
-        subject: `[BROADCAST] ${emailContent.subject}`,
-        body: generateBroadcastEmailHTML(emailContent)
-      });
-      
-      if (result.success) {
-        setMessage({ type: 'success', text: `Broadcast email sent to ${emailAddresses.length} recipients!` });
-        
-        // Reset form
-        setEmailContent({ subject: '', message: '', priority: 'normal' });
-        setRecipients({ admins: false, primaryOwners: false, secondaryOwners: false });
-        setRecipientList([]);
-      } else {
-        setMessage({ type: 'error', text: 'Failed to send broadcast email: ' + result.message });
-      }
-      
-    } catch (error) {
-      console.error('❌ Broadcast email failed:', error);
-      setMessage({ type: 'error', text: 'Broadcast email failed: ' + error.message });
-    } finally {
-      setLoading(false);
+const sendBroadcastEmail = async () => {
+  try {
+    setLoading(true);
+    
+    if (recipientList.length === 0) {
+      setMessage({ type: 'error', text: 'No recipients selected' });
+      return;
     }
-  };
+    
+    if (!emailContent.subject || !emailContent.message) {
+      setMessage({ type: 'error', text: 'Subject and message are required' });
+      return;
+    }
+    
+    // Extract email addresses from formatted strings
+    const emailAddresses = recipientList.map(recipient => {
+      const match = recipient.match(/<(.+)>/);
+      return match ? match[1] : recipient;
+    });
+    
+    // ✅ FIXED: Use the correct method path
+    const result = await emailService.emailService.sendEmailViaSharePoint({
+      to: emailAddresses,
+      subject: `[BROADCAST] ${emailContent.subject}`,
+      body: generateBroadcastEmailHTML(emailContent)
+    });
+    
+    if (result.success) {
+      setMessage({ type: 'success', text: `Broadcast email sent to ${emailAddresses.length} recipients!` });
+      
+      // Log broadcast activity
+      await logBroadcastActivity(emailAddresses.length);
+      
+      // Reset form
+      setEmailContent({ subject: '', message: '', priority: 'normal' });
+      setRecipients({ admins: false, primaryOwners: false, secondaryOwners: false });
+      setRecipientList([]);
+    } else {
+      setMessage({ type: 'error', text: 'Failed to send broadcast email: ' + result.message });
+    }
+    
+  } catch (error) {
+    console.error('❌ Broadcast email failed:', error);
+    setMessage({ type: 'error', text: 'Broadcast email failed: ' + error.message });
+  } finally {
+    setLoading(false);
+  }
+};
+// ✅ ALSO FIX: Update the logBroadcastActivity function
+const logBroadcastActivity = async (recipientCount) => {
+  try {
+    // ✅ FIXED: Use the correct method path
+    const requestDigest = await emailService.emailService.getFreshRequestDigest();
+    
+    const logEntry = {
+      __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
+      Title: 'BROADCAST_EMAIL_SENT',
+      ActivityType: 'BROADCAST_EMAIL_SENT',
+      PerformedBy: 'Admin',
+      ActivityDetails: JSON.stringify({
+        subject: emailContent.subject,
+        recipientCount: recipientCount,
+        recipientTypes: Object.keys(recipients).filter(key => recipients[key]),
+        priority: emailContent.priority
+      }),
+      ActivityTimestamp: new Date().toISOString(),
+      Status: 'completed',
+      NotificationType: 'BROADCAST'
+    };
 
+    await fetch(
+      'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailActivityLog\')/items',
+      {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(logEntry)
+      }
+    );
+    
+  } catch (error) {
+    console.error('❌ Failed to log broadcast activity:', error);
+  }
+};
   const generateBroadcastEmailHTML = (content) => {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
