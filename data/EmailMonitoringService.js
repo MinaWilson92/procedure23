@@ -462,4 +462,107 @@ class EmailMonitoringService {
 
   groupByActivityType(activities) {
     const grouped = {};
-    activities.
+    activities.forEach(activity => {
+      const type = activity.activityType || 'UNKNOWN';
+      grouped[type] = (grouped[type] || 0) + 1;
+    });
+    return grouped;
+  }
+
+  groupProceduresByLOB(procedures) {
+    const grouped = {};
+    procedures.forEach(procedure => {
+      const lob = procedure.LOB || 'Unknown';
+      grouped[lob] = (grouped[lob] || 0) + 1;
+    });
+    return grouped;
+  }
+
+  formatActivityType(type) {
+    const formatMap = {
+      'NEW_PROCEDURE_NOTIFICATION': '📤 New Procedure Uploads',
+      'USER_ACCESS_GRANTED_NOTIFICATION': '✅ User Access Granted',
+      'USER_ACCESS_REVOKED_NOTIFICATION': '❌ User Access Revoked',
+      'USER_ROLE_UPDATED_NOTIFICATION': '🔄 User Role Updates',
+      'PROCEDURE_EXPIRING_NOTIFICATION': '⏰ Expiry Warnings',
+      'PROCEDURE_EXPIRED_NOTIFICATION': '🚨 Expired Procedures',
+      'LOW_QUALITY_SCORE_NOTIFICATION': '📊 Quality Alerts',
+      'EMAIL_SYSTEM_TEST': '🧪 System Tests'
+    };
+    
+    return formatMap[type] || type.replace(/_/g, ' ');
+  }
+
+  async logMonitoringActivity(activityType, details) {
+    try {
+      const requestDigest = await this.getFreshRequestDigest();
+      
+      const logEntry = {
+        __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
+        Title: activityType,
+        ActivityType: activityType,
+        Recipients: JSON.stringify(['minaantoun@hsbc.com']),
+        Success: true,
+        Details: JSON.stringify(details),
+        Timestamp: new Date().toISOString(),
+        PerformedBy: 'Email Monitoring System',
+        ProcedureId: null,
+        TargetUser: null
+      };
+
+      await fetch(
+        'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailActivityLog\')/items',
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify(logEntry)
+        }
+      );
+      
+    } catch (error) {
+      console.error('❌ Failed to log monitoring activity:', error);
+    }
+  }
+
+  async getFreshRequestDigest() {
+    try {
+      const digestResponse = await fetch(
+        'https://teams.global.hsbc/sites/EmployeeEng/_api/contextinfo',
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose'
+          },
+          credentials: 'same-origin'
+        }
+      );
+      
+      if (digestResponse.ok) {
+        const digestData = await digestResponse.json();
+        return digestData.d.GetContextWebInformation.FormDigestValue;
+      }
+      
+      return document.getElementById('__REQUESTDIGEST')?.value || '';
+    } catch (error) {
+      return '';
+    }
+  }
+
+  // Get monitoring status
+  getMonitoringStatus() {
+    return {
+      isRunning: this.isRunning,
+      activeMonitors: Array.from(this.monitoringIntervals.keys()),
+      lastRun: this.lastMonitoringRun,
+      intervalsCount: this.monitoringIntervals.size
+    };
+  }
+}
+
+export default EmailMonitoringService;
