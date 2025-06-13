@@ -173,89 +173,109 @@ class EmailService {
     };
   }
 
-  async saveEmailConfig(config) {
-    try {
-      console.log('📧 Saving email configuration to SharePoint:', config);
-      
-      const requestDigest = await this.getFreshRequestDigest();
-      const entityType = await this.getListEntityTypeName('EmailConfiguration');
-      
-      console.log('✅ Got entity type:', entityType);
+// services/EmailService.js - Add this missing section in saveEmailConfig method
 
-      await this.clearExistingConfig(requestDigest);
+async saveEmailConfig(config) {
+  try {
+    console.log('📧 Saving email configuration to SharePoint:', config);
+    
+    const requestDigest = await this.getFreshRequestDigest();
+    const entityType = await this.getListEntityTypeName('EmailConfiguration');
+    
+    console.log('✅ Got entity type:', entityType);
 
-      let savedCount = 0;
+    await this.clearExistingConfig(requestDigest);
 
-      // Save Global CC List
-      for (const cc of config.globalCCList || []) {
-        if (cc.email && cc.email.trim()) {
-          await this.saveConfigItem({
-            ConfigType: 'GlobalCC',
-            EmailAddress: cc.email.trim(),
-            DisplayName: cc.name || cc.email.trim(),
-            IsActive: cc.active !== false,
-            LOB: cc.lob || 'All',
-            EscalationType: cc.escalationType || 'new-procedure-uploaded',
-            RecipientRole: cc.recipientRole || 'General'
-          }, requestDigest, entityType);
-          savedCount++;
-        }
-      }
+    let savedCount = 0;
 
-      // Save Admin List
-      for (const admin of config.adminList || []) {
-        if (admin.email && admin.email.trim()) {
-          await this.saveConfigItem({
-            ConfigType: 'Admin',
-            EmailAddress: admin.email.trim(),
-            DisplayName: admin.name || admin.email.trim(),
-            IsActive: admin.active !== false,
-            LOB: admin.lob || 'All',
-            EscalationType: admin.escalationType || 'new-procedure-uploaded',
-            RecipientRole: admin.recipientRole || 'Manager'
-          }, requestDigest, entityType);
-          savedCount++;
-        }
-      }
-
-      // Save LOB Heads List
-      for (const lobHead of config.lobHeadsList || []) {
-        if (lobHead.email && lobHead.email.trim()) {
-          await this.saveConfigItem({
-            ConfigType: 'LOBHead',
-            EmailAddress: lobHead.email.trim(),
-            DisplayName: lobHead.name || lobHead.email.trim(),
-            IsActive: lobHead.active !== false,
-            LOB: lobHead.lob || 'All',
-            EscalationType: lobHead.escalationType || 'new-procedure-uploaded',
-            RecipientRole: lobHead.recipientRole || 'Head'
-          }, requestDigest, entityType);
-          savedCount++;
-        }
-      }
-
-      // Save Test Email
-      if (config.testEmail && config.testEmail.trim()) {
+    // Save Global CC List
+    for (const cc of config.globalCCList || []) {
+      if (cc.email && cc.email.trim()) {
         await this.saveConfigItem({
-          ConfigType: 'TestEmail',
-          EmailAddress: config.testEmail.trim(),
-          DisplayName: 'Test Email Address',
-          IsActive: true,
-          LOB: 'All',
-          EscalationType: 'system-maintenance',
-          RecipientRole: 'General'
+          ConfigType: 'GlobalCC',
+          EmailAddress: cc.email.trim(),
+          DisplayName: cc.name || cc.email.trim(),
+          IsActive: cc.active !== false,
+          LOB: cc.lob || 'All',
+          EscalationType: cc.escalationType || 'new-procedure-uploaded',
+          RecipientRole: cc.recipientRole || 'General'
         }, requestDigest, entityType);
         savedCount++;
       }
-
-      console.log(`✅ Email configuration saved: ${savedCount} items`);
-      return { success: true, message: `Saved ${savedCount} configuration items to SharePoint` };
-      
-    } catch (error) {
-      console.error('❌ Error saving email config:', error);
-      return { success: false, message: error.message };
     }
+
+    // Save Admin List
+    for (const admin of config.adminList || []) {
+      if (admin.email && admin.email.trim()) {
+        await this.saveConfigItem({
+          ConfigType: 'Admin',
+          EmailAddress: admin.email.trim(),
+          DisplayName: admin.name || admin.email.trim(),
+          IsActive: admin.active !== false,
+          LOB: admin.lob || 'All',
+          EscalationType: admin.escalationType || 'new-procedure-uploaded',
+          RecipientRole: admin.recipientRole || 'Manager'
+        }, requestDigest, entityType);
+        savedCount++;
+      }
+    }
+
+    // Save LOB Heads List
+    for (const lobHead of config.lobHeadsList || []) {
+      if (lobHead.email && lobHead.email.trim()) {
+        await this.saveConfigItem({
+          ConfigType: 'LOBHead',
+          EmailAddress: lobHead.email.trim(),
+          DisplayName: lobHead.name || lobHead.email.trim(),
+          IsActive: lobHead.active !== false,
+          LOB: lobHead.lob || 'All',
+          EscalationType: lobHead.escalationType || 'new-procedure-uploaded',
+          RecipientRole: lobHead.recipientRole || 'Head'
+        }, requestDigest, entityType);
+        savedCount++;
+      }
+    }
+
+    // ✅ ADD THIS MISSING SECTION: Save Custom Groups List (Access Management Recipients)
+    for (const customGroup of config.customGroupsList || []) {
+      if (customGroup.email && customGroup.email.trim()) {
+        console.log('💾 Saving custom group recipient:', customGroup);
+        await this.saveConfigItem({
+          ConfigType: 'CustomGroup',
+          EmailAddress: customGroup.email.trim(),
+          DisplayName: customGroup.name || customGroup.email.trim(),
+          IsActive: customGroup.active !== false,
+          LOB: customGroup.lob || 'All',
+          EscalationType: customGroup.escalationType || 'user-access-granted',
+          RecipientRole: customGroup.recipientRole || 'Custom'
+        }, requestDigest, entityType);
+        savedCount++;
+        console.log('✅ Custom group recipient saved successfully');
+      }
+    }
+
+    // Save Test Email
+    if (config.testEmail && config.testEmail.trim()) {
+      await this.saveConfigItem({
+        ConfigType: 'TestEmail',
+        EmailAddress: config.testEmail.trim(),
+        DisplayName: 'Test Email Address',
+        IsActive: true,
+        LOB: 'All',
+        EscalationType: 'system-maintenance',
+        RecipientRole: 'General'
+      }, requestDigest, entityType);
+      savedCount++;
+    }
+
+    console.log(`✅ Email configuration saved: ${savedCount} items`);
+    return { success: true, message: `Saved ${savedCount} configuration items to SharePoint` };
+    
+  } catch (error) {
+    console.error('❌ Error saving email config:', error);
+    return { success: false, message: error.message };
   }
+}
 
   async clearExistingConfig(requestDigest) {
     try {
