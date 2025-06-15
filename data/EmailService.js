@@ -775,6 +775,8 @@ async checkAvailableTemplates() {
 
 // In EmailService.js, REPLACE THE ENTIRE sendNotificationEmail method with this:
 
+// REPLACE the entire sendNotificationEmail method in EmailService.js with this enhanced version:
+
 async sendNotificationEmail(templateType, recipients, variables) {
   try {
     console.log('📧 Sending notification email:', templateType);
@@ -789,77 +791,122 @@ async sendNotificationEmail(templateType, recipients, variables) {
 
     console.log('📧 Template loaded:', template.name);
     console.log('📧 Original subject BEFORE replacement:', template.subject);
-    console.log('📧 Original HTML content BEFORE replacement (first 200 chars):', template.htmlContent?.substring(0, 200));
+    console.log('📧 Original HTML content BEFORE replacement (first 500 chars):', template.htmlContent?.substring(0, 500));
 
-    // ✅ INITIALIZE: Start with template content
+    // ✅ ENHANCED FIX: Start with template content
     let subject = template.subject || '';
     let htmlContent = template.htmlContent || '';
 
-    // Debug: Show what we're starting with
-    console.log('📧 Starting replacement process...');
+    console.log('📧 Starting variable replacement process...');
     console.log('📧 Variables to replace:', Object.keys(variables));
 
-    // ✅ ENHANCED: Replace variables in HTML content (handles SharePoint Rich Text encoding)
+    // ✅ CRITICAL FIX: Enhanced variable replacement for SharePoint Rich Text
     for (const [key, value] of Object.entries(variables)) {
       const placeholder = `{{${key}}}`;
       const replaceValue = String(value || 'N/A');
       
       console.log(`🔄 REPLACING: "${placeholder}" WITH: "${replaceValue}"`);
       
-      // ✅ CRITICAL FIX: Multiple replacement patterns for SharePoint Rich Text
+      // ✅ COMPREHENSIVE REPLACEMENT PATTERNS for SharePoint Rich Text Editor
       const patterns = [
-        // Simple text replacement
-        new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'),
-        // HTML-encoded braces
-        new RegExp(placeholder.replace('{', '&#123;').replace('}', '&#125;'), 'g'),
-        new RegExp(placeholder.replace('{', '&lcub;').replace('}', '&rcub;'), 'g'),
-        // SharePoint span-wrapped variables
-        new RegExp(`<span[^>]*>${placeholder.replace(/[{}]/g, '\\$&')}</span>`, 'g'),
-        new RegExp(`<span[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</span>`, 'g'),
-        // Any HTML tag wrapped variables
-        new RegExp(`<[^>]*>${placeholder.replace(/[{}]/g, '\\$&')}<[^>]*>`, 'g'),
-        // Variables with extra whitespace
-        new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
+        // 1. Simple text replacement (most common)
+        new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'gi'),
+        
+        // 2. HTML-encoded braces (SharePoint encoding)
+        new RegExp(placeholder.replace('{', '&#123;').replace('}', '&#125;'), 'gi'),
+        new RegExp(placeholder.replace('{', '&lcub;').replace('}', '&rcub;'), 'gi'),
+        new RegExp(placeholder.replace('{', '&#x7B;').replace('}', '&#x7D;'), 'gi'),
+        
+        // 3. SharePoint span-wrapped variables (MOST COMMON ISSUE)
+        new RegExp(`<span[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</span>`, 'gi'),
+        new RegExp(`<span[^>]*>${placeholder.replace(/[{}]/g, '\\$&')}</span>`, 'gi'),
+        
+        // 4. Multiple span wrapping (nested spans)
+        new RegExp(`<span[^>]*><span[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</span></span>`, 'gi'),
+        
+        // 5. Bold/Italic wrapped variables
+        new RegExp(`<(strong|b)[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</(strong|b)>`, 'gi'),
+        new RegExp(`<(em|i)[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</(em|i)>`, 'gi'),
+        
+        // 6. Font/color wrapped variables
+        new RegExp(`<font[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</font>`, 'gi'),
+        
+        // 7. Paragraph wrapped variables
+        new RegExp(`<p[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</p>`, 'gi'),
+        
+        // 8. Div wrapped variables
+        new RegExp(`<div[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</div>`, 'gi'),
+        
+        // 9. Variables with extra whitespace and line breaks
+        new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi'),
+        new RegExp(`\\{\\{\\s*${key}\\s*\\n\\s*\\}\\}`, 'gi'),
+        
+        // 10. URL-encoded braces
+        new RegExp(placeholder.replace('{', '%7B').replace('}', '%7D'), 'gi'),
+        
+        // 11. Double-encoded HTML entities
+        new RegExp(placeholder.replace('{', '&amp;#123;').replace('}', '&amp;#125;'), 'gi'),
+        
+        // 12. Any HTML tag wrapped variables (catch-all)
+        new RegExp(`<[^>]+>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</[^>]+>`, 'gi')
       ];
       
-      // Count before replacement
-      const subjectBefore = (subject.match(patterns[0]) || []).length;
-      let htmlBefore = 0;
+      // Count occurrences before replacement
+      let totalFoundInHtml = 0;
       patterns.forEach(pattern => {
-        htmlBefore += (htmlContent.match(pattern) || []).length;
+        const matches = htmlContent.match(pattern) || [];
+        totalFoundInHtml += matches.length;
+        if (matches.length > 0) {
+          console.log(`📊 Pattern found ${matches.length} times: ${pattern.source}`);
+          console.log(`📊 Matches: ${JSON.stringify(matches)}`);
+        }
       });
       
-      console.log(`📊 Found ${subjectBefore} occurrences in subject, ${htmlBefore} total in HTML`);
+      const subjectBefore = (subject.match(patterns[0]) || []).length;
+      console.log(`📊 Found ${subjectBefore} occurrences in subject, ${totalFoundInHtml} total in HTML`);
       
-      // Replace in subject (simple)
+      // Replace in subject (simple pattern only)
       subject = subject.replace(patterns[0], replaceValue);
       
       // Replace in HTML content (all patterns)
-      patterns.forEach(pattern => {
+      patterns.forEach((pattern, index) => {
+        const beforeReplace = htmlContent;
         htmlContent = htmlContent.replace(pattern, replaceValue);
+        if (beforeReplace !== htmlContent) {
+          console.log(`✅ Pattern ${index + 1} made replacements`);
+        }
       });
       
       // Count after replacement
-      const subjectAfter = (subject.match(patterns[0]) || []).length;
-      let htmlAfter = 0;
+      let totalRemainingInHtml = 0;
       patterns.forEach(pattern => {
-        htmlAfter += (htmlContent.match(pattern) || []).length;
+        totalRemainingInHtml += (htmlContent.match(pattern) || []).length;
       });
       
-      console.log(`✅ After replacement: ${subjectAfter} remaining in subject, ${htmlAfter} remaining in HTML`);
+      const subjectAfter = (subject.match(patterns[0]) || []).length;
+      console.log(`✅ After replacement: ${subjectAfter} remaining in subject, ${totalRemainingInHtml} remaining in HTML`);
     }
 
     console.log('📧 Final subject AFTER replacement:', subject);
-    console.log('📧 Final HTML content AFTER replacement (first 200 chars):', htmlContent?.substring(0, 200));
+    console.log('📧 Final HTML content AFTER replacement (first 500 chars):', htmlContent?.substring(0, 500));
 
-    // ✅ VERIFICATION: Check for any remaining unreplaced variables
+    // ✅ FINAL VERIFICATION: Check for any remaining unreplaced variables
     const remainingInSubject = subject.match(/\{\{[^}]+\}\}/g);
     const remainingInHtml = htmlContent.match(/\{\{[^}]+\}\}/g);
     
     if (remainingInSubject || remainingInHtml) {
-      console.error('❌ UNREPLACED VARIABLES FOUND!');
+      console.error('❌ UNREPLACED VARIABLES STILL FOUND!');
       console.error('❌ In subject:', remainingInSubject);
       console.error('❌ In HTML:', remainingInHtml);
+      
+      // ✅ FALLBACK: Try one more aggressive replacement
+      Object.entries(variables).forEach(([key, value]) => {
+        const replaceValue = String(value || 'N/A');
+        // Ultra-aggressive replacement - remove any character between the key name
+        const ultraPattern = new RegExp(`\\{[^}]*${key}[^}]*\\}`, 'gi');
+        subject = subject.replace(ultraPattern, replaceValue);
+        htmlContent = htmlContent.replace(ultraPattern, replaceValue);
+      });
     } else {
       console.log('✅ ALL VARIABLES SUCCESSFULLY REPLACED!');
     }
@@ -873,14 +920,14 @@ async sendNotificationEmail(templateType, recipients, variables) {
     console.log('📧 Final email data being sent:', {
       to: emailData.to,
       subject: emailData.subject,
-      bodyPreview: emailData.body?.substring(0, 100) + '...'
+      bodyPreview: emailData.body?.substring(0, 200) + '...'
     });
 
     const result = await this.sendEmailViaSharePoint(emailData);
     
     if (result.success) {
-      console.log('✅ Notification email sent successfully with replaced variables');
-      return { success: true, message: 'Notification sent via SharePoint with variable replacement' };
+      console.log('✅ Notification email sent successfully with variable replacement');
+      return { success: true, message: 'Notification sent via SharePoint with enhanced variable replacement' };
     } else {
       throw new Error(result.message);
     }
@@ -891,9 +938,10 @@ async sendNotificationEmail(templateType, recipients, variables) {
   }
 }
   
-async debugVariableReplacement(templateType, variables) {
+
+async debugTemplateVariables(templateType, testVariables) {
   try {
-    console.log('🔍 DEBUG: Variable replacement test');
+    console.log('🔍 DEBUG: Testing template variable replacement');
     
     const template = await this.getEmailTemplate(templateType);
     if (!template) {
@@ -901,8 +949,8 @@ async debugVariableReplacement(templateType, variables) {
       return;
     }
     
-    console.log('🔍 Template content:', template.htmlContent);
-    console.log('🔍 Variables provided:', variables);
+    console.log('🔍 Template HTML content:', template.htmlContent);
+    console.log('🔍 Test variables:', testVariables);
     
     // Find all variables in template
     const templateVars = template.htmlContent.match(/\{\{[^}]+\}\}/g) || [];
@@ -911,12 +959,16 @@ async debugVariableReplacement(templateType, variables) {
     // Check which variables we have vs need
     templateVars.forEach(templateVar => {
       const varName = templateVar.replace(/[{}]/g, '');
-      if (variables.hasOwnProperty(varName)) {
-        console.log(`✅ Variable ${templateVar} will be replaced with: ${variables[varName]}`);
+      if (testVariables.hasOwnProperty(varName)) {
+        console.log(`✅ Variable ${templateVar} will be replaced with: ${testVariables[varName]}`);
       } else {
         console.error(`❌ Variable ${templateVar} NOT PROVIDED in variables object`);
       }
     });
+    
+    // Test the replacement
+    const result = await this.sendNotificationEmail(templateType, ['test@example.com'], testVariables);
+    console.log('🔍 Test result:', result);
     
   } catch (error) {
     console.error('❌ Debug failed:', error);
