@@ -790,52 +790,54 @@ async sendNotificationEmail(templateType, recipients, variables) {
     console.log('📧 Original HTML content BEFORE replacement (first 200 chars):', template.htmlContent?.substring(0, 200));
 
     // ✅ CRITICAL FIX: Proper variable replacement
-    let subject = template.subject || '';
-    let htmlContent = template.htmlContent || '';
-
-    // Debug: Show what we're starting with
-    console.log('📧 Starting replacement process...');
-    console.log('📧 Variables to replace:', Object.keys(variables));
-
-    // Replace each variable one by one
-    for (const [key, value] of Object.entries(variables)) {
-      const placeholder = `{{${key}}}`;
-      const replaceValue = String(value || 'N/A'); // Ensure it's a string
-      
-      console.log(`🔄 REPLACING: "${placeholder}" WITH: "${replaceValue}"`);
-      
-      // Count occurrences before replacement
-      const subjectBefore = (subject.match(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g')) || []).length;
-      const htmlBefore = (htmlContent.match(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g')) || []).length;
-      
-      console.log(`📊 Found ${subjectBefore} occurrences in subject, ${htmlBefore} in HTML`);
-      
-      // Perform replacement
-      subject = subject.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), replaceValue);
-      htmlContent = htmlContent.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), replaceValue);
-      
-      // Count occurrences after replacement
-      const subjectAfter = (subject.match(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g')) || []).length;
-      const htmlAfter = (htmlContent.match(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g')) || []).length;
-      
-      console.log(`✅ After replacement: ${subjectAfter} remaining in subject, ${htmlAfter} in HTML`);
-    }
-
-    console.log('📧 Final subject AFTER replacement:', subject);
-    console.log('📧 Final HTML content AFTER replacement (first 200 chars):', htmlContent?.substring(0, 200));
-
-    // ✅ VERIFICATION: Check for any remaining unreplaced variables
-    const remainingInSubject = subject.match(/\{\{[^}]+\}\}/g);
-    const remainingInHtml = htmlContent.match(/\{\{[^}]+\}\}/g);
-    
-    if (remainingInSubject || remainingInHtml) {
-      console.error('❌ UNREPLACED VARIABLES FOUND!');
-      console.error('❌ In subject:', remainingInSubject);
-      console.error('❌ In HTML:', remainingInHtml);
-    } else {
-      console.log('✅ ALL VARIABLES SUCCESSFULLY REPLACED!');
-    }
-
+  for (const [key, value] of Object.entries(variables)) {
+  const placeholder = `{{${key}}}`;
+  const replaceValue = String(value || 'N/A');
+  
+  console.log(`🔄 REPLACING: "${placeholder}" WITH: "${replaceValue}"`);
+  
+  // ✅ CRITICAL FIX: Multiple replacement patterns for SharePoint Rich Text
+  const patterns = [
+    // Simple text replacement
+    new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'),
+    // HTML-encoded braces
+    new RegExp(placeholder.replace('{', '&#123;').replace('}', '&#125;'), 'g'),
+    new RegExp(placeholder.replace('{', '&lcub;').replace('}', '&rcub;'), 'g'),
+    // SharePoint span-wrapped variables
+    new RegExp(`<span[^>]*>${placeholder.replace(/[{}]/g, '\\$&')}</span>`, 'g'),
+    new RegExp(`<span[^>]*>\\s*${placeholder.replace(/[{}]/g, '\\$&')}\\s*</span>`, 'g'),
+    // Any HTML tag wrapped variables
+    new RegExp(`<[^>]*>${placeholder.replace(/[{}]/g, '\\$&')}<[^>]*>`, 'g'),
+    // Variables with extra whitespace
+    new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g')
+  ];
+  
+  // Count before replacement
+  const subjectBefore = (subject.match(patterns[0]) || []).length;
+  let htmlBefore = 0;
+  patterns.forEach(pattern => {
+    htmlBefore += (htmlContent.match(pattern) || []).length;
+  });
+  
+  console.log(`📊 Found ${subjectBefore} occurrences in subject, ${htmlBefore} total in HTML`);
+  
+  // Replace in subject (simple)
+  subject = subject.replace(patterns[0], replaceValue);
+  
+  // Replace in HTML content (all patterns)
+  patterns.forEach(pattern => {
+    htmlContent = htmlContent.replace(pattern, replaceValue);
+  });
+  
+  // Count after replacement
+  const subjectAfter = (subject.match(patterns[0]) || []).length;
+  let htmlAfter = 0;
+  patterns.forEach(pattern => {
+    htmlAfter += (htmlContent.match(pattern) || []).length;
+  });
+  
+  console.log(`✅ After replacement: ${subjectAfter} remaining in subject, ${htmlAfter} remaining in HTML`);
+}
     const emailData = {
       to: recipients,
       subject: subject,
