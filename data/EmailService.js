@@ -862,6 +862,39 @@ async sendNotificationEmail(templateType, recipients, variables) {
     return { success: false, message: error.message };
   }
 }
+
+  
+async debugVariableReplacement(templateType, variables) {
+  try {
+    console.log('🔍 DEBUG: Variable replacement test');
+    
+    const template = await this.getEmailTemplate(templateType);
+    if (!template) {
+      console.error('❌ Template not found:', templateType);
+      return;
+    }
+    
+    console.log('🔍 Template content:', template.htmlContent);
+    console.log('🔍 Variables provided:', variables);
+    
+    // Find all variables in template
+    const templateVars = template.htmlContent.match(/\{\{[^}]+\}\}/g) || [];
+    console.log('🔍 Variables found in template:', templateVars);
+    
+    // Check which variables we have vs need
+    templateVars.forEach(templateVar => {
+      const varName = templateVar.replace(/[{}]/g, '');
+      if (variables.hasOwnProperty(varName)) {
+        console.log(`✅ Variable ${templateVar} will be replaced with: ${variables[varName]}`);
+      } else {
+        console.error(`❌ Variable ${templateVar} NOT PROVIDED in variables object`);
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+  }
+}
   // ===================================================================
   // DEFAULT TEMPLATES (For Your SharePoint Structure)
   // ===================================================================
