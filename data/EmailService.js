@@ -774,95 +774,63 @@ async checkAvailableTemplates() {
   }
 // In EmailService.js, REPLACE the sendNotificationEmail method with this DEBUGGING version.
 
+// In EmailService.js, replace your function with this FINAL, WORKING version
+
 async sendNotificationEmail(templateType, recipients, variables) {
   try {
-    console.log(`%c[DEBUG] Starting sendNotificationEmail for template: ${templateType}`, 'color: #blue; font-weight: bold;');
-
+    console.log(`📧 Preparing notification for template: ${templateType}`);
+    
     const template = await this.getEmailTemplate(templateType);
     if (!template || !template.isActive) {
-      console.error(`❌ Template "${templateType}" is not found or is inactive.`);
-      throw new Error(`Template ${templateType} not found or inactive`);
+      throw new Error(`Template ${templateType} not found or is inactive`);
     }
 
     let subject = template.subject || '';
     let htmlContent = template.htmlContent || '';
+    
+    // =================================================================
+    // ✅ THE DEFINITIVE FIX: Decode the HTML string from SharePoint
+    // =================================================================
+    // This will convert entities like '&#123;' back into the '{' character.
+    console.log("STEP 1: Decoding HTML content received from SharePoint...");
+    const decoder = document.createElement('textarea');
+    decoder.innerHTML = htmlContent;
+    let decodedHtml = decoder.value;
+    console.log("✅ STEP 2: HTML has been successfully decoded.");
+    // =================================================================
 
-    // =================================================================
-    // STEP 1: LOG THE RAW, UNTOUCHED DATA
-    // =================================================================
-    console.log('%c[DEBUG] STEP 1: RAW DATA FROM SHAREPOINT', 'color: #red; font-weight: bold;');
-    console.log('VARIABLES TO BE INJECTED:', variables);
-    console.log('RAW HTML CONTENT:', htmlContent);
-
-    // Let's try to find a placeholder manually for a sanity check
-    const manualCheck = /\{\{userName\}\}/gi.test(htmlContent);
-    console.log(`MANUAL CHECK FOR {{userName}}: ${manualCheck}`);
-    // =================================================================
-
-
-    // =================================================================
-    // STEP 2: LOOP AND DEBUG EACH VARIABLE
-    // =================================================================
-    console.log('%c[DEBUG] STEP 2: ATTEMPTING REPLACEMENT FOR EACH KEY', 'color: #red; font-weight: bold;');
+    // STEP 3: Now, perform replacements on the correctly decoded HTML.
+    console.log("STEP 3: Performing variable replacements on decoded HTML...");
     for (const [key, value] of Object.entries(variables)) {
-      
-      console.log(`%c--- Debugging Key: "${key}" ---`, 'color: #orange;');
-
       const placeholderRegex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
       const replaceValue = String(value || 'N/A');
 
-      // *** THE MOST IMPORTANT LOG ***
-      // This tells us if the Regex pattern can be found in the current HTML string
-      const isMatchFound = placeholderRegex.test(htmlContent);
+      // Replace in the subject line
+      subject = subject.replace(placeholderRegex, replaceValue);
       
-      console.log(`  - REGEX PATTERN: ${placeholderRegex}`);
-      console.log(`  - VALUE TO INSERT: "${replaceValue}"`);
-      console.log(`  - PATTERN FOUND IN HTML? : ${isMatchFound}`);
-
-      if (isMatchFound) {
-        // If a match is found, we perform the replacement
-        htmlContent = htmlContent.replace(placeholderRegex, replaceValue);
-        subject = subject.replace(placeholderRegex, replaceValue);
-        console.log(`  - ✅ SUCCESS: Replacement was performed.`);
-      } else {
-        console.log(`  - ❌ FAILED: Pattern for "{{${key}}}" was NOT found in the HTML.`);
-      }
+      // Replace in the decoded HTML body
+      decodedHtml = decodedHtml.replace(placeholderRegex, replaceValue);
     }
-    // =================================================================
 
-
-    // =================================================================
-    // STEP 3: LOG THE FINAL RESULT BEFORE SENDING
-    // =================================================================
-    console.log('%c[DEBUG] STEP 3: FINAL CONTENT BEFORE SENDING', 'color: #red; font-weight: bold;');
-    const remainingVars = htmlContent.match(/\{\{[^}]+\}\}/g);
+    // Final check for any missed variables
+    const remainingVars = decodedHtml.match(/\{\{[^}]+\}\}/g);
     if (remainingVars) {
-      console.warn('FINAL CHECK: Unreplaced variables still exist! ->', remainingVars);
+        console.warn('⚠️ Unreplaced variables still found after replacement:', remainingVars);
     } else {
-      console.log('FINAL CHECK: No more placeholders found. Looks good.');
+        console.log('✅ All variables replaced successfully.');
     }
-    console.log('FINAL SUBJECT:', subject);
-    console.log('FINAL HTML BODY:', htmlContent);
-    // =================================================================
 
     const emailData = {
       to: recipients,
       subject: subject,
-      body: htmlContent
+      body: decodedHtml // Use the fully processed string
     };
 
-    console.log('📤 Sending final email payload...');
-    // For this debug, you can comment out the next line to prevent sending emails while testing
-    // return await this.sendEmailViaSharePoint(emailData); 
-
-    // **IMPORTANT**: To prevent sending spam while debugging, the line above is commented out.
-    // We are returning a success message to let the rest of your code run.
-    // UNCOMMENT the line above and COMMENT the line below when you are ready to send again.
-    return { success: true, message: 'DEBUGGING COMPLETE. Email sending was skipped.' };
-    
+    console.log('📤 Sending final email...');
+    return await this.sendEmailViaSharePoint(emailData);
 
   } catch (error) {
-    console.error(`❌ Error in DEBUG sendNotificationEmail for template "${templateType}":`, error);
+    console.error(`❌ Fatal error in sendNotificationEmail for template "${templateType}":`, error);
     return { success: false, message: error.message };
   }
 }
