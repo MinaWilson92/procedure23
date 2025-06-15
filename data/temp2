@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSBC Role Update Notification</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f6fa; line-height: 1.6; color: #333333;">
+    
+    <!-- Main Container -->
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f6fa; padding: 20px 0; min-height: 100vh;">
+        <tr>
+            <td align="center">
+                <table width="650" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.15); overflow: hidden; max-width: 650px;">
+                    
+                    <!-- HSBC Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #d40000 0%, #b30000 100%); padding: 35px 40px; position: relative;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="vertical-align: middle;">
+                                        <!-- HSBC Logo Area -->
+                                        <div style="background-color: #ffffff; color: #d40000; padding: 12px 20px; border-radius: 6px; font-weight: bold; font-size: 20px; display: inline-block; margin-bottom: 20px; letter-spacing: 1px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                            HSBC
+                                        </div>
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
+                                            Procedures Hub
+                                        </h1>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 18px; font-weight: 300;">
+                                            Access Management System
+                                        </p>
+                                    </td>
+                                    <td width="100" align="right" style="vertical-align: middle;">
+                                        <!-- Security Icon -->
+                                        <div style="width: 80px; height: 80px; background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid rgba(255,255,255,0.3); text-align: center; line-height: 80px;">
+                                            <span style="color: #ffffff; font-size: 36px; font-weight: bold;">🔐</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Status Banner -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%); padding: 25px 40px; text-align: center; border-bottom: 4px solid #0d47a1;">
+                            <h2 style="color: #ffffff; margin: 0; font-size: 26px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+                                ⚡ Role Updated Successfully
+                            </h2>
+                            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">
+                                Your access permissions have been modified
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding: 45px 40px;">
+                            
+                            <!-- Welcome Message -->
+                            <div style="text-align: center; margin-bottom: 35px;">
+                                <p style="color: #555555; font-size: 18px; margin: 0; line-height: 1.5;">
+                                    Dear <strong style="color: #d40000;">{{userName}}</strong>,<br>
+                                    Your role in the HSBC Procedures Hub has been updated.
+                                </p>
+                            </div>
+                            
+                            <!-- Role Change Details Card -->
+                            <div style="border: 3px solid #e3f2fd; border-radius: 15px; padding: 30px; margin-bottom: 35px; background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%); position: relative;">
+                                
+                                <!-- Card Header -->
+                                <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #1976d2;">
+                                    <h3 style="color: #1976d2; margin: 0; font-size: 22px; font-weight: 600;">
+                                        📋 Role Change Summary
+                                    </h3>
+                                </div>
+                                
+                                <!-- User Details Table -->
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 16px;">
+                                    <tr>
+                                        <td style="padding: 15px 20px; width: 35%; background-color: #f8f9fa; border-radius: 8px 0 0 8px; border-left: 4px solid #1976d2;">
+                                            <strong style="color: #1976d2; font-size: 16px;">👤 User Identity</strong>
+                                        </td>
+                                        <td style="padding: 15px 20px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e0e0e0; border-left: none;">
+                                            <span style="color: #333333; font-weight: 600; font-size: 16px;">{{userName}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr><td colspan="2" style="height: 10px;"></td></tr>
+                                    <tr>
+                                        <td style="padding: 15px 20px; background-color: #fff3e0; border-radius: 8px 0 0 8px; border-left: 4px solid #ff9800;">
+                                            <strong style="color: #e65100; font-size: 16px;">📤 Previous Role</strong>
+                                        </td>
+                                        <td style="padding: 15px 20px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e0e0e0; border-left: none;">
+                                            <span style="background-color: #ffebee; color: #c62828; padding: 8px 15px; border-radius: 20px; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                {{oldValue}}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr><td colspan="2" style="height: 10px;"></td></tr>
+                                    <tr>
+                                        <td style="padding: 15px 20px; background-color: #e8f5e8; border-radius: 8px 0 0 8px; border-left: 4px solid #4caf50;">
+                                            <strong style="color: #2e7d32; font-size: 16px;">📥 New Role</strong>
+                                        </td>
+                                        <td style="padding: 15px 20px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e0e0e0; border-left: none;">
+                                            <span style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); color: #ffffff; padding: 8px 15px; border-radius: 20px; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 8px rgba(76,175,80,0.3);">
+                                                ✨ {{newValue}}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr><td colspan="2" style="height: 10px;"></td></tr>
+                                    <tr>
+                                        <td style="padding: 15px 20px; background-color: #f3e5f5; border-radius: 8px 0 0 8px; border-left: 4px solid #9c27b0;">
+                                            <strong style="color: #7b1fa2; font-size: 16px;">👨‍💼 Updated By</strong>
+                                        </td>
+                                        <td style="padding: 15px 20px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e0e0e0; border-left: none;">
+                                            <span style="color: #333333; font-weight: 600; font-size: 16px;">{{performedBy}}</span>
+                                        </td>
+                                    </tr>
+                                    <tr><td colspan="2" style="height: 10px;"></td></tr>
+                                    <tr>
+                                        <td style="padding: 15px 20px; background-color: #e1f5fe; border-radius: 8px 0 0 8px; border-left: 4px solid #03a9f4;">
+                                            <strong style="color: #0277bd; font-size: 16px;">📅 Date & Time</strong>
+                                        </td>
+                                        <td style="padding: 15px 20px; background-color: #ffffff; border-radius: 0 8px 8px 0; border: 1px solid #e0e0e0; border-left: none;">
+                                            <span style="color: #333333; font-family: 'Courier New', monospace; background-color: #f5f5f5; padding: 6px 10px; border-radius: 6px; font-size: 14px; border: 1px solid #ddd;">
+                                                {{timestamp}}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Information Box -->
+                            <div style="background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 100%); border-left: 6px solid #ffc107; padding: 25px; border-radius: 10px; margin-bottom: 35px;">
+                                <h4 style="color: #e65100; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">
+                                    ℹ️ What this means for you:
+                                </h4>
+                                <ul style="color: #555555; margin: 0; padding-left: 25px; font-size: 15px; line-height: 1.8;">
+                                    <li><strong>Access Updated:</strong> Your permissions have been adjusted according to your new role</li>
+                                    <li><strong>New Features:</strong> You may now have access to additional system capabilities</li>
+                                    <li><strong>Session Refresh:</strong> Please log out and log back in for all changes to take effect</li>
+                                    <li><strong>Support Available:</strong> Contact IT Support if you experience any access issues</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Action Button -->
+                            <div style="text-align: center; margin: 40px 0;">
+                                <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                                    <tr>
+                                        <td style="background: linear-gradient(135deg, #d40000 0%, #b30000 100%); border-radius: 50px; box-shadow: 0 6px 20px rgba(212,0,0,0.4);">
+                                            <a href="https://teams.global.hsbc/sites/EmployeeEng" style="display: inline-block; color: #ffffff; text-decoration: none; padding: 18px 35px; border-radius: 50px; font-weight: 700; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.3s ease;">
+                                                🏦 Access Procedures Hub
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <!-- Security Notice -->
+                            <div style="background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%); border: 2px solid #3f51b5; border-radius: 10px; padding: 20px; text-align: center;">
+                                <p style="color: #283593; margin: 0; font-size: 14px; font-weight: 500;">
+                                    🔒 <strong>Security Notice:</strong> This role change has been logged for audit purposes. 
+                                    If you did not expect this change, please contact your administrator immediately.
+                                </p>
+                            </div>
+                            
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 35px 40px; border-top: 3px solid #d40000;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="vertical-align: top;">
+                                        <h4 style="color: #d40000; font-size: 16px; margin: 0 0 10px 0; font-weight: 700;">
+                                            HSBC Procedures Hub
+                                        </h4>
+                                        <p style="color: #666666; font-size: 14px; margin: 0 0 8px 0; line-height: 1.5;">
+                                            <strong>Access Management System</strong><br>
+                                            Automated notification from SharePoint integration
+                                        </p>
+                                        <p style="color: #999999; font-size: 12px; margin: 0; line-height: 1.4;">
+                                            This email was generated automatically by the HSBC Procedures Hub system. 
+                                            Role changes are tracked for compliance and audit purposes.
+                                        </p>
+                                    </td>
+                                    <td width="140" align="right" style="vertical-align: top;">
+                                        <div style="background: linear-gradient(135deg, #d40000 0%, #b30000 100%); color: #ffffff; padding: 15px 20px; border-radius: 10px; text-align: center; box-shadow: 0 4px 12px rgba(212,0,0,0.3);">
+                                            <div style="font-weight: bold; font-size: 14px; letter-spacing: 1px;">HSBC</div>
+                                            <div style="font-size: 11px; opacity: 0.9; margin-top: 2px;">BANK PLC</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <hr style="border: none; border-top: 1px solid #d0d0d0; margin: 25px 0;">
+                            
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <p style="color: #999999; font-size: 11px; margin: 0; line-height: 1.4;">
+                                            🔐 <strong>Confidential:</strong> This email contains sensitive information. If received in error, 
+                                            please delete immediately and notify IT Support.<br>
+                                            <span style="color: #666666;">© {{timestamp}} HSBC Bank plc. All rights reserved.</span>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                </table>
+            </td>
+        </tr>
+    </table>
+    
+</body>
+</html>
