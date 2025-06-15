@@ -1,9 +1,11 @@
+SharePoint TemplateType: user-access-granted
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSBC New Procedure Notification</title>
+    <title>HSBC Access Granted</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4; line-height: 1.6;">
 
@@ -21,7 +23,7 @@
                                     </td>
                                     <td align="right">
                                         <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">Procedures Hub</h1>
-                                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">New Procedure Notification</p>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Access Management Notification</p>
                                     </td>
                                 </tr>
                             </table>
@@ -31,65 +33,58 @@
                     <tr>
                         <td style="padding: 30px 40px;">
                             
-                            <h2 style="color: #333333; font-size: 22px; margin: 0 0 20px 0;">New Procedure Published</h2>
-                            <p style="color: #555555; font-size: 16px; margin-bottom: 30px;">A new procedure has been successfully uploaded and analyzed by the system. The details are summarized below.</p>
+                            <h2 style="color: #333333; font-size: 22px; margin: 0 0 20px 0;">Welcome! Access Has Been Granted</h2>
+                            <p style="color: #555555; font-size: 16px; margin-bottom: 30px;">This is an automated notification to confirm that you have been granted access to the HSBC Procedures Hub.</p>
 
                             <div style="border: 1px solid #eeeeee; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
-                                <h3 style="color: #DB0011; margin: 0 0 20px 0; font-size: 18px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">
-                                    Procedure Details
+                                <h3 style="color: #0f6837; margin: 0 0 20px 0; font-size: 18px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">
+                                    Access Details
                                 </h3>
                                 
                                 <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 15px; color: #333333;">
                                     <tr>
                                         <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
-                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAM5JREFUSEvt1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAEZaRLdrKd5Jw3OTvZk91sZ9vbxPh2gA7wAS7AE7DqzDfgBSzABfQFnIBXZz4DF8ACWEAXcAK+wKtn8AG8gC7wBZyAWeSBDvAFLoBP4AvYAQ/AG/gCrsBD+AocwDfwCpyAN+AN2AGPwCtwBxzAe3AFnIAn4A2YgTfgDQgBC/AADAEL8AYMgRnYASYgBCyBGWAFLMBjMAGrwBJwA6zBFvACGIA3YAssgU3gDVgCmyAFrMDTfQPOUT4/TQPbNQAAAABJRU5ErkJggg==" alt="Document" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Procedure Name</span>
-                                        </td>
-                                        <td style="padding: 10px 0; font-weight: bold;">{{procedureName}}</td>
-                                    </tr>
-                                    <tr style="background-color: #f9f9f9;">
-                                        <td style="padding: 10px; width: 35%; vertical-align: middle;">
-                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAALJJREFUSEvt1CEOAmEQgOF/CiQRQRAEQRAEQRAEQRAEQRAEQRCEDsgm28kuyTk52cn+7M52t729jT8fRwbcgA2wARfgBRz6DLgBS+AJuAAv4NBnwAUwwQ50gRPwBS76DDgAR+gCL+AEzCIVbIAPcAI+wBdwAx7AG/gCrsBD+AocwBvwBpyAN+AN2AGPwCtwBxzAe3AFnEDrwBcQAhagBTQBC1ABU0ALaAIWoAJagVbQBCxABawCLaALWIAKWAG7eN4v4lI+5LwnE1sAAAAASUVORK5CYII=" alt="LOB" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Line of Business</span>
-                                        </td>
-                                        <td style="padding: 10px;">{{lob}}</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
                                             <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAANJJREFUSEvt1M0NAkEMB/B/UhFEQRAUQREUQREUQRFEQRAE5a5L92Q7Oc3JyZ63t7m36+a2x9Yn/g2gA1zACVyAt878FjiwBS5AGy/AFnjrDAscgAVwAY65AQ7sAQdwxBrwBT64BA5cAx5cAx7cAQ5cAnbAAYB2YAhYAXfACpC0BSSAJGAFjICHwBawAkaAMfAErIARMAKGAEvAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEbD5ETaApfAJeAF2wQvwCvgG3oC3wB3wBnwFvgC/gK/AD/C82w9YgT0w+kYwWgAAAABJRU5ErkJggg==" alt="User" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Owner Name</span>
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">User</span>
                                         </td>
-                                        <td style="padding: 10px 0;">{{ownerName}}</td>
+                                        <td style="padding: 10px 0; font-weight: bold;">{{userName}}</td>
                                     </tr>
                                     <tr style="background-color: #f9f9f9;">
                                         <td style="padding: 10px; width: 35%; vertical-align: middle;">
-                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAOJJREFUSEvt1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRCEDslOtlNOcvLnpCf7sp1tb39snOJbgAm4AE/AFnDozDdgBTzABbgBT+DQM/gCvsAXcAIu4AlY9Ay+gC/wBV6AC3CCNNAFfIAvcAIuwC50gS/gDTgBVuBjuAMeQBuwBGwBj8AbYASYAEfAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEdgEl8AVsAQuQBLfAFvAErgCS/ACrIDP4AN8A3fAG/AGfAG/AF/AV+AHuN7tB+8RPgP6gV4AAAAAAElFTkSuQmCC" alt="Upload" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Uploaded By</span>
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAM5JREFUSEvt1bENwjAUgOF/CiQBOglQCUgCdBKggwARsAmQDcgGdvIRcslecZKS3e52d+7W1p04/A00ARfgCVgBD735BmyAF3AALsAT8NBnYAIswA04gRdwA179Bj6AGXADDuAEMogJbcAHcAIuwAXYhS7wBTyAN2AFPIY74AHYgDVgC9gBj8AbYASYAEfAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEdgEl8AVsAQuQBLfAFvAErgCS/ACrIDP4AN8A3fAG/AGfAG/AF/AV+AHuN7tB0xRPj8oWWkSAAAAAElFTkSuQmCC" alt="Role" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Role Granted</span>
                                         </td>
-                                        <td style="padding: 10px;">{{uploadedBy}}</td>
+                                        <td style="padding: 10px;">
+                                            <span style="background-color: #e6f4ea; color: #0f6837; padding: 4px 8px; border-radius: 4px; font-weight: 600;">
+                                                {{newValue}}
+                                            </span>
+                                        </td>
                                     </tr>
                                     <tr>
                                         <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
-                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAPlJREFUSEvN1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAElM4lu2knycn5Jz/f9rSda3Nb4+4TfwY4gA2wAS6gArw78y1wYAs8gS/gCry7Aw5gASwBD+AGHLIDfsAbcAScsAYswCvgDDgBZuAM+AJuwBmwAh6BDvAFfIA3YAX4AR/AGLACHsBrsBssAQ/AY7AFbAEnwBq8AreAJXgF7oA34BW4gVfgFbiBDvAOrIDP4AUsgS2wBSyBTeAJsAQuwe0fgS1gCSwBS+ASWAJL4ApYApfADhjgCjiAK3AEHMEVcAQcQRUkwRlcge0fgWkQ8zM8BS4AAAAASUVORK5CYII=" alt="Date" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Upload Date</span>
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAN5JREFUSEvd1bENwjAUgOF/CiQBOglQCUgCdBKgg3QSoIMAEbAJkA3IBrCTnJLX9eL3SSi73OfO3XVr6xN/BmgDF+AEXMBnZ/4M7MAF2AIv4AP87Aw4gBVwAS/gEDfgBvyyBhzABXgCjrgFfIAXcAQccQs8gUuAEfAELoAj4An4uAQegSfgBbiBDuAJ+AJuwBGwAR5AG7AEbIDXYASYAEfAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEdgEl8AVsAQuQBLfAFvAErgCS/ACrIDP4AN8A3fAG/AGfAG/AF/AV+AHuN7tB9l5MvkSdbvAAAAAAElFTkSuQmCC" alt="Admin" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Granted By</span>
                                         </td>
-                                        <td style="padding: 10px 0;">{{uploadDate}}</td>
+                                        <td style="padding: 10px 0;">{{performedBy}}</td>
                                     </tr>
-                                     <tr style="background-color: #f9f9f9;">
+                                    <tr style="background-color: #f9f9f9;">
                                         <td style="padding: 10px; width: 35%; vertical-align: middle;">
-                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAANJJREFUSEvt1bENwjAUgOF/CiQBOglQCUgCdBKggwARsAmQDcgGMEI4yUvL5PGTkt1uZ+futrWd+O0BH+ADfAG/gFPv4A/4A7bAF/gCbvUZeAM+gA1wAR3gC3j1GXxAG/AFXsAZcALMIge0AR/AF3ACLsAXcAM+wBuyAh7BT3AGPIDXYA9YAY/BG7AEPAJrwAawBjwhKGAJrAELwBBYAhaADWAJGAJjYA5YAQvQBLQBS8AaaAUswBpQAlaAJagHbAFLwBLYBDvAFrAEln7eL5s/PqH5BppWAAAAAElFTkSuQmCC" alt="Score" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Quality Score</span>
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAPlJREFUSEvN1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAElM4lu2knycn5Jz/f9rSda3Nb4+4TfwY4gA2wAS6gArw78y1wYAs8gS/gCry7Aw5gASwBD+AGHLIDfsAbcAScsAYswCvgDDgBZuAM+AJuwBmwAh6BDvAFfIA3YAX4AR/AGLACHsBrsBssAQ/AY7AFbAEnwBq8AreAJXgF7oA34BW4gVfgFbiBDvAOrIDP4AUsgS2wBSyBTeAJsAQuwe0fgS1gCSwBS+ASWAJL4ApYApfADhjgCjiAK3AEHMEVcAQcQRUkwRlcge0fgWkQ8zM8BS4AAAAASUVORK5CYII=" alt="Date" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Date & Time</span>
                                         </td>
-                                        <td style="padding: 10px; font-weight: bold; color: #0f6837;">{{qualityScore}}%</td>
-                                    </tr>
-                                    <tr>
-                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
-                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAALBJREFUSEvt1bENg0AMAFH/FIhEwCRAJEAmASYBMAkwCRABmQAZkIHs5GfZyHb5OY+T22d3a3Nbn/glgA14AzbgBdiBLs/gCzgBF+ANuABdnQEHcAcuoA04ARdw6jN4Ax5AG3ACLkCmyIEW8AFcgBdwBRzAG/AG3IAL8BTugDfgDbgBX8AacAMegTdgC3gC1uANeAJW4Q2YgTXgDayBGbAGrAEh0PcbwFoQ52f4C/cAAAAASUVORK5CYII=" alt="ID" width="16" style="vertical-align: middle; margin-right: 10px;">
-                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Procedure ID</span>
-                                        </td>
-                                        <td style="padding: 10px 0;">{{procedureId}}</td>
+                                        <td style="padding: 10px;">{{timestamp}}</td>
                                     </tr>
                                 </table>
+                            </div>
+
+                             <div style="background-color: #fef9e7; border-left: 4px solid #f1c40f; padding: 20px; border-radius: 4px; margin-bottom: 30px;">
+                                <h4 style="color: #333333; margin: 0 0 10px 0; font-size: 16px;">
+                                    Next Steps:
+                                </h4>
+                                <ul style="color: #555555; margin: 0; padding-left: 20px; font-size: 14px;">
+                                    <li style="margin-bottom: 5px;">You can now log in and access features according to your assigned role.</li>
+                                    <li>If you are already logged in, please log out and log back in for changes to take effect.</li>
+                                </ul>
                             </div>
                             
                             <div style="text-align: center; margin: 20px 0;">
@@ -104,11 +99,6 @@
                         <td style="background-color: #f4f4f4; padding: 30px 40px; border-top: 1px solid #e0e0e0; text-align: center;">
                             <p style="color: #888888; font-size: 12px; margin: 0; line-height: 1.5;">
                                 This is an automated email from the HSBC Procedures Hub.
-                                <br>
-                                If you received this email in error, please disregard it. This email and any attachments are confidential.
-                            </p>
-                            <p style="color: #aaaaaa; font-size: 12px; margin: 10px 0 0 0;">
-                                &copy; 2025 HSBC Bank
                             </p>
                         </td>
                     </tr>
@@ -116,6 +106,304 @@
             </td>
         </tr>
     </table>
-    
 </body>
 </html>
+
+
+
+
+------------------------------------
+
+SharePoint TemplateType: user-access-revoked
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSBC Access Revoked</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4; line-height: 1.6;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+                    
+                    <tr>
+                        <td style="background-color: #333333; padding: 20px 40px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td>
+                                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEwMCAwIEwyNS44OCA1MEwzNC4xNCAxNTBMMTAwIDIwMEwxNjUuODYgMTUwTDE3NC4xMiA1MFpNNTAuNDQgNTcuNDVMOTkuOTEgMTUuNDhMMTQ5LjM4IDU3LjQ1TDE0Mi41NSAxNDIuNTVMOTkuOTEgMTg0LjUyTDU3LjI3IDE0Mi41NVoiIGZpbGw9IiNGRkZGRkYiLz48L3N2Zz4=" alt="HSBC Logo" width="50" height="50" style="display: block;">
+                                    </td>
+                                    <td align="right">
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">Procedures Hub</h1>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Access Management Notification</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding: 30px 40px;">
+                            
+                            <h2 style="color: #333333; font-size: 22px; margin: 0 0 20px 0;">Notice: Access Has Been Revoked</h2>
+                            <p style="color: #555555; font-size: 16px; margin-bottom: 30px;">This is an automated notification to confirm that your access to the HSBC Procedures Hub has been revoked by an administrator.</p>
+
+                            <div style="border: 1px solid #eeeeee; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                                <h3 style="color: #c0392b; margin: 0 0 20px 0; font-size: 18px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">
+                                    Revocation Details
+                                </h3>
+                                
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 15px; color: #333333;">
+                                    <tr>
+                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAANJJREFUSEvt1M0NAkEMB/B/UhFEQRAUQREUQREUQRFEQRAE5a5L92Q7Oc3JyZ63t7m36+a2x9Yn/g2gA1zACVyAt878FjiwBS5AGy/AFnjrDAscgAVwAY65AQ7sAQdwxBrwBT64BA5cAx5cAx7cAQ5cAnbAAYB2YAhYAXfACpC0BSSAJGAFjICHwBawAkaAMfAErIARMAKGAEvAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEbD5ETaApfAJeAF2wQvwCvgG3oC3wB3wBnwFvgC/gK/AD/C82w9YgT0w+kYwWgAAAABJRU5ErkJggg==" alt="User" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">User</span>
+                                        </td>
+                                        <td style="padding: 10px 0; font-weight: bold;">{{userName}}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 10px; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAN5JREFUSEvd1bENwjAUgOF/CiQBOglQCUgCdBKgg3QSoIMAEbAJkA3IBrCTnJLX9eL3SSi73OfO3XVr6xN/BmgDF+AEXMBnZ/4M7MAF2AIv4AP87Aw4gBVwAS/gEDfgBvyyBhzABXgCjrgFfIAXcAQccQs8gUuAEfAELoAj4An4uAQegSfgBbiBDuAJ+AJuwBGwAR5AG7AEbIDXYASYAEfAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEdgEl8AVsAQuQBLfAFvAErgCS/ACrIDP4AN8A3fAG/AGfAG/AF/AV+AHuN7tB9l5MvkSdbvAAAAAAElFTkSuQmCC" alt="Admin" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Revoked By</span>
+                                        </td>
+                                        <td style="padding: 10px;">{{performedBy}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAPlJREFUSEvN1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAElM4lu2knycn5Jz/f9rSda3Nb4+4TfwY4gA2wAS6gArw78y1wYAs8gS/gCry7Aw5gASwBD+AGHLIDfsAbcAScsAYswCvgDDgBZuAM+AJuwBmwAh6BDvAFfIA3YAX4AR/AGLACHsBrsBssAQ/AY7AFbAEnwBq8AreAJXgF7oA34BW4gVfgFbiBDvAOrIDP4AUsgS2wBSyBTeAJsAQuwe0fgS1gCSwBS+ASWAJL4ApYApfADhjgCjiAK3AEHMEVcAQcQRUkwRlcge0fgWkQ8zM8BS4AAAAASUVORK5CYII=" alt="Date" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Date & Time</span>
+                                        </td>
+                                        <td style="padding: 10px 0;">{{timestamp}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <p style="color: #555555; font-size: 16px; margin-bottom: 30px; text-align: center;">You will no longer be able to access the Procedures Hub. If you believe this is an error, please contact IT Support.</p>
+
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color: #f4f4f4; padding: 30px 40px; border-top: 1px solid #e0e0e0; text-align: center;">
+                            <p style="color: #888888; font-size: 12px; margin: 0; line-height: 1.5;">
+                                This is an automated email from the HSBC Procedures Hub.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+
+------------------------
+
+SharePoint TemplateType: procedure-expiring
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSBC Procedure Expiry Warning</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4; line-height: 1.6;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+                    
+                    <tr>
+                        <td style="background-color: #f39c12; padding: 20px 40px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td>
+                                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEwMCAwIEwyNS44OCA1MEwzNC4xNCAxNTBMMTAwIDIwMEwxNjUuODYgMTUwTDE3NC4xMiA1MFpNNTAuNDQgNTcuNDVMOTkuOTEgMTUuNDhMMTQ5LjM4IDU3LjQ1TDE0Mi41NSAxNDIuNTVMOTkuOTEgMTg0LjUyTDU3LjI3IDE0Mi41NVoiIGZpbGw9IiNGRkZGRkYiLz48L3N2Zz4=" alt="HSBC Logo" width="50" height="50" style="display: block;">
+                                    </td>
+                                    <td align="right">
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">Procedures Hub</h1>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Procedure Expiry Warning</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding: 30px 40px;">
+                            
+                            <h2 style="color: #333333; font-size: 22px; margin: 0 0 20px 0;">Action Recommended: Procedure Expiring Soon</h2>
+                            <p style="color: #555555; font-size: 16px; margin-bottom: 30px;">The following procedure is scheduled to expire soon. Please review and update it to ensure compliance.</p>
+
+                            <div style="border: 1px solid #eeeeee; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                                <h3 style="color: #f39c12; margin: 0 0 20px 0; font-size: 18px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">
+                                    Expiry Details
+                                </h3>
+                                
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 15px; color: #333333;">
+                                    <tr>
+                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAM5JREFUSEvt1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAEZaRLdrKd5Jw3OTvZk91sZ9vbxPh2gA7wAS7AE7DqzDfgBSzABfQFnIBXZz4DF8ACWEAXcAK+wKtn8AG8gC7wBZyAWeSBDvAFLoBP4AvYAQ/AG/gCrsBD+AocwDfwCpyAN+AN2AGPwCtwBxzAe3AFnIAn4A2YgTfgDQgBC/AADAEL8AYMgRnYASYgBCyBGWAFLMBjMAGrwBJwA6zBFvACGIA3YAssgU3gDVgCmyAFrMDTfQPOUT4/TQPbNQAAAABJRU5ErkJggg==" alt="Document" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Procedure</span>
+                                        </td>
+                                        <td style="padding: 10px 0; font-weight: bold;">{{procedureName}}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 10px; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAANJJREFUSEvt1M0NAkEMB/B/UhFEQRAUQREUQREUQRFEQRAE5a5L92Q7Oc3JyZ63t7m36+a2x9Yn/g2gA1zACVyAt878FjiwBS5AGy/AFnjrDAscgAVwAY65AQ7sAQdwxBrwBT64BA5cAx5cAx7cAQ5cAnbAAYB2YAhYAXfACpC0BSSAJGAFjICHwBawAkaAMfAErIARMAKGAEvAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEbD5ETaApfAJeAF2wQvwCvgG3oC3wB3wBnwFvgC/gK/AD/C82w9YgT0w+kYwWgAAAABJRU5ErkJggg==" alt="User" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Owner</span>
+                                        </td>
+                                        <td style="padding: 10px;">{{ownerName}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAPlJREFUSEvN1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAElM4lu2knycn5Jz/f9rSda3Nb4+4TfwY4gA2wAS6gArw78y1wYAs8gS/gCry7Aw5gASwBD+AGHLIDfsAbcAScsAYswCvgDDgBZuAM+AJuwBmwAh6BDvAFfIA3YAX4AR/AGLACHsBrsBssAQ/AY7AFbAEnwBq8AreAJXgF7oA34BW4gVfgFbiBDvAOrIDP4AUsgS2wBSyBTeAJsAQuwe0fgS1gCSwBS+ASWAJL4ApYApfADhjgCjiAK3AEHMEVcAQcQRUkwRlcge0fgWkQ8zM8BS4AAAAASUVORK5CYII=" alt="Date" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Expiry Date</span>
+                                        </td>
+                                        <td style="padding: 10px 0;">{{expiryDate}}</td>
+                                    </tr>
+                                     <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 10px; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAALRJREFUSEvt1bENwjAUgOF/CiQBOglQCUgCdBKggwARsAmQDcgGdvLgJVnylpLd7nZ37t7WjTj8DTSBC/AELMANeOgbfAEvwA24AB/AQ5+AEfAALsCpcAMuwFO/gQ9gBNyAC3ACGaIE2sAHcAIuwAXYhS7wBTyAN2AFPIY74AHYgDVgC9gBj8AbYASYAEfAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEdgEl8AVsAQuQRLfAFvAEhgfvgDBlT4/aAAAAABJRU5ErkJggg==" alt="Warning" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Days Left</span>
+                                        </td>
+                                        <td style="padding: 10px; font-weight: bold; color: #d35400;">{{daysLeft}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 20px 0;">
+                                <a href="https://teams.global.hsbc/sites/EmployeeEng" style="background-color: #DB0011; color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                                    Review Procedure Now
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color: #f4f4f4; padding: 30px 40px; border-top: 1px solid #e0e0e0; text-align: center;">
+                            <p style="color: #888888; font-size: 12px; margin: 0; line-height: 1.5;">
+                                This is an automated email from the HSBC Procedures Hub.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+----------------------------
+
+SharePoint TemplateType: procedure-expired
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HSBC Procedure Expired</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f4f4f4; line-height: 1.6;">
+
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f4f4; padding: 20px;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); overflow: hidden;">
+                    
+                    <tr>
+                        <td style="background-color: #c0392b; padding: 20px 40px;">
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td>
+                                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEwMCAwIEwyNS44OCA1MEwzNC4xNCAxNTBMMTAwIDIwMEwxNjUuODYgMTUwTDE3NC4xMiA1MFpNNTAuNDQgNTcuNDVMOTkuOTEgMTUuNDhMMTQ5LjM4IDU3LjQ1TDE0Mi41NSAxNDIuNTVMOTkuOTEgMTg0LjUyTDU3LjI3IDE0Mi41NVoiIGZpbGw9IiNGRkZGRkYiLz48L3N2Zz4=" alt="HSBC Logo" width="50" height="50" style="display: block;">
+                                    </td>
+                                    <td align="right">
+                                        <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">Procedures Hub</h1>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">URGENT: Procedure Expired</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="padding: 30px 40px;">
+                            
+                            <h2 style="color: #c0392b; font-size: 22px; margin: 0 0 20px 0;">Urgent Action Required: Procedure Has Expired</h2>
+                            <p style="color: #555555; font-size: 16px; margin-bottom: 30px;">The following procedure has passed its expiry date and is now out of compliance. It requires your immediate attention.</p>
+
+                            <div style="border: 1px solid #fee; border-radius: 8px; padding: 25px; margin-bottom: 30px;">
+                                <h3 style="color: #c0392b; margin: 0 0 20px 0; font-size: 18px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px;">
+                                    Expired Procedure Details
+                                </h3>
+                                
+                                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size: 15px; color: #333333;">
+                                    <tr>
+                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAM5JREFUSEvt1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAEZaRLdrKd5Jw3OTvZk91sZ9vbxPh2gA7wAS7AE7DqzDfgBSzABfQFnIBXZz4DF8ACWEAXcAK+wKtn8AG8gC7wBZyAWeSBDvAFLoBP4AvYAQ/AG/gCrsBD+AocwDfwCpyAN+AN2AGPwCtwBxzAe3AFnIAn4A2YgTfgDQgBC/AADAEL8AYMgRnYASYgBCyBGWAFLMBjMAGrwBJwA6zBFvACGIA3YAssgU3gDVgCmyAFrMDTfQPOUT4/TQPbNQAAAABJRU5ErkJggg==" alt="Document" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Procedure</span>
+                                        </td>
+                                        <td style="padding: 10px 0; font-weight: bold;">{{procedureName}}</td>
+                                    </tr>
+                                    <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 10px; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAANJJREFUSEvt1M0NAkEMB/B/UhFEQRAUQREUQREUQRFEQRAE5a5L92Q7Oc3JyZ63t7m36+a2x9Yn/g2gA1zACVyAt878FjiwBS5AGy/AFnjrDAscgAVwAY65AQ7sAQdwxBrwBT64BA5cAx5cAx7cAQ5cAnbAAYB2YAhYAXfACpC0BSSAJGAFjICHwBawAkaAMfAErIARMAKGAEvAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEbD5ETaApfAJeAF2wQvwCvgG3oC3wB3wBnwFvgC/gK/AD/C82w9YgT0w+kYwWgAAAABJRU5ErkJggg==" alt="User" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Owner</span>
+                                        </td>
+                                        <td style="padding: 10px;">{{ownerName}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 0; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAAPlJREFUSEvN1b0NAjEMB/B/CiQRQRAEQRAEQRAEQRAEQRAEQRAElM4lu2knycn5Jz/f9rSda3Nb4+4TfwY4gA2wAS6gArw78y1wYAs8gS/gCry7Aw5gASwBD+AGHLIDfsAbcAScsAYswCvgDDgBZuAM+AJuwBmwAh6BDvAFfIA3YAX4AR/AGLACHsBrsBssAQ/AY7AFbAEnwBq8AreAJXgF7oA34BW4gVfgFbiBDvAOrIDP4AUsgS2wBSyBTeAJsAQuwe0fgS1gCSwBS+ASWAJL4ApYApfADhjgCjiAK3AEHMEVcAQcQRUkwRlcge0fgWkQ8zM8BS4AAAAASUVORK5CYII=" alt="Date" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Expired On</span>
+                                        </td>
+                                        <td style="padding: 10px 0;">{{expiredDate}}</td>
+                                    </tr>
+                                     <tr style="background-color: #f9f9f9;">
+                                        <td style="padding: 10px; width: 35%; vertical-align: middle;">
+                                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAAAXNSR0IArs4c6QAAALRJREFUSEvt1bENwjAUgOF/CiQBOglQCUgCdBKggwARsAmQDcgGdvLgJVnylpLd7nZ37t7WjTj8DTSBC/AELMANeOgbfAEvwA24AB/AQ5+AEfAALsCpcAMuwFO/gQ9gBNyAC3ACGaIE2sAHcAIuwAXYhS7wBTyAN2AFPIY74AHYgDVgC9gBj8AbYASYAEfAEjAEPAFj4AlYAUfAEjAEjIBR8ASYApbAEdgEl8AVsAQuQRLfAFvAEhgfvgDBlT4/aAAAAABJRU5ErkJggg==" alt="Warning" width="16" style="vertical-align: middle; margin-right: 10px;">
+                                            <span style="vertical-align: middle; font-weight: bold; color: #555555;">Days Overdue</span>
+                                        </td>
+                                        <td style="padding: 10px; font-weight: bold; color: #c0392b;">{{daysOverdue}}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 20px 0;">
+                                <a href="https://teams.global.hsbc/sites/EmployeeEng" style="background-color: #c0392b; color: #ffffff; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+                                    Update Procedure Immediately
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td style="background-color: #f4f4f4; padding: 30px 40px; border-top: 1px solid #e0e0e0; text-align: center;">
+                            <p style="color: #888888; font-size: 12px; margin: 0; line-height: 1.5;">
+                                This is an automated email from the HSBC Procedures Hub.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+
+
+------------------------
+
+
