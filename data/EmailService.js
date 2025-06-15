@@ -784,53 +784,53 @@ async sendNotificationEmail(templateType, recipients, variables) {
     if (!template || !template.isActive) {
       throw new Error(`Template ${templateType} not found or is inactive`);
     }
-
+    
     let subject = template.subject || '';
     let htmlContent = template.htmlContent || '';
     
-    // =================================================================
-    // ✅ THE DEFINITIVE FIX: Decode the HTML string from SharePoint
-    // =================================================================
-    // This will convert entities like '&#123;' back into the '{' character.
-    console.log("STEP 1: Decoding HTML content received from SharePoint...");
+    // ✅ STEP 1: Decode HTML entities from SharePoint
+    console.log("📧 Decoding SharePoint HTML entities...");
     const decoder = document.createElement('textarea');
     decoder.innerHTML = htmlContent;
     let decodedHtml = decoder.value;
-    console.log("✅ STEP 2: HTML has been successfully decoded.");
-    // =================================================================
-
-    // STEP 3: Now, perform replacements on the correctly decoded HTML.
-    console.log("STEP 3: Performing variable replacements on decoded HTML...");
+    
+    // Also decode subject if it has entities
+    decoder.innerHTML = subject;
+    let decodedSubject = decoder.value;
+    
+    console.log("✅ HTML entities successfully decoded");
+    
+    // ✅ STEP 2: Variable replacement on clean content
+    console.log("📧 Performing variable replacements...");
     for (const [key, value] of Object.entries(variables)) {
       const placeholderRegex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'gi');
       const replaceValue = String(value || 'N/A');
-
-      // Replace in the subject line
-      subject = subject.replace(placeholderRegex, replaceValue);
       
-      // Replace in the decoded HTML body
+      console.log(`🔄 Replacing {{${key}}} with: ${replaceValue}`);
+      
+      decodedSubject = decodedSubject.replace(placeholderRegex, replaceValue);
       decodedHtml = decodedHtml.replace(placeholderRegex, replaceValue);
     }
-
-    // Final check for any missed variables
+    
+    // ✅ STEP 3: Final verification
     const remainingVars = decodedHtml.match(/\{\{[^}]+\}\}/g);
     if (remainingVars) {
-        console.warn('⚠️ Unreplaced variables still found after replacement:', remainingVars);
+      console.warn('⚠️ Unreplaced variables found:', remainingVars);
     } else {
-        console.log('✅ All variables replaced successfully.');
+      console.log('✅ All variables successfully replaced!');
     }
-
+    
     const emailData = {
       to: recipients,
-      subject: subject,
-      body: decodedHtml // Use the fully processed string
+      subject: decodedSubject,
+      body: decodedHtml
     };
-
-    console.log('📤 Sending final email...');
+    
+    console.log('📤 Sending email with properly decoded and replaced content...');
     return await this.sendEmailViaSharePoint(emailData);
-
+    
   } catch (error) {
-    console.error(`❌ Fatal error in sendNotificationEmail for template "${templateType}":`, error);
+    console.error(`❌ Error in sendNotificationEmail for template "${templateType}":`, error);
     return { success: false, message: error.message };
   }
 }
