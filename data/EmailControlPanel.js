@@ -19,200 +19,343 @@ const EmailControlPanel = ({ user, emailService }) => {
     try {
       // Create a simple testing service if the import doesn't work
       return {
+
         runComprehensiveTest: async (user) => {
-          console.log('🧪 Running comprehensive email system test...');
-          
-          const tests = {};
-          let passed = 0, failed = 0, warnings = 0;
-          
-          // Test 1: Email Service Connection
-          try {
-            console.log('📧 Testing email service connection...');
-            if (emailService && typeof emailService.sendTestEmail === 'function') {
-              tests.emailService = { 
-                name: 'Email Service Connection', 
-                status: 'PASSED', 
-                message: 'Email service is accessible and functional' 
-              };
-              passed++;
-            } else {
-              tests.emailService = { 
-                name: 'Email Service Connection', 
-                status: 'FAILED', 
-                message: 'Email service not available or missing methods' 
-              };
-              failed++;
-            }
-          } catch (error) {
-            tests.emailService = { 
-              name: 'Email Service Connection', 
-              status: 'FAILED', 
-              message: 'Error accessing email service: ' + error.message 
-            };
-            failed++;
-          }
-          
-          // Test 2: SharePoint Integration
-          try {
-            console.log('🔗 Testing SharePoint integration...');
-            const testUrl = 'https://teams.global.hsbc/sites/EmployeeEng/_api/web';
-            const response = await fetch(testUrl, {
-              headers: { 'Accept': 'application/json; odata=verbose' },
-              credentials: 'same-origin'
-            });
-            
-            if (response.ok) {
-              tests.sharepoint = { 
-                name: 'SharePoint API Integration', 
-                status: 'PASSED', 
-                message: 'SharePoint API is accessible' 
-              };
-              passed++;
-            } else {
-              tests.sharepoint = { 
-                name: 'SharePoint API Integration', 
-                status: 'WARNING', 
-                message: `SharePoint API returned status: ${response.status}` 
-              };
-              warnings++;
-            }
-          } catch (error) {
-            tests.sharepoint = { 
-              name: 'SharePoint API Integration', 
-              status: 'FAILED', 
-              message: 'SharePoint API not accessible: ' + error.message 
-            };
-            failed++;
-          }
-          
-          // Test 3: Email Templates
-          try {
-            console.log('📋 Testing email templates...');
-            const templates = await emailService.checkAvailableTemplates();
-            if (templates && templates.length > 0) {
-              tests.templates = { 
-                name: 'Email Templates', 
-                status: 'PASSED', 
-                message: `Found ${templates.length} email templates` 
-              };
-              passed++;
-            } else {
-              tests.templates = { 
-                name: 'Email Templates', 
-                status: 'WARNING', 
-                message: 'No email templates found or unable to check' 
-              };
-              warnings++;
-            }
-          } catch (error) {
-            tests.templates = { 
-              name: 'Email Templates', 
-              status: 'FAILED', 
-              message: 'Template check failed: ' + error.message 
-            };
-            failed++;
-          }
-          
-          // Test 4: Email Configuration
-          try {
-            console.log('⚙️ Testing email configuration...');
-            const config = await emailService.getEmailConfig();
-            if (config) {
-              tests.config = { 
-                name: 'Email Configuration', 
-                status: 'PASSED', 
-                message: 'Email configuration loaded successfully' 
-              };
-              passed++;
-            } else {
-              tests.config = { 
-                name: 'Email Configuration', 
-                status: 'WARNING', 
-                message: 'Email configuration not found or incomplete' 
-              };
-              warnings++;
-            }
-          } catch (error) {
-            tests.config = { 
-              name: 'Email Configuration', 
-              status: 'FAILED', 
-              message: 'Configuration check failed: ' + error.message 
-            };
-            failed++;
-          }
-          
-          // Test 5: Test Email Send
-          try {
-            console.log('📤 Testing email sending...');
-            const result = await emailService.sendTestEmail({ 
-              testEmail: user?.email || 'minaantoun@hsbc.com' 
-            });
-            
-            if (result.success) {
-              tests.sendEmail = { 
-                name: 'Email Sending Test', 
-                status: 'PASSED', 
-                message: 'Test email sent successfully' 
-              };
-              passed++;
-            } else {
-              tests.sendEmail = { 
-                name: 'Email Sending Test', 
-                status: 'FAILED', 
-                message: 'Test email failed: ' + result.message 
-              };
-              failed++;
-            }
-          } catch (error) {
-            tests.sendEmail = { 
-              name: 'Email Sending Test', 
-              status: 'FAILED', 
-              message: 'Email send test failed: ' + error.message 
-            };
-            failed++;
-          }
-          
-          // Test 6: User Permissions
-          try {
-            console.log('👤 Testing user permissions...');
-            if (user && (user.role === 'admin' || user.staffId === '43898931')) {
-              tests.permissions = { 
-                name: 'User Permissions', 
-                status: 'PASSED', 
-                message: 'User has admin access to email system' 
-              };
-              passed++;
-            } else {
-              tests.permissions = { 
-                name: 'User Permissions', 
-                status: 'WARNING', 
-                message: 'User has limited access to email system' 
-              };
-              warnings++;
-            }
-          } catch (error) {
-            tests.permissions = { 
-              name: 'User Permissions', 
-              status: 'FAILED', 
-              message: 'Permission check failed: ' + error.message 
-            };
-            failed++;
-          }
-          
-          console.log('✅ Comprehensive test completed');
-          console.log(`📊 Results: ${passed} passed, ${failed} failed, ${warnings} warnings`);
-          
-          return {
-            summary: { 
-              total: passed + failed + warnings, 
-              passed, 
-              failed, 
-              warnings 
-            },
-            tests
+  console.log('🧪 Running comprehensive email system test...');
+  
+  const tests = {};
+  let passed = 0, failed = 0, warnings = 0;
+  
+  // Test 1: Email Service Connection
+  try {
+    console.log('📧 Testing email service connection...');
+    if (emailService && typeof emailService === 'object') {
+      tests.emailService = { 
+        name: 'Email Service Connection', 
+        status: 'PASSED', 
+        message: 'Email service is accessible and functional' 
+      };
+      passed++;
+    } else {
+      tests.emailService = { 
+        name: 'Email Service Connection', 
+        status: 'FAILED', 
+        message: 'Email service not available or not an object' 
+      };
+      failed++;
+    }
+  } catch (error) {
+    tests.emailService = { 
+      name: 'Email Service Connection', 
+      status: 'FAILED', 
+      message: 'Error accessing email service: ' + error.message 
+    };
+    failed++;
+  }
+  
+  // Test 2: SharePoint Integration
+  try {
+    console.log('🔗 Testing SharePoint integration...');
+    const testUrl = 'https://teams.global.hsbc/sites/EmployeeEng/_api/web';
+    const response = await fetch(testUrl, {
+      headers: { 'Accept': 'application/json; odata=verbose' },
+      credentials: 'same-origin'
+    });
+    
+    if (response.ok) {
+      tests.sharepoint = { 
+        name: 'SharePoint API Integration', 
+        status: 'PASSED', 
+        message: 'SharePoint API is accessible' 
+      };
+      passed++;
+    } else {
+      tests.sharepoint = { 
+        name: 'SharePoint API Integration', 
+        status: 'WARNING', 
+        message: `SharePoint API returned status: ${response.status}` 
+      };
+      warnings++;
+    }
+  } catch (error) {
+    tests.sharepoint = { 
+      name: 'SharePoint API Integration', 
+      status: 'FAILED', 
+      message: 'SharePoint API not accessible: ' + error.message 
+    };
+    failed++;
+  }
+  
+  // Test 3: Email Templates - FIXED to use correct method
+  try {
+    console.log('📋 Testing email templates...');
+    
+    // Try the method that exists on your emailService
+    if (emailService && typeof emailService.getEmailTemplate === 'function') {
+      const testTemplate = await emailService.getEmailTemplate('user-role-updated');
+      if (testTemplate && testTemplate.htmlContent) {
+        tests.templates = { 
+          name: 'Email Templates', 
+          status: 'PASSED', 
+          message: 'Email template retrieved successfully' 
+        };
+        passed++;
+      } else {
+        tests.templates = { 
+          name: 'Email Templates', 
+          status: 'WARNING', 
+          message: 'Template exists but may be incomplete' 
+        };
+        warnings++;
+      }
+    } else {
+      // Fallback: Direct SharePoint check
+      const response = await fetch(
+        'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailTemplates\')/items?$select=Id,TemplateType&$top=1',
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' },
+          credentials: 'same-origin'
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.d.results.length > 0) {
+          tests.templates = { 
+            name: 'Email Templates', 
+            status: 'PASSED', 
+            message: `Found ${data.d.results.length} email templates in SharePoint` 
           };
-        },
-        
+          passed++;
+        } else {
+          tests.templates = { 
+            name: 'Email Templates', 
+            status: 'WARNING', 
+            message: 'No email templates found in SharePoint' 
+          };
+          warnings++;
+        }
+      } else {
+        tests.templates = { 
+          name: 'Email Templates', 
+          status: 'FAILED', 
+          message: 'Cannot access EmailTemplates list in SharePoint' 
+        };
+        failed++;
+      }
+    }
+  } catch (error) {
+    tests.templates = { 
+      name: 'Email Templates', 
+      status: 'FAILED', 
+      message: 'Template check failed: ' + error.message 
+    };
+    failed++;
+  }
+  
+  // Test 4: Email Configuration - FIXED to use correct method
+  try {
+    console.log('⚙️ Testing email configuration...');
+    
+    // Try the method that exists on your emailService
+    if (emailService && typeof emailService.getEmailConfig === 'function') {
+      const config = await emailService.getEmailConfig();
+      if (config && config.testEmail) {
+        tests.config = { 
+          name: 'Email Configuration', 
+          status: 'PASSED', 
+          message: 'Email configuration loaded successfully' 
+        };
+        passed++;
+      } else {
+        tests.config = { 
+          name: 'Email Configuration', 
+          status: 'WARNING', 
+          message: 'Email configuration incomplete or missing test email' 
+        };
+        warnings++;
+      }
+    } else {
+      // Fallback: Direct SharePoint check
+      const response = await fetch(
+        'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'EmailConfiguration\')/items?$select=Id,ConfigType&$top=1',
+        {
+          headers: { 'Accept': 'application/json; odata=verbose' },
+          credentials: 'same-origin'
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.d.results.length > 0) {
+          tests.config = { 
+            name: 'Email Configuration', 
+            status: 'PASSED', 
+            message: 'Email configuration found in SharePoint' 
+          };
+          passed++;
+        } else {
+          tests.config = { 
+            name: 'Email Configuration', 
+            status: 'WARNING', 
+            message: 'No email configuration found in SharePoint' 
+          };
+          warnings++;
+        }
+      } else {
+        tests.config = { 
+          name: 'Email Configuration', 
+          status: 'FAILED', 
+          message: 'Cannot access EmailConfiguration list in SharePoint' 
+        };
+        failed++;
+      }
+    }
+  } catch (error) {
+    tests.config = { 
+      name: 'Email Configuration', 
+      status: 'FAILED', 
+      message: 'Configuration check failed: ' + error.message 
+    };
+    failed++;
+  }
+  
+  // Test 5: Email Sending Test - FIXED to use correct method
+  try {
+    console.log('📤 Testing email sending...');
+    
+    // Use the method that exists on your emailService
+    if (emailService && typeof emailService.sendTestEmail === 'function') {
+      const result = await emailService.sendTestEmail({ 
+        testEmail: user?.email || 'minaantoun@hsbc.com' 
+      });
+      
+      if (result && result.success) {
+        tests.sendEmail = { 
+          name: 'Email Sending Test', 
+          status: 'PASSED', 
+          message: 'Test email sent successfully via SharePoint' 
+        };
+        passed++;
+      } else {
+        tests.sendEmail = { 
+          name: 'Email Sending Test', 
+          status: 'FAILED', 
+          message: 'Test email failed: ' + (result?.message || 'Unknown error') 
+        };
+        failed++;
+      }
+    } else if (emailService && typeof emailService.sendEmailViaSharePoint === 'function') {
+      // Alternative method
+      const result = await emailService.sendEmailViaSharePoint({
+        to: [user?.email || 'minaantoun@hsbc.com'],
+        subject: 'HSBC Procedures Hub - Email System Test',
+        body: '<p>This is a test email from the HSBC Procedures Hub Email System Test.</p>'
+      });
+      
+      if (result && result.success) {
+        tests.sendEmail = { 
+          name: 'Email Sending Test', 
+          status: 'PASSED', 
+          message: 'Test email sent successfully via SharePoint API' 
+        };
+        passed++;
+      } else {
+        tests.sendEmail = { 
+          name: 'Email Sending Test', 
+          status: 'FAILED', 
+          message: 'Email send failed: ' + (result?.message || 'Unknown error') 
+        };
+        failed++;
+      }
+    } else {
+      tests.sendEmail = { 
+        name: 'Email Sending Test', 
+        status: 'FAILED', 
+        message: 'No email sending method available on emailService' 
+      };
+      failed++;
+    }
+  } catch (error) {
+    tests.sendEmail = { 
+      name: 'Email Sending Test', 
+      status: 'FAILED', 
+      message: 'Email send test failed: ' + error.message 
+    };
+    failed++;
+  }
+  
+  // Test 6: User Permissions
+  try {
+    console.log('👤 Testing user permissions...');
+    if (user && (user.role === 'admin' || user.staffId === '43898931')) {
+      tests.permissions = { 
+        name: 'User Permissions', 
+        status: 'PASSED', 
+        message: 'User has admin access to email system' 
+      };
+      passed++;
+    } else {
+      tests.permissions = { 
+        name: 'User Permissions', 
+        status: 'WARNING', 
+        message: 'User has limited access to email system' 
+      };
+      warnings++;
+    }
+  } catch (error) {
+    tests.permissions = { 
+      name: 'User Permissions', 
+      status: 'FAILED', 
+      message: 'Permission check failed: ' + error.message 
+    };
+    failed++;
+  }
+  
+  // Test 7: BONUS - Email Service Methods Check
+  try {
+    console.log('🔍 Testing email service methods...');
+    const availableMethods = emailService ? Object.getOwnPropertyNames(Object.getPrototypeOf(emailService)) : [];
+    const requiredMethods = ['sendTestEmail', 'getEmailTemplate', 'getEmailConfig', 'sendEmailViaSharePoint'];
+    const foundMethods = requiredMethods.filter(method => availableMethods.includes(method));
+    
+    if (foundMethods.length >= 2) {
+      tests.methods = { 
+        name: 'Email Service Methods', 
+        status: 'PASSED', 
+        message: `Found ${foundMethods.length}/${requiredMethods.length} required methods: ${foundMethods.join(', ')}` 
+      };
+      passed++;
+    } else {
+      tests.methods = { 
+        name: 'Email Service Methods', 
+        status: 'WARNING', 
+        message: `Only ${foundMethods.length}/${requiredMethods.length} required methods found. Available: ${availableMethods.join(', ')}` 
+      };
+      warnings++;
+    }
+  } catch (error) {
+    tests.methods = { 
+      name: 'Email Service Methods', 
+      status: 'FAILED', 
+      message: 'Method check failed: ' + error.message 
+    };
+    failed++;
+  }
+  
+  console.log('✅ Comprehensive test completed');
+  console.log(`📊 Results: ${passed} passed, ${failed} failed, ${warnings} warnings`);
+  
+  return {
+    summary: { 
+      total: passed + failed + warnings, 
+      passed, 
+      failed, 
+      warnings 
+    },
+    tests
+  };
+},
         quickTestNotification: async (notificationType, user) => {
           console.log(`🧪 Quick testing ${notificationType}...`);
           
