@@ -10,7 +10,192 @@ class EmailMonitoringService {
     
     console.log('📊 Email Monitoring Service initialized');
   }
+// At the top of EmailControlPanel.js - Enhanced service instantiation
+const EmailControlPanel = ({ user, emailService }) => {
+  // ✅ ENHANCED: Add error handling for service instantiation
+  const [testingService] = useState(() => {
+    try {
+      return new EmailTestingService();
+    } catch (error) {
+      console.error('❌ Failed to initialize EmailTestingService:', error);
+      return null;
+    }
+  });
+  
+  const [monitoringService] = useState(() => {
+    try {
+      const service = new EmailMonitoringService();
+      console.log('✅ EmailMonitoringService created:', service);
+      console.log('✅ Available methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(service)));
+      return service;
+    } catch (error) {
+      console.error('❌ Failed to initialize EmailMonitoringService:', error);
+      return null;
+    }
+  });
+  
+  const [integrationService] = useState(() => {
+    try {
+      return new EmailIntegrationService();
+    } catch (error) {
+      console.error('❌ Failed to initialize EmailIntegrationService:', error);
+      return null;
+    }
+  });
 
+  // ✅ ENHANCED: Add service validation
+  useEffect(() => {
+    console.log('🔍 Service validation:');
+    console.log('- testingService:', !!testingService);
+    console.log('- monitoringService:', !!monitoringService);
+    console.log('- integrationService:', !!integrationService);
+    
+    if (monitoringService) {
+      console.log('🔍 MonitoringService methods:', 
+        typeof monitoringService.startAutomaticMonitoring,
+        typeof monitoringService.stopAutomaticMonitoring,
+        typeof monitoringService.getWeeklyStatistics
+      );
+    }
+  }, [testingService, monitoringService, integrationService]);
+
+  // Rest of your existing state...
+  const [systemStatus, setSystemStatus] = useState({
+    monitoring: false,
+    integration: false,
+    lastTest: null,
+    lastMonitoring: null
+  });
+
+  const startMonitoring = async () => {
+  try {
+    setLoading(true);
+    
+    // ✅ ENHANCED: Validate service exists and has method
+    if (!monitoringService) {
+      throw new Error('EmailMonitoringService not initialized');
+    }
+    
+    if (typeof monitoringService.startAutomaticMonitoring !== 'function') {
+      throw new Error('startAutomaticMonitoring method not found on service');
+    }
+    
+    console.log('📧 Calling startAutomaticMonitoring...');
+    const result = await monitoringService.startAutomaticMonitoring();
+    console.log('📧 Start monitoring result:', result);
+    
+    if (result.success) {
+      await loadSystemStatus();
+      alert('✅ Automatic monitoring started successfully!');
+    } else {
+      alert('❌ Failed to start monitoring: ' + result.message);
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to start monitoring:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      monitoringService: !!monitoringService,
+      serviceType: typeof monitoringService
+    });
+    alert('❌ Error starting monitoring: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const stopMonitoring = async () => {
+  try {
+    setLoading(true);
+    
+    // ✅ ENHANCED: Validate service exists and has method
+    if (!monitoringService) {
+      throw new Error('EmailMonitoringService not initialized');
+    }
+    
+    if (typeof monitoringService.stopAutomaticMonitoring !== 'function') {
+      throw new Error('stopAutomaticMonitoring method not found on service');
+    }
+    
+    console.log('📧 Calling stopAutomaticMonitoring...');
+    const result = await monitoringService.stopAutomaticMonitoring();
+    console.log('📧 Stop monitoring result:', result);
+    
+    if (result.success) {
+      await loadSystemStatus();
+      alert('✅ Automatic monitoring stopped successfully!');
+    } else {
+      alert('❌ Failed to stop monitoring: ' + result.message);
+    }
+    
+  } catch (error) {
+    console.error('❌ Failed to stop monitoring:', error);
+    alert('❌ Error stopping monitoring: ' + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const loadMonitoringStats = async () => {
+  try {
+    setLoading(true);
+    setShowStatsDialog(true);
+    
+    // ✅ ENHANCED: Validate service exists and has method
+    if (!monitoringService) {
+      throw new Error('EmailMonitoringService not initialized');
+    }
+    
+    if (typeof monitoringService.getWeeklyStatistics !== 'function') {
+      throw new Error('getWeeklyStatistics method not found on service');
+    }
+    
+    console.log('📊 Calling getWeeklyStatistics...');
+    const stats = await monitoringService.getWeeklyStatistics();
+    console.log('📊 Weekly stats result:', stats);
+    
+    setMonitoringStats(stats);
+    
+  } catch (error) {
+    console.error('❌ Failed to load monitoring stats:', error);
+    
+    // Provide fallback stats
+    setMonitoringStats({
+      emailActivity: { total: 0, byType: {} },
+      procedures: { total: 0, expiringSoon: 0, expired: 0, byLOB: {} }
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+const loadSystemStatus = async () => {
+  try {
+    // ✅ ENHANCED: Safe service method calls
+    const integrationStatus = integrationService ? integrationService.getStatus() : { initialized: false };
+    const monitoringStatus = monitoringService ? monitoringService.getMonitoringStatus() : { isRunning: false };
+    
+    console.log('📊 Integration status:', integrationStatus);
+    console.log('📊 Monitoring status:', monitoringStatus);
+    
+    setSystemStatus({
+      monitoring: monitoringStatus.isRunning || false,
+      integration: integrationStatus.initialized || false,
+      lastTest: integrationStatus.lastActivity || null,
+      lastMonitoring: monitoringStatus.lastRun || null
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to load system status:', error);
+    setSystemStatus({
+      monitoring: false,
+      integration: false,
+      lastTest: null,
+      lastMonitoring: null
+    });
+  }
+};
   // ===================================================================
   // AUTOMATIC MONITORING SETUP
   // ===================================================================
