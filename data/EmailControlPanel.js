@@ -437,61 +437,131 @@ const EmailControlPanel = ({ user, emailService }) => {
          </CardContent>
        </Card>
      </motion.div>
+{/* Quick Test Buttons - CORRECTED VERSION */}
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.5, delay: 0.3 }}
+>
+  <Accordion sx={{ mb: 4 }}>
+    <AccordionSummary expandIcon={<ExpandMore />}>
+      <Typography variant="h6">🧪 Quick Notification Tests</Typography>
+    </AccordionSummary>
+    <AccordionDetails>
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<Email />}
+            onClick={() => quickTestNotification('new-procedure-uploaded')}
+            disabled={loading}
+            color="primary"
+          >
+            Test Procedure Upload
+          </Button>
+        </Grid>
+        
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<Email />}
+            onClick={() => quickTestNotification('user-access-granted')}
+            disabled={loading}
+            color="success"
+          >
+            Test User Access
+          </Button>
+        </Grid>
 
-     {/* Quick Test Buttons */}
-     <motion.div
-       initial={{ opacity: 0, y: 20 }}
-       animate={{ opacity: 1, y: 0 }}
-       transition={{ duration: 0.5, delay: 0.3 }}
-     >
-       <Accordion sx={{ mb: 4 }}>
-         <AccordionSummary expandIcon={<ExpandMore />}>
-           <Typography variant="h6">🧪 Quick Notification Tests</Typography>
-         </AccordionSummary>
-         <AccordionDetails>
-           <Grid container spacing={2}>
-             <Grid item xs={12} sm={6} md={4}>
-               <Button
-                 fullWidth
-                 variant="outlined"
-                 startIcon={<Email />}
-                 onClick={() => quickTestNotification('new-procedure-uploaded')}
-                 disabled={loading}
-                 color="primary"
-               >
-                 Test Procedure Upload
-               </Button>
-             </Grid>
-             
-             <Grid item xs={12} sm={6} md={4}>
-               <Button
-                 fullWidth
-                 variant="outlined"
-                 startIcon={<Email />}
-                 onClick={() => quickTestNotification('user-access-granted')}
-                 disabled={loading}
-                 color="success"
-               >
-                 Test User Access
-               </Button>
-             </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<Email />}
+            onClick={() => {
+              console.log('🧪 Testing email configuration...');
+              setLoading(true);
+              emailService.sendTestEmail({ testEmail: user?.email || 'minaantoun@hsbc.com' })
+                .then(result => {
+                  if (result.success) {
+                    alert('✅ Configuration test successful!');
+                  } else {
+                    alert('❌ Configuration test failed: ' + result.message);
+                  }
+                })
+                .catch(error => {
+                  console.error('❌ Configuration test error:', error);
+                  alert('❌ Test error: ' + error.message);
+                })
+                .finally(() => {
+                  setLoading(false);
+                });
+            }}
+            disabled={loading}
+            color="info"
+          >
+            Test Configuration
+          </Button>
+        </Grid>
 
-             <Grid item xs={12} sm={6} md={4}>
-               <Button
-                 fullWidth
-                 variant="outlined"
-                 startIcon={<Email />}
-                 onClick={() => testingService.quickTestConfiguration()}
-                 disabled={loading}
-                 color="info"
-               >
-                 Test Configuration
-               </Button>
-             </Grid>
-           </Grid>
-         </AccordionDetails>
-       </Accordion>
-     </motion.div>
+        {/* Add debug service button */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<BugReport />}
+            onClick={() => {
+              console.log('🧪 Service Debug Info:');
+              console.log('- Services object:', services);
+              console.log('- Monitoring service:', !!services.monitoring);
+              console.log('- User access:', hasAccess);
+              console.log('- System status:', systemStatus);
+              
+              if (services.monitoring) {
+                console.log('- Monitoring methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(services.monitoring)));
+                console.log('- Monitoring status:', services.monitoring.getMonitoringStatus());
+              }
+              
+              alert('🔍 Check console for debug information');
+            }}
+            disabled={loading}
+            color="warning"
+          >
+            🔍 Debug Services
+          </Button>
+        </Grid>
+
+        {/* Add template check button */}
+        <Grid item xs={12} sm={6} md={4}>
+          <Button
+            fullWidth
+            variant="outlined"
+            startIcon={<Info />}
+            onClick={async () => {
+              setLoading(true);
+              try {
+                const templates = await emailService.checkAvailableTemplates();
+                console.log('📧 Available templates:', templates);
+                alert('✅ Check console for available email templates');
+              } catch (error) {
+                console.error('❌ Template check failed:', error);
+                alert('❌ Failed to check templates: ' + error.message);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading}
+            color="info"
+          >
+            🔍 Check Templates
+          </Button>
+        </Grid>
+      </Grid>
+    </AccordionDetails>
+  </Accordion>
+</motion.div>
 
      {/* System Information */}
      <motion.div
