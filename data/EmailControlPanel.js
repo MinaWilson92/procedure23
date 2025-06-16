@@ -412,7 +412,97 @@ const [testingService] = useState(() => {
           tests
         };
       },
-      
+      async checkAvailableTemplates() {
+  try {
+    console.log('🔍 Checking available email templates...');
+    
+    const response = await fetch(
+      `${this.baseUrl}/_api/web/lists/getbytitle('EmailTemplates')/items?$select=Id,Title,TemplateType,IsActive,Subject,Created,Modified&$orderby=TemplateType`,
+      {
+        headers: { 
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        },
+        credentials: 'same-origin'
+      }
+    );
+
+    if (!response.ok) {
+      console.warn(`⚠️ EmailTemplates list not accessible (${response.status})`);
+      return [];
+    }
+
+    const data = await response.json();
+    console.log('📧 Raw email templates from SharePoint:', data.d.results.length);
+    
+    const templates = data.d.results.map(item => ({
+      id: item.Id,
+      name: item.Title,
+      type: item.TemplateType,
+      isActive: item.IsActive !== false,
+      subject: item.Subject || '',
+      created: item.Created,
+      modified: item.Modified,
+      status: item.IsActive !== false ? 'Active' : 'Inactive'
+    }));
+
+    // Group templates by type for better organization
+    const templatesByType = {};
+    const activeTemplates = [];
+    const inactiveTemplates = [];
+
+    templates.forEach(template => {
+      // Group by type
+      if (!templatesByType[template.type]) {
+        templatesByType[template.type] = [];
+      }
+      templatesByType[template.type].push(template);
+
+      // Separate active vs inactive
+      if (template.isActive) {
+        activeTemplates.push(template);
+      } else {
+        inactiveTemplates.push(template);
+      }
+    });
+
+    const summary = {
+      total: templates.length,
+      active: activeTemplates.length,
+      inactive: inactiveTemplates.length,
+      types: Object.keys(templatesByType).length,
+      templateTypes: Object.keys(templatesByType)
+    };
+
+    console.log('✅ Email templates summary:', summary);
+    console.log('📋 Available template types:', summary.templateTypes);
+    console.log('📧 Active templates:', activeTemplates.map(t => `${t.name} (${t.type})`));
+    
+    if (inactiveTemplates.length > 0) {
+      console.log('⚠️ Inactive templates:', inactiveTemplates.map(t => `${t.name} (${t.type})`));
+    }
+
+    // Return structured data
+    return {
+      summary,
+      templates,
+      activeTemplates,
+      inactiveTemplates,
+      templatesByType
+    };
+    
+  } catch (error) {
+    console.error('❌ Error checking available templates:', error);
+    return {
+      summary: { total: 0, active: 0, inactive: 0, types: 0, templateTypes: [] },
+      templates: [],
+      activeTemplates: [],
+      inactiveTemplates: [],
+      templatesByType: {},
+      error: error.message
+    };
+  }
+},
       // Rest of your existing methods...
       quickTestNotification: async (notificationType, user) => {
         console.log(`🧪 Quick testing ${notificationType}...`);
@@ -1087,30 +1177,75 @@ const [testingService] = useState(() => {
                 </Button>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={4}>
-                <Button
-                  fullWidth
-                  variant="outlined"
-                  startIcon={<Info />}
-                  onClick={async () => {
-                    setLoading(true);
-                    try {
-                      const templates = await emailService.checkAvailableTemplates();
-                      console.log('📧 Available templates:', templates);
-                      alert('✅ Check console for available email templates');
-                    } catch (error) {
-                      console.error('❌ Template check failed:', error);
-                      alert('❌ Failed to check templates: ' + error.message);
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading}
-                  color="info"
-                >
-                  🔍 Check Templates
-                </Button>
-              </Grid>
+              
+<Grid item xs={12} sm={6} md={4}>
+  <Button
+    fullWidth
+    variant="outlined"
+    startIcon={<Info />}
+    onClick={async () => {
+      setLoading(true);
+      try {
+        console.log('🔍 Checking available email templates...');
+        
+        const templatesData = await emailService.checkAvailableTemplates();
+        
+        if (templatesData.error) {
+          alert('❌ Failed to check templates: ' + templatesData.error);
+          return;
+        }
+
+        const { summary, activeTemplates, inactiveTemplates, templatesByType } = templatesData;
+        
+        // Create detailed summary message
+        let message = `📧 EMAIL TEMPLATES SUMMARY\n\n`;
+        message += `📊 Total Templates: ${summary.total}\n`;
+        message += `✅ Active Templates: ${summary.active}\n`;
+        message += `⚠️ Inactive Templates: ${summary.inactive}\n`;
+        message += `🏷️ Template Types: ${summary.types}\n\n`;
+        
+        if (summary.templateTypes.length > 0) {
+          message += `📋 AVAILABLE TEMPLATE TYPES:\n`;
+          summary.templateTypes.forEach(type => {
+            const count = templatesByType[type].length;
+            const activeCount = templatesByType[type].filter(t => t.isActive).length;
+            message += `  • ${type}: ${activeCount}/${count} active\n`;
+          });
+        }
+        
+        if (activeTemplates.length > 0) {
+          message += `\n✅ ACTIVE TEMPLATES:\n`;
+          activeTemplates.forEach(template => {
+            message += `  • ${template.name} (${template.type})\n`;
+          });
+        }
+        
+        if (inactiveTemplates.length > 0) {
+          message += `\n⚠️ INACTIVE TEMPLATES:\n`;
+          inactiveTemplates.forEach(template => {
+            message += `  • ${template.name} (${template.type})\n`;
+          });
+        }
+        
+        console.log('📧 Complete templates data:', templatesData);
+        console.log('📋 Template types found:', summary.templateTypes);
+        console.log('✅ Active templates:', activeTemplates);
+        
+        alert(message);
+        
+      } catch (error) {
+        console.error('❌ Template check failed:', error);
+        alert('❌ Failed to check templates: ' + error.message);
+      } finally {
+        setLoading(false);
+      }
+    }}
+    disabled={loading}
+    color="info"
+  >
+    🔍 Check Templates
+  </Button>
+</Grid>
             </Grid>
           </AccordionDetails>
         </Accordion>
