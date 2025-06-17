@@ -19,9 +19,6 @@ import {
 } from '@mui/material';
 
 // ADD this separate import for Timeline:
-import {
-  Timeline, TimelineItem, TimelineSeparator, TimelineDot, TimelineContent
-} from '@mui/lab';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // 🎨 **HSBC Brand Colors (Official)**
@@ -162,14 +159,6 @@ const ScoreDisplay = styled(Box)(({ score }) => ({
     background: 'white'
   }
 }));
-
-const StatusTimeline = styled(Timeline)({
-  '& .MuiTimelineItem-root': {
-    '&::before': {
-      display: 'none'
-    }
-  }
-});
 
 // Helper functions
 const getScoreColor = (score) => {
@@ -1177,112 +1166,285 @@ const ProcedureDetailsModal = ({
                     </GlassmorphismCard>
                   </motion.div>
 
-                  {/* Procedure Timeline */}
-                  <motion.div
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.6, delay: 0.5 }}
-                  >
-                    <GlassmorphismCard>
-                      <CardHeader
-                        avatar={
-                          <HSBCHexagon size={50}>
-                            <TimelineIcon sx={{ color: 'white', fontSize: 20 }} />
-                          </HSBCHexagon>
-                        }
-                        title={
-                          <Typography variant="h5" fontWeight={800}>
-                            Procedure Timeline
-                          </Typography>
-                        }
-                        subheader={
-                          <Typography variant="body2" color="text.secondary">
-                            Key dates and milestones
-                          </Typography>
-                        }
-                      />
-                      
-                      <CardContent>
-                        <StatusTimeline>
-                          <TimelineItem>
-                            <TimelineSeparator>
-                              <TimelineDot sx={{ background: '#4caf50' }}>
-                                <CloudDownload sx={{ color: 'white', fontSize: 16 }} />
-                              </TimelineDot>
-                            </TimelineSeparator>
-                            <TimelineContent>
-                              <Typography variant="body2" fontWeight={700}>
-                                Document Uploaded
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {formatDate(procedureDetails.uploadedOn)}
-                              </Typography>
-                            </TimelineContent>
-                          </TimelineItem>
+      {/* Enhanced Procedure Timeline - No Extra Dependencies */}
+<motion.div
+  initial={{ opacity: 0, x: 30 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ duration: 0.6, delay: 0.5 }}
+>
+  <GlassmorphismCard>
+    <CardHeader
+      avatar={
+        <HSBCHexagon size={50}>
+          <TimelineIcon sx={{ color: 'white', fontSize: 20 }} />
+        </HSBCHexagon>
+      }
+      title={
+        <Typography variant="h5" fontWeight={800}>
+          Procedure Timeline
+        </Typography>
+      }
+      subheader={
+        <Typography variant="body2" color="text.secondary">
+          Key dates and milestones
+        </Typography>
+      }
+    />
+    
+    <CardContent>
+      <Stack spacing={3}>
+        {/* Document Uploaded */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <Paper sx={{ 
+            p: 3, 
+            borderRadius: '16px',
+            background: HSBCColors.gradients.successGlass,
+            border: '1px solid rgba(76,175,80,0.2)',
+            position: 'relative',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateX(8px)',
+              boxShadow: '0 8px 24px rgba(76,175,80,0.2)'
+            },
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              left: -12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 6,
+              height: '80%',
+              background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
+              borderRadius: 3
+            }
+          }}>
+            <Stack direction="row" alignItems="center" spacing={3}>
+              <Avatar sx={{ 
+                background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)', 
+                width: 48, 
+                height: 48,
+                boxShadow: '0 4px 16px rgba(76,175,80,0.3)'
+              }}>
+                <CloudDownload sx={{ color: 'white', fontSize: 24 }} />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight={800} color="#2e7d32">
+                  Document Uploaded
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  {formatDate(procedureDetails.uploadedOn)}
+                </Typography>
+                <Chip 
+                  label="Initial Upload"
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(76,175,80,0.1)',
+                    color: '#2e7d32',
+                    fontWeight: 700,
+                    fontSize: '0.7rem'
+                  }}
+                />
+              </Box>
+            </Stack>
+          </Paper>
+        </motion.div>
 
-                          {procedureDetails.signOffDate && (
-                            <TimelineItem>
-                              <TimelineSeparator>
-                                <TimelineDot sx={{ background: '#2196f3' }}>
-                                  <CheckCircle sx={{ color: 'white', fontSize: 16 }} />
-                                </TimelineDot>
-                              </TimelineSeparator>
-                              <TimelineContent>
-                                <Typography variant="body2" fontWeight={700}>
-                                  Document Signed Off
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  {formatDate(procedureDetails.signOffDate)}
-                                </Typography>
-                              </TimelineContent>
-                            </TimelineItem>
-                          )}
+        {/* Sign-off (if available) */}
+        {procedureDetails.signOffDate && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+          >
+            <Paper sx={{ 
+              p: 3, 
+              borderRadius: '16px',
+              background: HSBCColors.gradients.infoGlass,
+              border: '1px solid rgba(33,150,243,0.2)',
+              position: 'relative',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateX(8px)',
+                boxShadow: '0 8px 24px rgba(33,150,243,0.2)'
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: -12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 6,
+                height: '80%',
+                background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+                borderRadius: 3
+              }
+            }}>
+              <Stack direction="row" alignItems="center" spacing={3}>
+                <Avatar sx={{ 
+                  background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)', 
+                  width: 48, 
+                  height: 48,
+                  boxShadow: '0 4px 16px rgba(33,150,243,0.3)'
+                }}>
+                  <CheckCircle sx={{ color: 'white', fontSize: 24 }} />
+                </Avatar>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="h6" fontWeight={800} color="#1565c0">
+                    Document Signed Off
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                    {formatDate(procedureDetails.signOffDate)}
+                  </Typography>
+                  <Chip 
+                    label="Approved"
+                    size="small"
+                    sx={{ 
+                      backgroundColor: 'rgba(33,150,243,0.1)',
+                      color: '#1565c0',
+                      fontWeight: 700,
+                      fontSize: '0.7rem'
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </Paper>
+          </motion.div>
+        )}
 
-                          <TimelineItem>
-                            <TimelineSeparator>
-                              <TimelineDot sx={{ background: '#ff9800' }}>
-                                <Schedule sx={{ color: 'white', fontSize: 16 }} />
-                              </TimelineDot>
-                            </TimelineSeparator>
-                            <TimelineContent>
-                              <Typography variant="body2" fontWeight={700}>
-                                Last Modified
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {formatDate(procedureDetails.modifiedOn)}
-                              </Typography>
-                            </TimelineContent>
-                          </TimelineItem>
+        {/* Last Modified */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.3 }}
+        >
+          <Paper sx={{ 
+            p: 3, 
+            borderRadius: '16px',
+            background: HSBCColors.gradients.warningGlass,
+            border: '1px solid rgba(255,152,0,0.2)',
+            position: 'relative',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateX(8px)',
+              boxShadow: '0 8px 24px rgba(255,152,0,0.2)'
+            },
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              left: -12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 6,
+              height: '80%',
+              background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+              borderRadius: 3
+            }
+          }}>
+            <Stack direction="row" alignItems="center" spacing={3}>
+              <Avatar sx={{ 
+                background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)', 
+                width: 48, 
+                height: 48,
+                boxShadow: '0 4px 16px rgba(255,152,0,0.3)'
+              }}>
+                <Schedule sx={{ color: 'white', fontSize: 24 }} />
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight={800} color="#ef6c00">
+                  Last Modified
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  {formatDate(procedureDetails.modifiedOn)}
+                </Typography>
+                <Chip 
+                  label="Updated"
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,152,0,0.1)',
+                    color: '#ef6c00',
+                    fontWeight: 700,
+                    fontSize: '0.7rem'
+                  }}
+                />
+              </Box>
+            </Stack>
+          </Paper>
+        </motion.div>
 
-                          <TimelineItem>
-                            <TimelineSeparator>
-                              <TimelineDot sx={{ background: expiryStatus?.color }}>
-                                {expiryStatus?.icon && React.cloneElement(expiryStatus.icon, { 
-                                  sx: { color: 'white', fontSize: 16 } 
-                                })}
-                              </TimelineDot>
-                            </TimelineSeparator>
-                            <TimelineContent>
-                              <Typography variant="body2" fontWeight={700}>
-                                Expires
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {formatDate(procedureDetails.expiry)}
-                              </Typography>
-                              {daysLeft !== null && (
-                                <Typography variant="caption" display="block" sx={{ 
-                                  color: expiryStatus?.color, 
-                                  fontWeight: 700 
-                                }}>
-                                  {expiryStatus?.text}
-                                </Typography>
-                              )}
-                            </TimelineContent>
-                          </TimelineItem>
-                        </StatusTimeline>
-                      </CardContent>
-                    </GlassmorphismCard>
-                  </motion.div>
+        {/* Expiry Date */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.3, delay: 0.4 }}
+        >
+          <Paper sx={{ 
+            p: 3, 
+            borderRadius: '16px',
+            background: expiryStatus?.status === 'EXPIRED' ? HSBCColors.gradients.errorGlass :
+                        expiryStatus?.status === 'CRITICAL' ? HSBCColors.gradients.errorGlass :
+                        expiryStatus?.status === 'EXPIRING' ? HSBCColors.gradients.warningGlass :
+                        HSBCColors.gradients.successGlass,
+            border: `1px solid ${alpha(expiryStatus?.color || '#4caf50', 0.2)}`,
+            position: 'relative',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateX(8px)',
+              boxShadow: `0 8px 24px ${alpha(expiryStatus?.color || '#4caf50', 0.2)}`
+            },
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              left: -12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 6,
+              height: '80%',
+              background: `linear-gradient(135deg, ${expiryStatus?.color || '#4caf50'} 0%, ${alpha(expiryStatus?.color || '#4caf50', 0.8)} 100%)`,
+              borderRadius: 3
+            }
+          }}>
+            <Stack direction="row" alignItems="center" spacing={3}>
+              <Avatar sx={{ 
+                background: `linear-gradient(135deg, ${expiryStatus?.color || '#4caf50'} 0%, ${alpha(expiryStatus?.color || '#4caf50', 0.8)} 100%)`, 
+                width: 48, 
+                height: 48,
+                boxShadow: `0 4px 16px ${alpha(expiryStatus?.color || '#4caf50', 0.3)}`
+              }}>
+                {expiryStatus?.icon && React.cloneElement(expiryStatus.icon, { 
+                  sx: { color: 'white', fontSize: 24 } 
+                })}
+              </Avatar>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="h6" fontWeight={800} sx={{ color: expiryStatus?.color || '#4caf50' }}>
+                  Expires
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  {formatDate(procedureDetails.expiry)}
+                </Typography>
+                {daysLeft !== null && (
+                  <Chip 
+                    label={expiryStatus?.text}
+                    size="small"
+                    sx={{ 
+                      backgroundColor: alpha(expiryStatus?.color || '#4caf50', 0.1),
+                      color: expiryStatus?.color || '#4caf50',
+                      fontWeight: 700,
+                      fontSize: '0.7rem'
+                    }}
+                  />
+                )}
+              </Box>
+            </Stack>
+          </Paper>
+        </motion.div>
+      </Stack>
+    </CardContent>
+  </GlassmorphismCard>
+</motion.div>
 
                   {/* Document Owners (Extracted) */}
                   {procedureDetails.documentOwners?.length > 0 && (
