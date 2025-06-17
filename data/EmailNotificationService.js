@@ -154,61 +154,65 @@ class EmailNotificationService {
   // ===================================================================
 
   // ✅ FIXED: Enhanced procedure upload notification
-  async triggerProcedureUploadNotification(uploadResult) {
-    try {
-      console.log('📧 Triggering procedure upload notification...');
-      
-      const procedureData = uploadResult.procedure || uploadResult;
-      const lob = procedureData.lob || 'Unknown';
-      
-      // Get fresh recipients
-      const recipients = await this.getRecipientsForNotification(
-        'new-procedure-uploaded', 
+
+async triggerProcedureUploadNotification(uploadResult) {
+  try {
+    console.log('📧 Triggering procedure upload notification...');
+    console.log('📋 Upload Result Data:', uploadResult); // Debug log
+    
+    // ✅ FIXED: Extract data from the uploadResult object correctly
+    const lob = uploadResult.lineOfBusiness || uploadResult.lob || 'Unknown';
+    
+    // Get fresh recipients
+    const recipients = await this.getRecipientsForNotification(
+      'new-procedure-uploaded', 
+      lob, 
+      uploadResult
+    );
+
+    // ✅ FIXED: Use the correct field names from AdminPanel
+    const emailVariables = {
+      procedureName: uploadResult.procedureName || 'Unknown Procedure',
+      ownerName: uploadResult.ownerName || 'Unknown Owner',
+      uploadDate: uploadResult.uploadDate || new Date().toLocaleDateString(),
+      qualityScore: uploadResult.qualityScore || 'N/A',
+      lob: lob,
+      uploadedBy: uploadResult.uploadedBy || 'System',
+      procedureId: uploadResult.procedureId || 'Unknown'
+    };
+
+    console.log('📧 Email Variables Prepared:', emailVariables); // Debug log
+
+    // Send notification
+    const result = await this.emailService.sendNotificationEmail(
+      'new-procedure-uploaded',
+      recipients,
+      emailVariables
+    );
+
+    // Log the activity
+    await this.logEmailActivity({
+      activityType: 'NEW_PROCEDURE_NOTIFICATION',
+      recipients: recipients,
+      procedureId: uploadResult.procedureId,
+      success: result.success,
+      details: { 
         lob, 
-        procedureData
-      );
+        procedureName: emailVariables.procedureName,
+        qualityScore: emailVariables.qualityScore,
+        ownerName: emailVariables.ownerName
+      }
+    });
 
-      // Prepare email variables
-      const emailVariables = {
-        procedureName: procedureData.name || procedureData.Title || 'Unknown Procedure',
-        ownerName: procedureData.primary_owner || 'Unknown Owner',
-        uploadDate: new Date().toLocaleDateString(),
-        qualityScore: procedureData.score || uploadResult.analysisResult?.score || 'N/A',
-        lob: lob,
-        uploadedBy: procedureData.uploaded_by_name || 'System',
-        procedureId: uploadResult.procedureId || 'Unknown'
-      };
-
-      // Send notification
-      const result = await this.emailService.sendNotificationEmail(
-        'new-procedure-uploaded',
-        recipients,
-        emailVariables
-      );
-
-      // Log the activity
-      await this.logEmailActivity({
-        activityType: 'NEW_PROCEDURE_NOTIFICATION',
-        recipients: recipients,
-        procedureId: uploadResult.procedureId,
-        success: result.success,
-        details: { 
-          lob, 
-          procedureName: emailVariables.procedureName,
-          qualityScore: emailVariables.qualityScore,
-          ownerName: emailVariables.ownerName
-        }
-      });
-
-      console.log('✅ Procedure upload notification completed:', result.success);
-      return result;
-      
-    } catch (error) {
-      console.error('❌ Failed to send procedure upload notification:', error);
-      return { success: false, message: error.message };
-    }
+    console.log('✅ Procedure upload notification completed:', result.success);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Failed to send procedure upload notification:', error);
+    return { success: false, message: error.message };
   }
-
+}
+  
   // ✅ FIXED: Enhanced user access notification
 // In EmailNotificationService.js, REPLACE the existing triggerUserChangeNotification method with this:
 
