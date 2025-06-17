@@ -46,12 +46,55 @@ const GlassmorphismDrawer = styled(Drawer)(({ theme }) => ({
     borderRight: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
     overflow: 'hidden',
-    marginTop: 64, // Account for app bar
+    marginTop: 64,
     display: 'flex',
-    flexDirection: 'column'
+    flexDirection: 'column',
+    
+    // 🌟 **BEAUTIFUL CUSTOM SCROLLBARS**
+    '&::-webkit-scrollbar': {
+      width: '8px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: 'rgba(255,255,255,0.05)',
+      borderRadius: '10px',
+      margin: '8px 0'
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: 'linear-gradient(135deg, #DB0011 0%, #B50010 100%)',
+      borderRadius: '10px',
+      border: '1px solid rgba(255,255,255,0.1)',
+      '&:hover': {
+        background: 'linear-gradient(135deg, #FF1B2D 0%, #DB0011 100%)',
+        boxShadow: '0 0 10px rgba(219,0,17,0.5)'
+      }
+    },
+    '&::-webkit-scrollbar-thumb:active': {
+      background: 'linear-gradient(135deg, #B50010 0%, #8B000C 100%)'
+    },
+    
+    // 🎯 **FIREFOX SCROLLBAR SUPPORT**
+    scrollbarWidth: 'thin',
+    scrollbarColor: '#DB0011 rgba(255,255,255,0.05)'
   },
+  
+  // 🎨 **SCROLLABLE CONTENT AREA**
+  '& .MuiList-root': {
+    overflow: 'auto',
+    '&::-webkit-scrollbar': {
+      width: '6px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: 'transparent',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: 'linear-gradient(135deg, rgba(219,0,17,0.6) 0%, rgba(181,0,16,0.6) 100%)',
+      borderRadius: '6px',
+      '&:hover': {
+        background: 'linear-gradient(135deg, rgba(219,0,17,0.8) 0%, rgba(181,0,16,0.8) 100%)'
+      }
+    }
+  }
 }));
-
 const HSBCHexagon = styled(Box)(({ theme, size = 40 }) => ({
   width: size,
   height: size,
