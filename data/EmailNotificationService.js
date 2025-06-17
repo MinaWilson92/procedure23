@@ -155,30 +155,32 @@ class EmailNotificationService {
 
   // ✅ FIXED: Enhanced procedure upload notification
 
+triggerProcedureUploadNotification method
 async triggerProcedureUploadNotification(uploadResult) {
   try {
     console.log('📧 Triggering procedure upload notification...');
     console.log('📋 Upload Result Data:', uploadResult); // Debug log
     
-    // ✅ FIXED: Extract data from the uploadResult object correctly
-    const lob = uploadResult.lineOfBusiness || uploadResult.lob || 'Unknown';
+    // ✅ FIXED: Extract data using the CORRECT field names from AdminPanel
+    const procedureData = uploadResult.procedure || uploadResult; // Handle nested structure
+    const lob = procedureData.lob || uploadResult.lob || 'Unknown';
     
     // Get fresh recipients
     const recipients = await this.getRecipientsForNotification(
       'new-procedure-uploaded', 
       lob, 
-      uploadResult
+      procedureData
     );
 
-    // ✅ FIXED: Use the correct field names from AdminPanel
+    // ✅ FIXED: Map the ACTUAL field names from your AdminPanel upload
     const emailVariables = {
-      procedureName: uploadResult.procedureName || 'Unknown Procedure',
-      ownerName: uploadResult.ownerName || 'Unknown Owner',
-      uploadDate: uploadResult.uploadDate || new Date().toLocaleDateString(),
-      qualityScore: uploadResult.qualityScore || 'N/A',
+      procedureName: procedureData.name || uploadResult.name || 'Unknown Procedure',
+      ownerName: procedureData.primary_owner || uploadResult.primary_owner || uploadResult.uploaded_by_name || 'Unknown Owner',
+      uploadDate: new Date().toLocaleDateString(),
+      qualityScore: uploadResult.qualityScore || procedureData.score || 'N/A',
       lob: lob,
-      uploadedBy: uploadResult.uploadedBy || 'System',
-      procedureId: uploadResult.procedureId || 'Unknown'
+      uploadedBy: uploadResult.uploaded_by_name || procedureData.uploaded_by || 'System',
+      procedureId: uploadResult.procedureId || procedureData.id || 'Unknown'
     };
 
     console.log('📧 Email Variables Prepared:', emailVariables); // Debug log
@@ -212,6 +214,7 @@ async triggerProcedureUploadNotification(uploadResult) {
     return { success: false, message: error.message };
   }
 }
+
   
   // ✅ FIXED: Enhanced user access notification
 // In EmailNotificationService.js, REPLACE the existing triggerUserChangeNotification method with this:
