@@ -155,66 +155,50 @@ class EmailNotificationService {
 
   // ✅ FIXED: Enhanced procedure upload notification
 
-triggerProcedureUploadNotification method
-async triggerProcedureUploadNotification(uploadResult) {
-  try {
-    console.log('📧 Triggering procedure upload notification...');
-    console.log('📋 Upload Result Data:', uploadResult); // Debug log
+
+try {
+  // ✅ ENHANCED DEBUG: Log exactly what we're sending
+  console.log('🔍 DEBUG: About to send email notification');
+  console.log('🔍 DEBUG: formData =', formData);
+  console.log('🔍 DEBUG: result =', result);
+  console.log('🔍 DEBUG: documentAnalysis =', documentAnalysis);
+  console.log('🔍 DEBUG: user =', user);
+  
+  // ✅ FIXED: Create properly structured data for email service
+  const emailNotificationData = {
+    // Main procedure info
+    procedureName: formData.name,
+    ownerName: formData.primary_owner,
+    lob: formData.lob,
     
-    // ✅ FIXED: Extract data using the CORRECT field names from AdminPanel
-    const procedureData = uploadResult.procedure || uploadResult; // Handle nested structure
-    const lob = procedureData.lob || uploadResult.lob || 'Unknown';
+    // Upload details
+    procedureId: result.procedureId,
+    uploadDate: new Date().toLocaleDateString(),
+    uploadedBy: user?.displayName || user?.staffId,
     
-    // Get fresh recipients
-    const recipients = await this.getRecipientsForNotification(
-      'new-procedure-uploaded', 
-      lob, 
-      procedureData
-    );
-
-    // ✅ FIXED: Map the ACTUAL field names from your AdminPanel upload
-    const emailVariables = {
-      procedureName: procedureData.name || uploadResult.name || 'Unknown Procedure',
-      ownerName: procedureData.primary_owner || uploadResult.primary_owner || uploadResult.uploaded_by_name || 'Unknown Owner',
-      uploadDate: new Date().toLocaleDateString(),
-      qualityScore: uploadResult.qualityScore || procedureData.score || 'N/A',
-      lob: lob,
-      uploadedBy: uploadResult.uploaded_by_name || procedureData.uploaded_by || 'System',
-      procedureId: uploadResult.procedureId || procedureData.id || 'Unknown'
-    };
-
-    console.log('📧 Email Variables Prepared:', emailVariables); // Debug log
-
-    // Send notification
-    const result = await this.emailService.sendNotificationEmail(
-      'new-procedure-uploaded',
-      recipients,
-      emailVariables
-    );
-
-    // Log the activity
-    await this.logEmailActivity({
-      activityType: 'NEW_PROCEDURE_NOTIFICATION',
-      recipients: recipients,
-      procedureId: uploadResult.procedureId,
-      success: result.success,
-      details: { 
-        lob, 
-        procedureName: emailVariables.procedureName,
-        qualityScore: emailVariables.qualityScore,
-        ownerName: emailVariables.ownerName
-      }
-    });
-
-    console.log('✅ Procedure upload notification completed:', result.success);
-    return result;
+    // Analysis results
+    qualityScore: documentAnalysis?.score || 'N/A',
     
-  } catch (error) {
-    console.error('❌ Failed to send procedure upload notification:', error);
-    return { success: false, message: error.message };
-  }
+    // Additional context
+    primary_owner: formData.primary_owner,
+    primary_owner_email: formData.primary_owner_email,
+    secondary_owner: formData.secondary_owner,
+    secondary_owner_email: formData.secondary_owner_email,
+    
+    // Full objects for fallback
+    procedure: result.procedure,
+    formData: formData,
+    analysisResult: documentAnalysis
+  };
+  
+  console.log('🔍 DEBUG: emailNotificationData =', emailNotificationData);
+  
+  await emailNotificationService.triggerProcedureUploadNotification(emailNotificationData);
+  
+} catch (emailError) {
+  console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
 }
-
+  
   
   // ✅ FIXED: Enhanced user access notification
 // In EmailNotificationService.js, REPLACE the existing triggerUserChangeNotification method with this:
