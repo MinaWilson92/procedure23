@@ -140,7 +140,7 @@ const EnhancedDialog = styled(Dialog)(({ theme }) => ({
     maxWidth: '1200px'
   }
 }));
-
+// Fix the ScoreDisplay component
 const ScoreDisplay = styled(Box)(({ score }) => ({
   width: 120,
   height: 120,
@@ -156,9 +156,14 @@ const ScoreDisplay = styled(Box)(({ score }) => ({
     width: '80%',
     height: '80%',
     borderRadius: '50%',
-    background: 'white'
+    background: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 }));
+
+
 
 // Helper functions
 const getScoreColor = (score) => {
@@ -611,32 +616,49 @@ const ProcedureDetailsModal = ({
                     
                     <Grid item xs={12} md={4}>
                       <Stack alignItems="center" spacing={2}>
-                        <Box sx={{ position: 'relative' }}>
-                          <ScoreDisplay score={procedureDetails.qualityScore}>
-                            <Typography 
-                              variant="h3" 
-                              fontWeight={900} 
-                              color={qualityInfo.color}
-                              sx={{ position: 'relative', zIndex: 1 }}
-                            >
-                              {procedureDetails.qualityScore}%
-                            </Typography>
-                          </ScoreDisplay>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                            style={{
-                              position: 'absolute',
-                              top: -10,
-                              left: -10,
-                              right: -10,
-                              bottom: -10,
-                              border: `2px solid ${alpha(qualityInfo.color, 0.3)}`,
-                              borderRadius: '50%',
-                              borderTopColor: qualityInfo.color
-                            }}
-                          />
-                        </Box>
+                        
+                      <Box sx={{ position: 'relative' }}>
+  <ScoreDisplay score={procedureDetails.qualityScore}>
+    <Box sx={{ 
+      position: 'absolute', 
+      zIndex: 2, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      height: '100%'
+    }}>
+      <Typography 
+        variant="h3" 
+        fontWeight={900} 
+        color={qualityInfo.color}
+        sx={{ 
+          lineHeight: 1,
+          textAlign: 'center'
+        }}
+      >
+        {procedureDetails.qualityScore}%
+      </Typography>
+    </Box>
+  </ScoreDisplay>
+  
+  {/* Rotating border animation */}
+  <motion.div
+    animate={{ rotate: 360 }}
+    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+    style={{
+      position: 'absolute',
+      top: -10,
+      left: -10,
+      right: -10,
+      bottom: -10,
+      border: `2px solid ${alpha(qualityInfo.color, 0.3)}`,
+      borderRadius: '50%',
+      borderTopColor: qualityInfo.color
+    }}
+  />
+</Box>
                         
                         <Stack alignItems="center" spacing={1}>
                           <Stack direction="row" alignItems="center" spacing={1}>
