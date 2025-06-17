@@ -753,7 +753,8 @@ const HSBCProceduresHub = () => {
         onClose={() => setDrawerOpen(false)}
         user={user}
         isAdmin={isAdmin}
-        isUploader={isUploader}
+        procedures={procedures}
+        dashboardData={dashboardData}
       />
 
       {/* Main Content */}
