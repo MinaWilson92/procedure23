@@ -2,7 +2,7 @@
 import React from 'react';
 import {
   Box, Typography, Alert, Grid, Card, CardContent,
-  Paper, alpha, LinearProgress, Badge, Chip
+  Paper, alpha, LinearProgress, Badge, Chip, Avatar
 } from '@mui/material';
 import {
   Dashboard, Schedule, TrendingUp, Error as ErrorIcon,
@@ -836,6 +836,145 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
        ))}
      </Grid>
 
+
+           {/*Adding governance team details*/}
+           <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          Governance Team
+        </Typography>
+      </Box>
+            {/* Adding the Governance team */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+     <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <Card sx={{ 
+               height: '100%', 
+               background: 'linear-gradient(135deg,rgb(139, 1, 1) 0%,rgb(151, 1, 1) 100%)', 
+               color: 'white',
+               boxShadow: '0 8px 32px rgba(39, 3, 3, 0.3)',
+               cursor: 'default',
+               transition: 'all 0.3s ease'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                    SENIOR MANAGER GOVERNANCE AND PERFORMANCE MGT
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                    Maii Pharouh
+                    </Typography>
+                    <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                    maii.pharouh@hsbc.com
+                    </Typography>
+                  </Box>
+                  {/* using fixed URL from the HSBC directory for ease of access - Clean & Make sure to update when changing user details */}
+                  <Avatar 
+                 src="https://photos.global.hsbc/GetPhoto.ashx?pose=casual&format=square&empid=43744500"
+                  sx={{ 
+                    width: 80, 
+                    height: 80, 
+                    opacity: 0.6 
+                  }}
+                  alt="User Profile"/>
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <Card sx={{ 
+             height: '100%', 
+             background: 'linear-gradient(135deg,rgb(66, 0, 0) 0%,rgb(75, 18, 18) 100%)', 
+             color: 'white',
+             boxShadow: '0 8px 32px rgba(58, 4, 4, 0.3)',
+             cursor: 'default',
+             transition: 'all 0.3s ease'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                    MANAGER GOVERNANCE AND PERFORMANCE MGT
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                    Heba A MAHER
+                    </Typography>
+                    <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                    heba.maher@hsbc.com
+                    </Typography>
+                  </Box>
+                  {/* using fixed URL from the HSBC directory for ease of access - Clean & Make sure to update when changing user details */}
+                  <Avatar 
+                 src="https://photos.global.hsbc/GetPhoto.ashx?pose=casual&format=square&empid=43246885"
+                  sx={{ 
+                    width: 80, 
+                    height: 80, 
+                    opacity: 0.6 
+                  }}
+                  alt="User Profile"/>
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
+            <Card sx={{ 
+              height: '100%', 
+              background: 'linear-gradient(135deg,rgb(66, 0, 0) 0%,rgb(75, 18, 18) 100%)', 
+              color: 'white',
+              boxShadow: '0 8px 32px rgba(58, 4, 4, 0.3)',
+              cursor: 'default',
+              transition: 'all 0.3s ease'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography color="rgba(255,255,255,0.8)" variant="body2" gutterBottom>
+                    GOVERNANCE AND PERFORMANCE MGT MANAGER
+                    </Typography>
+                    <Typography variant="h3" fontWeight="bold" sx={{ mb: 1 }}>
+                    Radwa HEGAZY
+                    </Typography>
+                    <Typography variant="caption" sx={{ mb: 1, display: 'block' }}>
+                    radwa.osman.hegazy@hsbc.com
+                    </Typography>
+                  </Box>
+                  {/* using fixed URL from the HSBC directory for ease of access - Clean & Make sure to update when changing user details */}
+                  <Avatar 
+                 src="https://photos.global.hsbc/GetPhoto.ashx?pose=casual&format=square&empid=43246885"
+                  sx={{ 
+                    width: 80, 
+                    height: 80, 
+                    opacity: 0.6 
+                  }}
+                  alt="User Profile"/>
+                </Box>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </Grid>
+        </Grid>
+        
+
+
+        
      {/* Empty State Message for New Installations */}
      {!hasRealData && sharePointAvailable && (
        <motion.div
