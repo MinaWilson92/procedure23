@@ -124,22 +124,18 @@ const AdminPanelPage = ({ onDataRefresh }) => {
 
   // Check admin access on component mount
   useEffect(() => {
-    if (!isAdmin) {
-      showErrorDialog(
-        'Access Denied',
-        'You do not have admin privileges to access this page.',
-        `User ID: ${user?.staffId} | Role: ${user?.role || 'user'}`
-      );
-      setTimeout(() => navigate('home'), 5000);
-      return;
-    }
-    
-    console.log('✅ Admin access granted for user:', {
-      staffId: user?.staffId,
-      displayName: user?.displayName,
-      role: user?.role
-    });
-  }, [isAdmin, user, navigate]);
+
+    // Line 71 - CHANGE THIS:
+useEffect(() => {
+  if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
+    showErrorDialog(
+      'Access Denied',
+      'You need admin or uploader privileges to access this page.', // ✅ UPDATED MESSAGE
+      `User ID: ${user?.staffId} | Role: ${user?.role || 'user'}`
+    );
+    setTimeout(() => navigate('home'), 5000);
+    return;
+  }
 
   // Set default expiry date and auto-populate display name only
   useEffect(() => {
@@ -312,29 +308,38 @@ const AdminPanelPage = ({ onDataRefresh }) => {
 
       const result = await documentAnalyzer.uploadProcedureWithAnalysis(uploadData, selectedFile);
 
-      if (result.success) {
-        // ✅ PROMINENT SUCCESS DIALOG
-        showSuccessDialog(
-          'Upload Successful! 🎉',
-          `Your procedure has been successfully uploaded to SharePoint.`,
-          `Procedure ID: ${result.procedureId}\nQuality Score: ${documentAnalysis.score}%\nUploaded by: ${user?.displayName}`
-        );
-        setSubmitStatus('success');
-        setTimeout(() => {
-          handleReset();
-          if (onDataRefresh) onDataRefresh();
-        }, 3000);
-        
-                try {
-          await emailNotificationService.triggerProcedureUploadNotification( 
-            result,
-          );
-          
+// Line 402 - CHANGE THIS EMAIL SECTION:
+if (result.success) {
+  showSuccessDialog(
+    'Upload Successful! 🎉',
+    `Your procedure has been successfully uploaded to SharePoint.`,
+    `Procedure ID: ${result.procedureId}\nQuality Score: ${documentAnalysis.score}%\nUploaded by: ${user?.displayName}`
+  );
+  setSubmitStatus('success');
+  setTimeout(() => {
+    handleReset();
+    if (onDataRefresh) onDataRefresh();
+  }, 3000);
+  
+  // ✅ FIXED: Pass complete procedure data for email template
+  try {
+    await emailNotificationService.triggerProcedureUploadNotification({
+      ...result,
+      procedureName: formData.name,           // ✅ FIXED: Pass actual procedure name
+      ownerName: formData.primary_owner,      // ✅ FIXED: Pass actual owner name  
+      lineOfBusiness: formData.lob,           // ✅ FIXED: Pass actual LOB
+      qualityScore: documentAnalysis.score,   // ✅ Already working
+      uploadedBy: user?.displayName,          // ✅ FIXED: Pass uploader name
+      uploadDate: new Date().toLocaleDateString(), // ✅ Already working
+      procedureId: result.procedureId         // ✅ Already working
+    });
+  } catch (emailError) {
+    console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
+  }
+}
+
       
-        } catch (emailError) {
-          console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
-        }
-      } else {
+      else {
         // ✅ PROMINENT ERROR DIALOG for upload failure
         showErrorDialog(
           'Upload Failed',
@@ -399,34 +404,36 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     return '#f44336';
   };
 
-  // Show access denied if not admin
-  if (!isAdmin) {
-    return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Card sx={{ maxWidth: 500, textAlign: 'center' }}>
-          <CardContent sx={{ p: 4 }}>
-            <Error sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
-            <Typography variant="h5" gutterBottom>
-              Access Denied
-            </Typography>
-            <Typography variant="body1" color="text.secondary" gutterBottom>
-              Admin privileges required to access this page.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              User ID: {user?.staffId} | Role: {user?.role}
-            </Typography>
-            <Button 
-              variant="contained" 
-              onClick={() => navigate('home')}
-              startIcon={<ArrowBack />}
-            >
-              Return to Home
-            </Button>
-          </CardContent>
-        </Card>
-      </Box>
-    );
-  }
+  // Show access denied if not 
+
+if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Card sx={{ maxWidth: 500, textAlign: 'center' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Error sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
+          <Typography variant="h5" gutterBottom>
+            Access Denied
+          </Typography>
+          <Typography variant="body1" color="text.secondary" gutterBottom>
+            Admin or uploader privileges required to access this page. {/* ✅ UPDATED MESSAGE */}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            User ID: {user?.staffId} | Role: {user?.role}
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={() => navigate('home')}
+            startIcon={<ArrowBack />}
+          >
+            Return to Home
+          </Button>
+        </CardContent>
+      </Card>
+    </Box>
+  );
+}
+  
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa' }}>
