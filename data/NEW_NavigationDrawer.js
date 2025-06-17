@@ -1,4 +1,4 @@
-// components/NavigationDrawer.js - FIXED VERSION
+// components/NavigationDrawer.js - COMPLETE SCROLLBAR-FREE VERSION
 import React, { useState } from 'react';
 import {
   Drawer, Box, Typography, Divider, List, ListItem,
@@ -36,65 +36,23 @@ const floatIcon = keyframes`
   50% { transform: translateY(-3px); }
 `;
 
-// 🎨 **Styled Components**
+// 🎨 **Styled Components - SCROLLBAR-FREE**
 const GlassmorphismDrawer = styled(Drawer)(({ theme }) => ({
   '& .MuiDrawer-paper': {
-    width: 320,
+    width: 380, // ✅ INCREASED from 320 to 380 for more space
     background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
     backdropFilter: 'blur(20px)',
     border: 'none',
     borderRight: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
-    overflow: 'hidden',
+    overflow: 'hidden', // ✅ HIDDEN to prevent any scrollbars
     marginTop: 64,
     display: 'flex',
     flexDirection: 'column',
-    
-    // 🌟 **BEAUTIFUL CUSTOM SCROLLBARS**
-    '&::-webkit-scrollbar': {
-      width: '8px',
-    },
-    '&::-webkit-scrollbar-track': {
-      background: 'rgba(255,255,255,0.05)',
-      borderRadius: '10px',
-      margin: '8px 0'
-    },
-    '&::-webkit-scrollbar-thumb': {
-      background: 'linear-gradient(135deg, #DB0011 0%, #B50010 100%)',
-      borderRadius: '10px',
-      border: '1px solid rgba(255,255,255,0.1)',
-      '&:hover': {
-        background: 'linear-gradient(135deg, #FF1B2D 0%, #DB0011 100%)',
-        boxShadow: '0 0 10px rgba(219,0,17,0.5)'
-      }
-    },
-    '&::-webkit-scrollbar-thumb:active': {
-      background: 'linear-gradient(135deg, #B50010 0%, #8B000C 100%)'
-    },
-    
-    // 🎯 **FIREFOX SCROLLBAR SUPPORT**
-    scrollbarWidth: 'thin',
-    scrollbarColor: '#DB0011 rgba(255,255,255,0.05)'
-  },
-  
-  // 🎨 **SCROLLABLE CONTENT AREA**
-  '& .MuiList-root': {
-    overflow: 'auto',
-    '&::-webkit-scrollbar': {
-      width: '6px',
-    },
-    '&::-webkit-scrollbar-track': {
-      background: 'transparent',
-    },
-    '&::-webkit-scrollbar-thumb': {
-      background: 'linear-gradient(135deg, rgba(219,0,17,0.6) 0%, rgba(181,0,16,0.6) 100%)',
-      borderRadius: '6px',
-      '&:hover': {
-        background: 'linear-gradient(135deg, rgba(219,0,17,0.8) 0%, rgba(181,0,16,0.8) 100%)'
-      }
-    }
+    height: 'calc(100vh - 64px)', // ✅ EXACT HEIGHT to prevent overflow
   }
 }));
+
 const HSBCHexagon = styled(Box)(({ theme, size = 40 }) => ({
   width: size,
   height: size,
@@ -104,7 +62,7 @@ const HSBCHexagon = styled(Box)(({ theme, size = 40 }) => ({
   alignItems: 'center',
   justifyContent: 'center',
   position: 'relative',
-  flexShrink: 0, // ✅ FIX: Prevent shrinking
+  flexShrink: 0,
   '&::after': {
     content: '""',
     position: 'absolute',
@@ -116,9 +74,9 @@ const HSBCHexagon = styled(Box)(({ theme, size = 40 }) => ({
 }));
 
 const ModernMenuItem = styled(ListItem)(({ theme, isActive, itemColor }) => ({
-  margin: '4px 12px', // ✅ FIX: Reduced horizontal margin
+  margin: '4px 20px', // ✅ INCREASED horizontal margin for wider layout
   borderRadius: '16px',
-  padding: '12px 16px',
+  padding: '16px 20px', // ✅ INCREASED padding for more comfortable spacing
   position: 'relative',
   overflow: 'hidden',
   cursor: 'pointer',
@@ -142,7 +100,7 @@ const ModernMenuItem = styled(ListItem)(({ theme, isActive, itemColor }) => ({
   },
   
   '&:hover': {
-    transform: 'translateX(6px)', // ✅ FIX: Reduced movement to stay in bounds
+    transform: 'translateX(8px)', // ✅ REDUCED movement to stay within bounds
     background: `linear-gradient(135deg, ${itemColor}20 0%, ${itemColor}10 100%)`,
     border: `1px solid ${alpha(itemColor, 0.4)}`,
     boxShadow: `0 8px 32px ${alpha(itemColor, 0.3)}`,
@@ -204,7 +162,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
   if (isAdmin) {
     menuItems.push(
       { 
-        id: 'admin-dashboard', // ✅ NEW: Separate admin dashboard
+        id: 'admin-dashboard',
         label: 'Admin Dashboard', 
         icon: <BarChart />, 
         color: '#9c27b0',
@@ -213,7 +171,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
         show: true
       },
       { 
-        id: 'admin-panel', // ✅ FIX: Upload procedure (renamed from submit-procedure)
+        id: 'admin-panel',
         label: 'Upload Procedure', 
         icon: <CloudUpload />, 
         color: '#f44336',
@@ -224,7 +182,6 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
     );
   }
 
-  // ✅ FIX: Filter items based on show property
   const visibleMenuItems = menuItems.filter(item => item.show);
 
   const handleNavigation = (pageId) => {
@@ -248,11 +205,11 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
         transition={{ duration: 0.6 }}
       >
         <Box sx={{ 
-          p: 3,
+          p: 4, // ✅ INCREASED padding for wider layout
           background: HSBCColors.gradients.redPrimary,
           position: 'relative',
           overflow: 'hidden',
-          flexShrink: 0 // ✅ FIX: Prevent header shrinking
+          flexShrink: 0
         }}>
           {/* Animated Background Pattern */}
           <Box sx={{
@@ -267,15 +224,15 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
           
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ position: 'relative', zIndex: 1 }}>
             <Stack direction="row" alignItems="center" spacing={2}>
-              <HSBCHexagon size={50}>
-                <Person sx={{ color: 'white', fontSize: 24 }} />
+              <HSBCHexagon size={60}> {/* ✅ SLIGHTLY LARGER for wider layout */}
+                <Person sx={{ color: 'white', fontSize: 28 }} />
               </HSBCHexagon>
               
-              <Box sx={{ minWidth: 0 }}> {/* ✅ FIX: Allow text to shrink */}
-                <Typography variant="h6" fontWeight={900} color="white">
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="h5" fontWeight={900} color="white"> {/* ✅ LARGER text */}
                   Navigation
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
                   HSBC Procedures Hub
                 </Typography>
               </Box>
@@ -285,7 +242,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
               onClick={onClose} 
               sx={{ 
                 color: 'white',
-                flexShrink: 0, // ✅ FIX: Prevent button shrinking
+                flexShrink: 0,
                 '&:hover': {
                   background: 'rgba(255,255,255,0.1)',
                   transform: 'rotate(90deg)'
@@ -305,30 +262,30 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <Box sx={{ p: 3, flexShrink: 0 }}> {/* ✅ FIX: Prevent shrinking */}
+          <Box sx={{ p: 4, flexShrink: 0 }}> {/* ✅ INCREASED padding */}
             <Paper sx={{ 
-              p: 3, 
+              p: 4, // ✅ INCREASED padding
               borderRadius: '20px',
               background: HSBCColors.gradients.glassMorphism,
               border: '1px solid rgba(255,255,255,0.1)',
               backdropFilter: 'blur(10px)'
             }}>
-              <Stack direction="row" alignItems="center" spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={3}> {/* ✅ INCREASED spacing */}
                 <Avatar sx={{ 
-                  width: 56, 
-                  height: 56,
+                  width: 64, // ✅ LARGER avatar
+                  height: 64,
                   background: HSBCColors.gradients.redPrimary,
-                  fontSize: '1.5rem',
+                  fontSize: '1.8rem', // ✅ LARGER text
                   fontWeight: 900,
                   boxShadow: '0 8px 24px rgba(219,0,17,0.3)',
-                  flexShrink: 0 // ✅ FIX: Prevent avatar shrinking
+                  flexShrink: 0
                 }}>
                   {user.displayName?.[0] || user.staffId?.[0] || 'U'}
                 </Avatar>
                 
-                <Box sx={{ flex: 1, minWidth: 0 }}> {/* ✅ FIX: Allow text to wrap */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography 
-                    variant="h6" 
+                    variant="h5" // ✅ LARGER text
                     fontWeight={800} 
                     color="white" 
                     sx={{
@@ -340,36 +297,37 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                     {user.displayName || user.staffId}
                   </Typography>
                   <Typography 
-                    variant="body2" 
+                    variant="body1" // ✅ LARGER text
                     sx={{ 
                       color: 'rgba(255,255,255,0.7)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      mb: 1
                     }}
                   >
                     {user.email || 'user@hsbc.com'}
                   </Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap' }}>
+                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                     <Chip 
                       label={user.role || 'User'}
-                      size="small"
+                      size="medium" // ✅ LARGER chips
                       sx={{ 
                         backgroundColor: user.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
                         color: 'white',
                         fontWeight: 700,
-                        fontSize: '0.7rem'
+                        fontSize: '0.8rem' // ✅ LARGER text
                       }}
                     />
                     <Chip 
                       icon={<Star />}
                       label="Active"
-                      size="small"
+                      size="medium" // ✅ LARGER chips
                       sx={{ 
                         backgroundColor: 'rgba(76,175,80,0.3)',
                         color: 'white',
                         fontWeight: 700,
-                        fontSize: '0.7rem'
+                        fontSize: '0.8rem' // ✅ LARGER text
                       }}
                     />
                   </Stack>
@@ -380,8 +338,15 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
         </motion.div>
       )}
 
-      {/* 🚀 **NEXT-GEN MENU ITEMS** */}
-      <Box sx={{ flex: 1, py: 2, overflow: 'auto' }}> {/* ✅ FIX: Allow scrolling */}
+      {/* 🚀 **NEXT-GEN MENU ITEMS - NO SCROLLING NEEDED** */}
+      <Box sx={{ 
+        flex: 1, 
+        py: 2, 
+        overflow: 'visible', // ✅ NO SCROLLING
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center' // ✅ CENTER the menu items
+      }}>
         <List sx={{ px: 0 }}>
           <AnimatePresence>
             {visibleMenuItems.map((item, index) => (
@@ -400,7 +365,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  <ListItemIcon sx={{ minWidth: 48, flexShrink: 0 }}> {/* ✅ FIX: Prevent icon shrinking */}
+                  <ListItemIcon sx={{ minWidth: 56, flexShrink: 0 }}> {/* ✅ LARGER icon area */}
                     <Box className="menu-icon" sx={{ 
                       color: currentPage === item.id ? item.color : 'rgba(255,255,255,0.7)',
                       transition: 'all 0.3s ease',
@@ -408,16 +373,16 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      {React.cloneElement(item.icon, { fontSize: 'medium' })}
+                      {React.cloneElement(item.icon, { fontSize: 'large' })} {/* ✅ LARGER icons */}
                     </Box>
                   </ListItemIcon>
                   
                   <ListItemText 
-                    sx={{ flex: 1, minWidth: 0 }} // ✅ FIX: Allow text to shrink properly
+                    sx={{ flex: 1, minWidth: 0 }}
                     primary={
                       <Typography 
                         className="menu-text"
-                        variant="body1" 
+                        variant="h6" // ✅ LARGER text
                         fontWeight={currentPage === item.id ? 800 : 600}
                         sx={{ 
                           color: currentPage === item.id ? item.color : 'rgba(255,255,255,0.9)',
@@ -429,10 +394,10 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                     }
                     secondary={
                       <Typography 
-                        variant="caption" 
+                        variant="body2" // ✅ LARGER text
                         sx={{ 
                           color: 'rgba(255,255,255,0.6)',
-                          fontSize: '0.75rem'
+                          fontSize: '0.9rem' // ✅ LARGER text
                         }}
                       >
                         {item.description}
@@ -440,18 +405,18 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                     }
                   />
                   
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}> {/* ✅ FIX: Prevent badges from shrinking */}
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}>
                     {item.badge && (
                       <Chip 
                         label={item.badge}
-                        size="small"
+                        size="medium" // ✅ LARGER badges
                         sx={{ 
                           backgroundColor: alpha(item.color, 0.2),
                           color: item.color,
                           fontWeight: 700,
-                          fontSize: '0.7rem',
-                          height: 24,
-                          minWidth: 'auto' // ✅ FIX: Allow badges to be small
+                          fontSize: '0.8rem', // ✅ LARGER text
+                          height: 28, // ✅ LARGER height
+                          minWidth: 'auto'
                         }}
                       />
                     )}
@@ -460,7 +425,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                       className="chevron-icon"
                       sx={{ 
                         color: alpha(item.color, 0.6),
-                        fontSize: 20,
+                        fontSize: 24, // ✅ LARGER chevron
                         opacity: hoveredItem === item.id ? 1 : 0,
                         transform: hoveredItem === item.id ? 'translateX(0px)' : 'translateX(-10px)',
                         transition: 'all 0.3s ease'
@@ -474,69 +439,24 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
         </List>
       </Box>
 
-      {/* 📊 **QUICK STATS SECTION - FIXED SCROLLING** */}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.8 }}
-      >
-        <Box sx={{ p: 3, flexShrink: 0 }}> {/* ✅ FIX: Prevent shrinking */}
-          <Paper sx={{ 
-            p: 3, 
-            borderRadius: '20px',
-            background: 'linear-gradient(135deg, rgba(33,150,243,0.1) 0%, rgba(33,150,243,0.05) 100%)',
-            border: '1px solid rgba(33,150,243,0.2)',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-              <TrendingUp sx={{ color: '#2196f3', flexShrink: 0 }} />
-              <Typography variant="h6" fontWeight={800} color="white">
-                Quick Stats
-              </Typography>
-            </Stack>
-            
-            <Stack spacing={1}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Total Procedures
-                </Typography>
-                <Typography variant="body2" fontWeight={700} color="white">
-                  {totalProcedures}
-                </Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Expiring Soon
-                </Typography>
-                <Typography variant="body2" fontWeight={700} color="#ff9800">
-                  {expiringSoon}
-                </Typography>
-              </Stack>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                  Quality Score
-                </Typography>
-                <Typography variant="body2" fontWeight={700} color="#4caf50">
-                  {qualityScore}%
-                </Typography>
-              </Stack>
-            </Stack>
-          </Paper>
-        </Box>
-      </motion.div>
-
+      {/* ✅ REMOVED QUICK STATS SECTION COMPLETELY - NO MORE SCROLLING! */}
+      
       {/* 🔗 **FOOTER** */}
-      <Box sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.1)', flexShrink: 0 }}> {/* ✅ FIX: Prevent shrinking */}
+      <Box sx={{ 
+        p: 4, // ✅ INCREASED padding
+        borderTop: '1px solid rgba(255,255,255,0.1)', 
+        flexShrink: 0 
+      }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
             HSBC Procedures Hub v4.2.0
           </Typography>
           <Stack direction="row" spacing={1}>
-            <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-              <Settings fontSize="small" />
+            <IconButton size="medium" sx={{ color: 'rgba(255,255,255,0.6)' }}> {/* ✅ LARGER buttons */}
+              <Settings />
             </IconButton>
-            <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-              <Notifications fontSize="small" />
+            <IconButton size="medium" sx={{ color: 'rgba(255,255,255,0.6)' }}> {/* ✅ LARGER buttons */}
+              <Notifications />
             </IconButton>
           </Stack>
         </Stack>
