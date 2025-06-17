@@ -8,14 +8,20 @@ import {
   CardHeader, Accordion, AccordionSummary, AccordionDetails, Timeline,
   TimelineItem, TimelineSeparator, TimelineDot, TimelineContent, Fab
 } from '@mui/material';
+
+// With this corrected import:
 import {
-  Close, Person, CalendarToday, Business, Assignment, Security, Schedule, 
-  Star, CloudDownload, Email, Phone, LocationOn, Work, Description, 
-  Link as LinkIcon, Grade, TrendingUp, Warning, CheckCircle, ErrorIcon,
-  AutoAwesome, Psychology, Assessment, Timeline as TimelineIcon,
-  LocalFireDepartment, Speed, Insights, ExpandMore, AccountBalance,
-  Share, Print, Edit, Visibility, AdminPanelSettings
-} from '@mui/icons-material';
+  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, 
+  Grid, Card, CardContent, Chip, Divider, List, ListItem, ListItemIcon, 
+  ListItemText, Avatar, LinearProgress, Alert, IconButton, Skeleton, Link,
+  Stack, Paper, Tooltip, Badge, useTheme, styled, keyframes, alpha,
+  CardHeader, Accordion, AccordionSummary, AccordionDetails, Fab
+} from '@mui/material';
+
+// ADD this separate import for Timeline:
+import {
+  Timeline, TimelineItem, TimelineSeparator, TimelineDot, TimelineContent
+} from '@mui/lab';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // 🎨 **HSBC Brand Colors (Official)**
