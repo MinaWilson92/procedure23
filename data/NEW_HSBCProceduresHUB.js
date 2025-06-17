@@ -11,6 +11,7 @@ import {
   Warning, Schedule, CheckCircle, Assignment, Error as ErrorIcon,
   CloudDone, CloudOff, Settings, Search, TrendingUp, Star
 } from '@mui/icons-material';
+import { styled, keyframes, alpha } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -57,23 +58,26 @@ const rotateHexagon = keyframes`
 `;
 
 // 🎨 **Styled Components**
+// 🎨 **FIXED STYLED COMPONENTS** - Replace the styled components section with this:
 const GlassmorphismAppBar = styled(AppBar)(({ theme }) => ({
   background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
   backdropFilter: 'blur(20px)',
   borderBottom: '1px solid rgba(255,255,255,0.1)',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-  position: 'relative',
-  overflow: 'hidden',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="rgba(255,255,255,0.03)" fill-opacity="1" fill-rule="evenodd"%3E%3Cpath d="m36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z"/%3E%3C/g%3E%3C/svg%3E")',
-    opacity: 0.5,
-    pointerEvents: 'none'
+  boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+}));
+
+const HSBCHexagonLogo = styled(Box)(({ theme }) => ({
+  width: 50,
+  height: 50,
+  background: 'linear-gradient(135deg, #DB0011 0%, #B50010 50%, #8B000C 100%)',
+  clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'scale(1.1)'
   }
 }));
 
@@ -803,317 +807,280 @@ const HSBCProceduresHub = () => {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: "easeOut" }}
       >
-        <GlassmorphismAppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
-          <Toolbar sx={{ position: 'relative', zIndex: 1 }}>
-            {/* 📱 **MENU BUTTON WITH GLASSMORPHISM** */}
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <MenuButton
-                onClick={() => setDrawerOpen(!drawerOpen)}
-                sx={{ mr: 2 }}
-              >
-                <MenuIcon sx={{ color: 'white' }} />
-              </MenuButton>
-            </motion.div>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-              {/* 🎨 **PREMIUM HSBC HEXAGON LOGO** */}
-              <motion.div
-                whileHover={{ rotate: 180, scale: 1.1 }}
-                transition={{ duration: 0.6, ease: "easeInOut" }}
-              >
-                <HSBCHexagonLogo size={50}>
-                  <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '11px' }}>
-                    HBEG
-                  </Typography>
-                </HSBCHexagonLogo>
-              </motion.div>
-              
-              <Stack>
-                <Typography variant="h6" component="div" color="white" fontWeight={800}>
-                  Procedures Hub
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
-                  Next-Generation Document Management
-                </Typography>
-              </Stack>
-              
-              {/* 🌟 **PREMIUM STATUS CHIPS** */}
-              <Stack direction="row" spacing={1} sx={{ ml: 2 }}>
-                <motion.div
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  <PremiumChip 
-                    icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
-                    label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
-                    variant={sharePointAvailable ? 'success' : 'warning'}
-                  />
-                </motion.div>
-                
-                {sharePointAvailable && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
-                  >
-                    <PremiumChip 
-                      icon={<Assignment />}
-                      label={`${procedures.length} procedures`}
-                      variant="info"
-                    />
-                  </motion.div>
-                )}
-                
-                {dashboardData?.stats?.averageScore && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                  >
-                    <PremiumChip 
-                      icon={<Star />}
-                      label={`${dashboardData.stats.averageScore}% avg quality`}
-                      variant="success"
-                    />
-                  </motion.div>
-                )}
-              </Stack>
-            </Box>
+{/* 🌟 **FIXED APP BAR** */}
+<GlassmorphismAppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+  <Toolbar>
+    <IconButton
+      color="inherit"
+      edge="start"
+      onClick={() => setDrawerOpen(!drawerOpen)}
+      sx={{ 
+        mr: 2,
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255,255,255,0.2)',
+        borderRadius: '12px',
+        '&:hover': {
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
+          transform: 'translateY(-2px)'
+        }
+      }}
+    >
+      <MenuIcon />
+    </IconButton>
+    
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+      {/* HSBC Hexagon Logo */}
+      <HSBCHexagonLogo>
+        <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '11px' }}>
+          HBEG
+        </Typography>
+      </HSBCHexagonLogo>
+      
+      <Box>
+        <Typography variant="h6" component="div" color="white" fontWeight={800}>
+          Procedures Hub
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
+          Next-Generation Document Management
+        </Typography>
+      </Box>
+      
+      {/* Status Chips */}
+      <Chip 
+        icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
+        label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
+        size="small"
+        sx={{
+          ml: 2,
+          background: sharePointAvailable 
+            ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'
+            : 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+          color: 'white',
+          fontWeight: 700,
+          border: 'none',
+          '&:hover': {
+            transform: 'translateY(-2px)'
+          }
+        }}
+      />
+      
+      {sharePointAvailable && (
+        <Chip 
+          label={`${procedures.length} procedures`}
+          size="small"
+          sx={{
+            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
+            color: 'white',
+            fontWeight: 700,
+            border: 'none'
+          }}
+        />
+      )}
+    </Box>
 
-            {user && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {/* 🔔 **SPECTACULAR NOTIFICATIONS BELL** */}
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Tooltip title={`${notifications.length} notifications • ${unreadCount} high priority`} arrow>
-                    <NotificationButton
-                      onClick={handleNotificationClick}
-                      unreadCount={unreadCount}
-                    >
-                      <NotificationBadge 
-                        badgeContent={unreadCount} 
-                        invisible={unreadCount === 0}
-                      >
-                        <motion.div
-                          animate={unreadCount > 0 ? { rotate: [0, 10, -10, 0] } : {}}
-                          transition={{ duration: 0.5, repeat: unreadCount > 0 ? Infinity : 0, repeatDelay: 3 }}
-                        >
-                          <Notifications sx={{ color: 'white' }} />
-                        </motion.div>
-                      </NotificationBadge>
-                    </NotificationButton>
-                  </Tooltip>
-                </motion.div>
+    {user && (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Notifications Bell */}
+        <IconButton
+          color="inherit"
+          onClick={handleNotificationClick}
+          sx={{ 
+            background: unreadCount > 0 
+              ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
+              : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: '12px',
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
+            }
+          }}
+        >
+          <Badge 
+            badgeContent={unreadCount} 
+            color="error"
+            invisible={unreadCount === 0}
+            sx={{
+              '& .MuiBadge-badge': {
+                background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+                color: 'white',
+                fontWeight: 900
+              }
+            }}
+          >
+            <Notifications />
+          </Badge>
+        </IconButton>
 
-                {/* 👤 **PREMIUM USER PROFILE CHIP** */}
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Tooltip title={`${user.displayName || user.staffId} • ${user.email || 'user@hsbc.com'}`} arrow>
-                    <UserProfileChip 
-                      avatar={
-                        <motion.div
-                          animate={{ rotate: [0, 360] }}
-                          transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                        >
-                          <Avatar sx={{ 
-                            bgcolor: isAdmin ? '#fff' : HSBCColors.primary,
-                            color: isAdmin ? HSBCColors.primary : '#fff',
-                            fontWeight: 900
-                          }}>
-                            {user.displayName?.[0] || user.staffId?.[0] || 'U'}
-                          </Avatar>
-                        </motion.div>
-                      }
-                      label={user.displayName || user.staffId}
-                      isAdmin={isAdmin}
-                    />
-                  </Tooltip>
-                </motion.div>
-                
-                {/* 🏆 **ROLE BADGE** */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                >
-                  <PremiumChip 
-                    icon={isAdmin ? <Star /> : <AccountCircle />}
-                    label={user.role || 'User'}
-                    variant={isAdmin ? 'error' : 'outlined'}
-                  />
-                </motion.div>
-              </Box>
-            )}
-          </Toolbar>
-        </GlassmorphismAppBar>
+        <Chip 
+          avatar={<Avatar sx={{ bgcolor: '#d40000' }}>{user.displayName?.[0] || 'U'}</Avatar>}
+          label={user.displayName || user.staffId}
+          sx={{ 
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+            color: 'white',
+            border: '1px solid rgba(255,255,255,0.2)',
+            fontWeight: 700,
+            '&:hover': {
+              transform: 'translateY(-2px)'
+            }
+          }}
+        />
+        
+        <Chip 
+          label={user.role || 'User'}
+          size="small"
+          sx={{ 
+            background: user.role === 'admin' 
+              ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
+              : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+            color: 'white',
+            fontWeight: 700,
+            border: 'none'
+          }}
+        />
+      </Box>
+    )}
+  </Toolbar>
+</GlassmorphismAppBar>
+        
       </motion.div>
 
       {/* 🔔 **SPECTACULAR NOTIFICATIONS MENU** */}
-      <Menu
-        anchorEl={notificationAnchor}
-        open={Boolean(notificationAnchor)}
-        onClose={handleNotificationClose}
-        PaperProps={{
-          sx: {
-            width: 420,
-            maxHeight: 550,
-            overflow: 'auto',
-            background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: '20px',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
+      {/* 🔔 **FIXED NOTIFICATIONS MENU** */}
+<Menu
+  anchorEl={notificationAnchor}
+  open={Boolean(notificationAnchor)}
+  onClose={handleNotificationClose}
+  PaperProps={{
+    sx: {
+      width: 420,
+      maxHeight: 550,
+      overflow: 'auto',
+      background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
+      backdropFilter: 'blur(20px)',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '20px',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
+    }
+  }}
+  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+>
+  {/* Header */}
+  <Box sx={{ 
+    p: 3, 
+    borderBottom: '1px solid rgba(255,255,255,0.1)'
+  }}>
+    <Typography variant="h6" fontWeight="bold" color="white">
+      Notifications
+    </Typography>
+    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+      {notifications.length} total • {unreadCount} high priority
+    </Typography>
+    {sharePointAvailable && (
+      <Chip 
+        label="Live Data" 
+        size="small" 
+        sx={{
+          ml: 1,
+          background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
+          color: 'white',
+          fontSize: '0.6rem',
+          height: 20
+        }}
+      />
+    )}
+  </Box>
+
+  {notifications.length === 0 ? (
+    <MenuItem sx={{ py: 6 }}>
+      <Box sx={{ textAlign: 'center', width: '100%' }}>
+        <CheckCircle sx={{ fontSize: 64, color: '#4caf50', mb: 2 }} />
+        <Typography variant="h6" color="white" fontWeight={700}>
+          All caught up! 🎉
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+          No notifications at this time
+        </Typography>
+      </Box>
+    </MenuItem>
+  ) : (
+    notifications.slice(0, 10).map((notification) => (
+      <MenuItem
+        key={notification.id}
+        onClick={() => handleNotificationItemClick(notification)}
+        sx={{ 
+          borderLeft: `4px solid ${getNotificationColor(notification.type)}`,
+          py: 2,
+          px: 3,
+          background: 'rgba(255,255,255,0.02)',
+          '&:hover': {
+            background: `${alpha(getNotificationColor(notification.type), 0.1)}`,
+            transform: 'translateX(8px)'
           }
         }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        {/* 📋 **NOTIFICATIONS HEADER** */}
-        <Box sx={{ 
-          p: 3, 
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-          background: HSBCColors.gradients.glassMorphism
+        <ListItemIcon sx={{ 
+          color: getNotificationColor(notification.type),
+          minWidth: 40
         }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Stack>
-              <Typography variant="h6" fontWeight="bold" color="white">
-                Notifications
+          {notification.icon}
+        </ListItemIcon>
+        <ListItemText
+          sx={{ color: 'white' }}
+          primary={
+            <Typography variant="body1" fontWeight={700} color="white">
+              {notification.title}
+            </Typography>
+          }
+          secondary={
+            <Box>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                {notification.message}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                {notifications.length} total • {unreadCount} high priority
-              </Typography>
-            </Stack>
-            <Stack direction="row" spacing={1}>
-              {sharePointAvailable && (
-                <PremiumChip 
-                  label="Live Data" 
-                  variant="success"
-                  sx={{ fontSize: '0.6rem', height: 20 }}
-                />
-              )}
-              <PremiumChip 
-                icon={<TrendingUp />}
-                label="Smart Alerts"
-                variant="info"
-                sx={{ fontSize: '0.6rem', height: 20 }}
-              />
-            </Stack>
-          </Stack>
-        </Box>
-
-        {notifications.length === 0 ? (
-          <MenuItem sx={{ py: 6 }}>
-            <Box sx={{ textAlign: 'center', width: '100%' }}>
-              <motion.div
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <CheckCircle sx={{ fontSize: 64, color: '#4caf50', mb: 2 }} />
-              </motion.div>
-              <Typography variant="h6" color="white" fontWeight={700}>
-                All caught up! 🎉
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-                No notifications at this time
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                {formatTimeAgo(notification.timestamp)}
               </Typography>
             </Box>
-          </MenuItem>
-        ) : (
-          notifications.slice(0, 10).map((notification, index) => (
-            <motion.div
-              key={notification.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-            >
-              <MenuItem
-                onClick={() => handleNotificationItemClick(notification)}
-                sx={{ 
-                  borderLeft: `4px solid ${getNotificationColor(notification.type)}`,
-                  py: 2,
-                  px: 3,
-                  background: 'rgba(255,255,255,0.02)',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    background: `${alpha(getNotificationColor(notification.type), 0.1)}`,
-                    transform: 'translateX(8px)'
-                  }
-                }}
-              >
-                <ListItemIcon sx={{ 
-                  color: getNotificationColor(notification.type),
-                  minWidth: 40
-                }}>
-                  <motion.div
-                    animate={{ rotate: [0, 10, -10, 0] }}
-                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                  >
-                    {notification.icon}
-                  </motion.div>
-                </ListItemIcon>
-                <ListItemText
-                  sx={{ color: 'white' }}
-                  primary={
-                    <Typography variant="body1" fontWeight={700} color="white">
-                      {notification.title}
-                    </Typography>
-                  }
-                  secondary={
-                    <Stack spacing={0.5}>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                        {notification.message}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                        {formatTimeAgo(notification.timestamp)}
-                      </Typography>
-                    </Stack>
-                  }
-                />
-                {notification.priority === 'high' && (
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >
-                    <PremiumChip 
-                      label="High" 
-                      variant="error"
-                      sx={{ fontSize: '0.6rem', height: 20 }}
-                    />
-                  </motion.div>
-                )}
-              </MenuItem>
-            </motion.div>
-          ))
+          }
+        />
+        {notification.priority === 'high' && (
+          <Chip 
+            label="High" 
+            size="small"
+            sx={{
+              background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+              color: 'white',
+              fontSize: '0.6rem',
+              height: 20
+            }}
+          />
         )}
+      </MenuItem>
+    ))
+  )}
 
-        {notifications.length > 10 && (
-          <>
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-            <MenuItem 
-              onClick={handleNotificationClose} 
-              sx={{ 
-                justifyContent: 'center',
-                py: 2,
-                background: HSBCColors.gradients.glassMorphism,
-                '&:hover': {
-                  background: HSBCColors.gradients.modernBlue
-                }
-              }}
-            >
-              <Typography variant="body2" color="white" fontWeight={700}>
-                View All {notifications.length} Notifications
-              </Typography>
-            </MenuItem>
-          </>
-        )}
-      </Menu>
+  {notifications.length > 10 && (
+    <>
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
+      <MenuItem 
+        onClick={handleNotificationClose} 
+        sx={{ 
+          justifyContent: 'center',
+          py: 2,
+          '&:hover': {
+            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)'
+          }
+        }}
+      >
+        <Typography variant="body2" color="white" fontWeight={700}>
+          View All {notifications.length} Notifications
+        </Typography>
+      </MenuItem>
+    </>
+  )}
+</Menu>
 
       {/* Navigation Drawer */}
       <NavigationDrawer 
