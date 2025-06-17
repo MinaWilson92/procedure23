@@ -468,11 +468,51 @@ const AdminPanelPage = ({ onDataRefresh }) => {
           if (onDataRefresh) onDataRefresh();
         }, 3000);
         
-        try {
-          await emailNotificationService.triggerProcedureUploadNotification(result);
-        } catch (emailError) {
-          console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
-        }
+
+try {
+  // ✅ ENHANCED DEBUG: Log exactly what we're sending
+  console.log('🔍 DEBUG: About to send email notification');
+  console.log('🔍 DEBUG: formData =', formData);
+  console.log('🔍 DEBUG: result =', result);
+  console.log('🔍 DEBUG: documentAnalysis =', documentAnalysis);
+  console.log('🔍 DEBUG: user =', user);
+  
+  // ✅ FIXED: Create properly structured data for email service
+  const emailNotificationData = {
+    // Main procedure info
+    procedureName: formData.name,
+    ownerName: formData.primary_owner,
+    lob: formData.lob,
+    
+    // Upload details
+    procedureId: result.procedureId,
+    uploadDate: new Date().toLocaleDateString(),
+    uploadedBy: user?.displayName || user?.staffId,
+    
+    // Analysis results
+    qualityScore: documentAnalysis?.score || 'N/A',
+    
+    // Additional context
+    primary_owner: formData.primary_owner,
+    primary_owner_email: formData.primary_owner_email,
+    secondary_owner: formData.secondary_owner,
+    secondary_owner_email: formData.secondary_owner_email,
+    
+    // Full objects for fallback
+    procedure: result.procedure,
+    formData: formData,
+    analysisResult: documentAnalysis
+  };
+  
+  console.log('🔍 DEBUG: emailNotificationData =', emailNotificationData);
+  
+  await emailNotificationService.triggerProcedureUploadNotification(emailNotificationData);
+  
+} catch (emailError) {
+  console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
+}
+
+        
       } else {
         showErrorDialog(
           'Upload Failed',
