@@ -155,35 +155,76 @@ class EmailNotificationService {
 
   // ✅ FIXED: Enhanced procedure upload notification
 
-triggerProcedureUploadNotification method
+
+
+  
 async triggerProcedureUploadNotification(uploadResult) {
   try {
     console.log('📧 Triggering procedure upload notification...');
-    console.log('📋 Upload Result Data:', uploadResult); // Debug log
+    console.log('🔍 FULL DEBUG: uploadResult =', JSON.stringify(uploadResult, null, 2));
     
-    // ✅ FIXED: Extract data using the CORRECT field names from AdminPanel
-    const procedureData = uploadResult.procedure || uploadResult; // Handle nested structure
-    const lob = procedureData.lob || uploadResult.lob || 'Unknown';
+    // ✅ MULTIPLE FALLBACK EXTRACTION: Try every possible field combination
+    const procedureName = uploadResult.procedureName || 
+                         uploadResult.name || 
+                         uploadResult.procedure?.name || 
+                         uploadResult.formData?.name ||
+                         'Unknown Procedure';
+    
+    const ownerName = uploadResult.ownerName || 
+                     uploadResult.primary_owner || 
+                     uploadResult.procedure?.primary_owner || 
+                     uploadResult.formData?.primary_owner ||
+                     uploadResult.uploadedBy ||
+                     'Unknown Owner';
+    
+    const lob = uploadResult.lob || 
+               uploadResult.procedure?.lob || 
+               uploadResult.formData?.lob ||
+               'Unknown';
+    
+    const qualityScore = uploadResult.qualityScore || 
+                        uploadResult.score || 
+                        uploadResult.analysisResult?.score ||
+                        uploadResult.procedure?.score ||
+                        'N/A';
+    
+    const procedureId = uploadResult.procedureId || 
+                       uploadResult.id || 
+                       uploadResult.procedure?.id ||
+                       'Unknown';
+    
+    const uploadedBy = uploadResult.uploadedBy || 
+                      uploadResult.uploaded_by_name ||
+                      uploadResult.formData?.primary_owner ||
+                      'System';
+    
+    console.log('🔍 EXTRACTED VALUES:');
+    console.log('  - procedureName:', procedureName);
+    console.log('  - ownerName:', ownerName);
+    console.log('  - lob:', lob);
+    console.log('  - qualityScore:', qualityScore);
+    console.log('  - procedureId:', procedureId);
+    console.log('  - uploadedBy:', uploadedBy);
     
     // Get fresh recipients
     const recipients = await this.getRecipientsForNotification(
       'new-procedure-uploaded', 
       lob, 
-      procedureData
+      uploadResult
     );
 
-    // ✅ FIXED: Map the ACTUAL field names from your AdminPanel upload
+    // ✅ FIXED: Use extracted values
     const emailVariables = {
-      procedureName: procedureData.name || uploadResult.name || 'Unknown Procedure',
-      ownerName: procedureData.primary_owner || uploadResult.primary_owner || uploadResult.uploaded_by_name || 'Unknown Owner',
-      uploadDate: new Date().toLocaleDateString(),
-      qualityScore: uploadResult.qualityScore || procedureData.score || 'N/A',
+      procedureName: procedureName,
+      ownerName: ownerName,
+      uploadDate: uploadResult.uploadDate || new Date().toLocaleDateString(),
+      qualityScore: qualityScore,
       lob: lob,
-      uploadedBy: uploadResult.uploaded_by_name || procedureData.uploaded_by || 'System',
-      procedureId: uploadResult.procedureId || procedureData.id || 'Unknown'
+      uploadedBy: uploadedBy,
+      procedureId: procedureId
     };
 
-    console.log('📧 Email Variables Prepared:', emailVariables); // Debug log
+    console.log('📧 Final Email Variables:', emailVariables);
 
     // Send notification
     const result = await this.emailService.sendNotificationEmail(
@@ -196,13 +237,13 @@ async triggerProcedureUploadNotification(uploadResult) {
     await this.logEmailActivity({
       activityType: 'NEW_PROCEDURE_NOTIFICATION',
       recipients: recipients,
-      procedureId: uploadResult.procedureId,
+      procedureId: procedureId,
       success: result.success,
       details: { 
         lob, 
-        procedureName: emailVariables.procedureName,
-        qualityScore: emailVariables.qualityScore,
-        ownerName: emailVariables.ownerName
+        procedureName: procedureName,
+        qualityScore: qualityScore,
+        ownerName: ownerName
       }
     });
 
@@ -214,6 +255,7 @@ async triggerProcedureUploadNotification(uploadResult) {
     return { success: false, message: error.message };
   }
 }
+
 
   
   // ✅ FIXED: Enhanced user access notification
