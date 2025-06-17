@@ -808,47 +808,67 @@ const ProcedureDetailsModal = ({
                           )}
                           
                           <Grid item xs={12} sm={6}>
-                            <Paper sx={{ 
-                              p: 2, 
-                              borderRadius: '16px',
-                              background: HSBCColors.gradients.modernGlass,
-                              border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`
-                            }}>
-                              <Stack direction="row" alignItems="center" spacing={2}>
-                                <Description sx={{ color: HSBCColors.primary }} />
-                                <Box>
-                                  <Typography variant="body2" color="text.secondary">
-                                    Original Filename
-                                  </Typography>
-                                  <Typography variant="body1" fontWeight={700} noWrap>
-                                    {procedureDetails.originalFilename || 'Not available'}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Paper>
-                          </Grid>
+  <Paper sx={{ 
+    p: 2, 
+    borderRadius: '16px',
+    background: HSBCColors.gradients.modernGlass,
+    border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`,
+    minHeight: 80, // Ensure consistent height
+    display: 'flex',
+    alignItems: 'center'
+  }}>
+    <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
+      <Description sx={{ color: HSBCColors.primary, flexShrink: 0 }} />
+      <Box sx={{ flex: 1, minWidth: 0 }}> {/* minWidth: 0 allows text to wrap */}
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Original Filename
+        </Typography>
+        <Tooltip title={procedureDetails.originalFilename || 'Not available'} arrow>
+          <Typography 
+            variant="body1" 
+            fontWeight={700}
+            sx={{
+              wordBreak: 'break-word', // Break long words
+              overflowWrap: 'break-word', // Wrap long text
+              display: '-webkit-box',
+              WebkitLineClamp: 2, // Limit to 2 lines
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              lineHeight: 1.2
+            }}
+          >
+            {procedureDetails.originalFilename || 'Not available'}
+          </Typography>
+        </Tooltip>
+      </Box>
+    </Stack>
+  </Paper>
+</Grid>
                           
-                          <Grid item xs={12} sm={6}>
-                            <Paper sx={{ 
-                              p: 2, 
-                              borderRadius: '16px',
-                              background: HSBCColors.gradients.modernGlass,
-                              border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`
-                            }}>
-                              <Stack direction="row" alignItems="center" spacing={2}>
-                                <CloudDownload sx={{ color: HSBCColors.primary }} />
-                                <Box>
-                                  <Typography variant="body2" color="text.secondary">
-                                    File Size
-                                  </Typography>
-                                  <Typography variant="body1" fontWeight={700}>
-                                    {formatFileSize(procedureDetails.fileSize)}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Paper>
-                          </Grid>
-                        </Grid>
+  <Grid item xs={12} sm={6}>
+    <Paper sx={{ 
+      p: 2, 
+      borderRadius: '16px',
+      background: HSBCColors.gradients.modernGlass,
+      border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`,
+      minHeight: { xs: 'auto', sm: 80 },
+      display: 'flex',
+      alignItems: 'center'
+    }}>
+      <Stack direction="row" alignItems="center" spacing={2}>
+        <CloudDownload sx={{ color: HSBCColors.primary }} />
+        <Box>
+          <Typography variant="body2" color="text.secondary">
+            File Size
+          </Typography>
+          <Typography variant="body1" fontWeight={700}>
+            {formatFileSize(procedureDetails.fileSize)}
+          </Typography>
+        </Box>
+      </Stack>
+    </Paper>
+  </Grid>
+</Grid>
                         
                         {/* Document Link */}
                         {procedureDetails.documentLink && (
