@@ -555,28 +555,29 @@ async triggerUserChangeNotification(userEmail, logEntry) {
   }
 
   // Log email activity for audit trail
-async logEmailActivity(activity) {
+
+  async logEmailActivity(activity) {
   try {
     console.log('📝 Logging email activity:', activity);
     
     // Get fresh request digest
     const requestDigest = await this.emailService.getFreshRequestDigest();
     
-    // ✅ FIXED: Remove Recipients column, use only existing columns from your list
+    // ✅ FIXED: Ensure ALL fields are properly stringified
     const logEntry = {
       __metadata: { type: 'SP.Data.EmailActivityLogListItem' },
-      Title: activity.activityType,
-      ActivityType: activity.activityType,
-      PerformedBy: activity.performedBy || 'System',
+      Title: String(activity.activityType || 'Unknown'),
+      ActivityType: String(activity.activityType || 'Unknown'),
+      PerformedBy: String(activity.performedBy || 'System'),
       ActivityDetails: JSON.stringify({
         ...activity.details,
-        recipients: activity.recipients || [] // Store recipients in details instead
+        recipients: activity.recipients || []
       }),
       ActivityTimestamp: activity.timestamp || new Date().toISOString(),
-      Status: activity.success ? 'completed' : 'failed',
-      ProcedureName: activity.details?.procedureName || '',
-      ProcedureID: activity.procedureId || '',
-      NotificationType: activity.activityType
+      Status: String(activity.success ? 'completed' : 'failed'),
+      ProcedureName: String(activity.details?.procedureName || ''),
+      ProcedureID: String(activity.procedureId || ''),
+      NotificationType: String(activity.activityType || '')
     };
 
     const response = await fetch(
