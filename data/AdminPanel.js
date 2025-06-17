@@ -7,20 +7,19 @@ import {
   IconButton, Divider, List, ListItem, ListItemIcon, ListItemText,
   CircularProgress, Backdrop, Accordion, AccordionSummary, AccordionDetails,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar // ✅ Added Dialog components
+  Dialog, DialogTitle, DialogContent, DialogActions, Snackbar
 } from '@mui/material';
 import {
   CloudUpload, ArrowBack, CheckCircle, Error, Warning, Info,
   Assignment, Analytics, Save, Cancel, Refresh, ExpandMore,
-  Security, CalendarToday, Assessment, OpenInNew, Close, // ✅ Added Close icon
-  ErrorOutline, CheckCircleOutline // ✅ Added prominent icons
+  Security, CalendarToday, Assessment, OpenInNew, Close,
+  ErrorOutline, CheckCircleOutline
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useSharePoint } from '../SharePointContext';
 import DocumentAnalyzer from '../services/DocumentAnalyzer';
 import EmailNotificationService from '../services/EmailNotificationService';
-
 
 const AdminPanelPage = ({ onDataRefresh }) => {
   const { navigate } = useNavigation();
@@ -48,7 +47,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
   const [activeStep, setActiveStep] = useState(0);
   const [documentAnalysis, setDocumentAnalysis] = useState(null);
 
-  // ✅ NEW: Modal Dialog States for Prominent Notifications
+  // Modal Dialog States for Prominent Notifications
   const [errorDialog, setErrorDialog] = useState({
     open: false,
     title: '',
@@ -64,14 +63,14 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     details: null
   });
 
-  // ✅ NEW: Snackbar for minor notifications
+  // Snackbar for minor notifications
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'info'
   });
 
-  // ✅ NEW: Show Error Dialog - Cannot be ignored!
+  // Show Error Dialog - Cannot be ignored!
   const showErrorDialog = (title, message, details = null) => {
     setErrorDialog({
       open: true,
@@ -82,7 +81,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     });
   };
 
-  // ✅ NEW: Show Success Dialog - Prominent success notification
+  // Show Success Dialog - Prominent success notification
   const showSuccessDialog = (title, message, details = null) => {
     setSuccessDialog({
       open: true,
@@ -92,7 +91,7 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     });
   };
 
-  // ✅ NEW: Show Snackbar - For minor notifications
+  // Show Snackbar - For minor notifications
   const showSnackbar = (message, severity = 'info') => {
     setSnackbar({
       open: true,
@@ -122,20 +121,24 @@ const AdminPanelPage = ({ onDataRefresh }) => {
     { label: 'Upload to SharePoint', description: 'Final upload if score ≥ 85%' }
   ];
 
-  // Check admin access on component mount
+  // ✅ FIXED: Check admin/uploader access on component mount
   useEffect(() => {
-
-    // Line 71 - CHANGE THIS:
-useEffect(() => {
-  if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
-    showErrorDialog(
-      'Access Denied',
-      'You need admin or uploader privileges to access this page.', // ✅ UPDATED MESSAGE
-      `User ID: ${user?.staffId} | Role: ${user?.role || 'user'}`
-    );
-    setTimeout(() => navigate('home'), 5000);
-    return;
-  }
+    if (!isAdmin && user?.role !== 'uploader') {
+      showErrorDialog(
+        'Access Denied',
+        'You need admin or uploader privileges to access this page.',
+        `User ID: ${user?.staffId} | Role: ${user?.role || 'user'}`
+      );
+      setTimeout(() => navigate('home'), 5000);
+      return;
+    }
+    
+    console.log('✅ Admin/Uploader access granted for user:', {
+      staffId: user?.staffId,
+      displayName: user?.displayName,
+      role: user?.role
+    });
+  }, [isAdmin, user, navigate]);
 
   // Set default expiry date and auto-populate display name only
   useEffect(() => {
@@ -165,7 +168,7 @@ useEffect(() => {
     }
   };
 
-  // ✅ UPDATED: Handle file selection with prominent error dialog
+  // Handle file selection with prominent error dialog
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -176,20 +179,18 @@ useEffect(() => {
         setActiveStep(1);
         showSnackbar(`File selected: ${file.name}`, 'success');
       } catch (err) {
-        // ✅ PROMINENT ERROR DIALOG instead of small alert
         showErrorDialog(
           'Invalid File',
           'The selected file does not meet the requirements.',
           err.message
         );
         setSelectedFile(null);
-        // Clear the file input
         e.target.value = '';
       }
     }
   };
 
-  // ✅ UPDATED: AI Document Analysis with prominent notifications
+  // AI Document Analysis with prominent notifications
   const analyzeDocument = async () => {
     if (!selectedFile) {
       showErrorDialog(
@@ -217,14 +218,12 @@ useEffect(() => {
       setSubmitStatus('ready');
 
       if (analysisResult.accepted) {
-        // ✅ PROMINENT SUCCESS DIALOG
         showSuccessDialog(
           'Document Analysis Completed! ✅',
           `Your document achieved a quality score of ${analysisResult.score}% which meets the 85% minimum requirement.`,
           'The document is ready for upload to SharePoint.'
         );
       } else {
-        // ✅ PROMINENT ERROR DIALOG for failed analysis
         showErrorDialog(
           'Document Quality Score Too Low ❌',
           `Your document scored ${analysisResult.score}% but requires at least 85% to proceed.`,
@@ -233,7 +232,6 @@ useEffect(() => {
       }
 
     } catch (err) {
-      // ✅ PROMINENT ERROR DIALOG for analysis failure
       showErrorDialog(
         'Analysis Failed',
         'The AI document analysis encountered an error.',
@@ -243,7 +241,7 @@ useEffect(() => {
     }
   };
 
-  // ✅ UPDATED: Form validation with prominent error dialog
+  // Form validation with prominent error dialog
   const validateForm = () => {
     const errors = [];
 
@@ -251,18 +249,15 @@ useEffect(() => {
     if (!formData.primary_owner) errors.push('• Primary Owner is required');
     if (!formData.lob) errors.push('• Line of Business (LOB) is required');
 
-    // Validate that primary owner is a name, not email
     if (formData.primary_owner && formData.primary_owner.includes('@')) {
       errors.push('• Primary Owner should be a name, not an email address');
     }
 
-    // Validate email format if provided
     if (formData.primary_owner_email && !formData.primary_owner_email.includes('@')) {
       errors.push('• Please enter a valid email address for Primary Owner Email');
     }
 
     if (errors.length > 0) {
-      // ✅ PROMINENT ERROR DIALOG for validation errors
       showErrorDialog(
         'Form Validation Errors',
         'Please fix the following issues before proceeding:',
@@ -274,7 +269,7 @@ useEffect(() => {
     return true;
   };
 
-  // ✅ UPDATED: Upload to SharePoint with prominent notifications
+  // ✅ FIXED: Upload to SharePoint with proper email data
   const handleUploadToSharePoint = async () => {
     if (!documentAnalysis?.accepted) {
       showErrorDialog(
@@ -286,9 +281,8 @@ useEffect(() => {
     }
 
     try {
-      // ✅ Validate form before upload
       if (!validateForm()) {
-        return; // validateForm() already shows error dialog
+        return;
       }
 
       setLoading(true);
@@ -298,7 +292,6 @@ useEffect(() => {
 
       console.log('🚀 Starting upload to SharePoint...');
 
-      // Add user context data for backend processing
       const uploadData = {
         ...formData,
         uploaded_by_user_id: user?.staffId,
@@ -308,39 +301,34 @@ useEffect(() => {
 
       const result = await documentAnalyzer.uploadProcedureWithAnalysis(uploadData, selectedFile);
 
-// Line 402 - CHANGE THIS EMAIL SECTION:
-if (result.success) {
-  showSuccessDialog(
-    'Upload Successful! 🎉',
-    `Your procedure has been successfully uploaded to SharePoint.`,
-    `Procedure ID: ${result.procedureId}\nQuality Score: ${documentAnalysis.score}%\nUploaded by: ${user?.displayName}`
-  );
-  setSubmitStatus('success');
-  setTimeout(() => {
-    handleReset();
-    if (onDataRefresh) onDataRefresh();
-  }, 3000);
-  
-  // ✅ FIXED: Pass complete procedure data for email template
-  try {
-    await emailNotificationService.triggerProcedureUploadNotification({
-      ...result,
-      procedureName: formData.name,           // ✅ FIXED: Pass actual procedure name
-      ownerName: formData.primary_owner,      // ✅ FIXED: Pass actual owner name  
-      lineOfBusiness: formData.lob,           // ✅ FIXED: Pass actual LOB
-      qualityScore: documentAnalysis.score,   // ✅ Already working
-      uploadedBy: user?.displayName,          // ✅ FIXED: Pass uploader name
-      uploadDate: new Date().toLocaleDateString(), // ✅ Already working
-      procedureId: result.procedureId         // ✅ Already working
-    });
-  } catch (emailError) {
-    console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
-  }
-}
-
-      
-      else {
-        // ✅ PROMINENT ERROR DIALOG for upload failure
+      if (result.success) {
+        showSuccessDialog(
+          'Upload Successful! 🎉',
+          `Your procedure has been successfully uploaded to SharePoint.`,
+          `Procedure ID: ${result.procedureId}\nQuality Score: ${documentAnalysis.score}%\nUploaded by: ${user?.displayName}`
+        );
+        setSubmitStatus('success');
+        setTimeout(() => {
+          handleReset();
+          if (onDataRefresh) onDataRefresh();
+        }, 3000);
+        
+        // ✅ FIXED: Pass complete procedure data for email template
+        try {
+          await emailNotificationService.triggerProcedureUploadNotification({
+            ...result,
+            procedureName: formData.name,
+            ownerName: formData.primary_owner,
+            lineOfBusiness: formData.lob,
+            qualityScore: documentAnalysis.score,
+            uploadedBy: user?.displayName,
+            uploadDate: new Date().toLocaleDateString(),
+            procedureId: result.procedureId
+          });
+        } catch (emailError) {
+          console.warn('⚠️ Procedure uploaded but email notification failed:', emailError);
+        }
+      } else {
         showErrorDialog(
           'Upload Failed',
           'The procedure could not be uploaded to SharePoint.',
@@ -350,7 +338,6 @@ if (result.success) {
       }
 
     } catch (err) {
-      // ✅ PROMINENT ERROR DIALOG for upload error
       showErrorDialog(
         'Upload Error',
         'An unexpected error occurred while uploading to SharePoint.',
@@ -404,40 +391,38 @@ if (result.success) {
     return '#f44336';
   };
 
-  // Show access denied if not 
-
-if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
-  return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Card sx={{ maxWidth: 500, textAlign: 'center' }}>
-        <CardContent sx={{ p: 4 }}>
-          <Error sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>
-            Access Denied
-          </Typography>
-          <Typography variant="body1" color="text.secondary" gutterBottom>
-            Admin or uploader privileges required to access this page. {/* ✅ UPDATED MESSAGE */}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            User ID: {user?.staffId} | Role: {user?.role}
-          </Typography>
-          <Button 
-            variant="contained" 
-            onClick={() => navigate('home')}
-            startIcon={<ArrowBack />}
-          >
-            Return to Home
-          </Button>
-        </CardContent>
-      </Card>
-    </Box>
-  );
-}
-  
+  // ✅ FIXED: Show access denied if not admin or uploader
+  if (!isAdmin && user?.role !== 'uploader') {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Card sx={{ maxWidth: 500, textAlign: 'center' }}>
+          <CardContent sx={{ p: 4 }}>
+            <Error sx={{ fontSize: 64, color: 'error.main', mb: 2 }} />
+            <Typography variant="h5" gutterBottom>
+              Access Denied
+            </Typography>
+            <Typography variant="body1" color="text.secondary" gutterBottom>
+              Admin or uploader privileges required to access this page.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              User ID: {user?.staffId} | Role: {user?.role}
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('home')}
+              startIcon={<ArrowBack />}
+            >
+              Return to Home
+            </Button>
+          </CardContent>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa' }}>
-      {/* ✅ ERROR DIALOG - Cannot be ignored! */}
+      {/* ERROR DIALOG - Cannot be ignored! */}
       <Dialog 
         open={errorDialog.open} 
         onClose={closeErrorDialog}
@@ -492,7 +477,7 @@ if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
         </DialogActions>
       </Dialog>
 
-      {/* ✅ SUCCESS DIALOG - Prominent success notification */}
+      {/* SUCCESS DIALOG - Prominent success notification */}
       <Dialog 
         open={successDialog.open} 
         onClose={closeSuccessDialog}
@@ -547,7 +532,7 @@ if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
         </DialogActions>
       </Dialog>
 
-      {/* ✅ SNACKBAR for minor notifications */}
+      {/* SNACKBAR for minor notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
@@ -866,7 +851,7 @@ if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
                   </Box>
                 )}
 
-                {/* Step 3:InHouse AI Analysis Results */}
+                {/* Step 3: AI Analysis Results */}
                 {activeStep >= 2 && documentAnalysis && (
                   <Box sx={{ mb: 4 }}>
                     <Divider sx={{ my: 3 }} />
@@ -885,478 +870,478 @@ if (!isAdmin && user?.role !== 'uploader') { // ✅ FIXED: Allow uploader access
                     >
                       <CardContent>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-<Typography variant="h3" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
-                           {documentAnalysis.score}%
-                         </Typography>
-                         <Box sx={{ flex: 1 }}>
-                           <Typography variant="body2" color="text.secondary" gutterBottom>
-                             Quality Score (Minimum Required: 85%)
-                           </Typography>
-                           <LinearProgress 
-                             variant="determinate" 
-                             value={documentAnalysis.score} 
-                             sx={{ 
-                               height: 10, 
-                               borderRadius: 5,
-                               backgroundColor: '#e0e0e0',
-                               '& .MuiLinearProgress-bar': {
-                                 backgroundColor: getScoreColor(documentAnalysis.score),
-                                 borderRadius: 5
-                               }
-                             }}
-                           />
-                         </Box>
-                         <Chip 
-                           label={documentAnalysis.accepted ? 'ACCEPTED' : 'REJECTED'} 
-                           color={documentAnalysis.accepted ? 'success' : 'error'}
-                           icon={documentAnalysis.accepted ? <CheckCircle /> : <Error />}
-                         />
-                       </Box>
+                                                    <Typography variant="h3" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
+                            {documentAnalysis.score}%
+                          </Typography>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              Quality Score (Minimum Required: 85%)
+                            </Typography>
+                            <LinearProgress 
+                              variant="determinate" 
+                              value={documentAnalysis.score} 
+                              sx={{ 
+                                height: 10, 
+                                borderRadius: 5,
+                                backgroundColor: '#e0e0e0',
+                                '& .MuiLinearProgress-bar': {
+                                  backgroundColor: getScoreColor(documentAnalysis.score),
+                                  borderRadius: 5
+                                }
+                              }}
+                            />
+                          </Box>
+                          <Chip 
+                            label={documentAnalysis.accepted ? 'ACCEPTED' : 'REJECTED'} 
+                            color={documentAnalysis.accepted ? 'success' : 'error'}
+                            icon={documentAnalysis.accepted ? <CheckCircle /> : <Error />}
+                          />
+                        </Box>
 
-                       {/* Template Compliance Badge */}
-                       {documentAnalysis.details?.summary?.templateCompliance && (
-                         <Box sx={{ mb: 2 }}>
-                           <Chip 
-                             label={`Template Compliance: ${documentAnalysis.details.summary.templateCompliance}`}
-                             color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
-                                    documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
-                             variant="outlined"
-                           />
-                         </Box>
-                       )}
+                        {/* Template Compliance Badge */}
+                        {documentAnalysis.details?.summary?.templateCompliance && (
+                          <Box sx={{ mb: 2 }}>
+                            <Chip 
+                              label={`Template Compliance: ${documentAnalysis.details.summary.templateCompliance}`}
+                              color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
+                                     documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
+                              variant="outlined"
+                            />
+                          </Box>
+                        )}
 
-                       {/* Found Elements */}
-                       <Accordion sx={{ mb: 2 }}>
-                         <AccordionSummary expandIcon={<ExpandMore />}>
-                           <Typography variant="h6">
-                             ✅ Found Elements ({documentAnalysis.details.foundElements?.length || 0})
-                           </Typography>
-                         </AccordionSummary>
-                         <AccordionDetails>
-                           <List dense>
-                             {documentAnalysis.details.foundElements?.map((element, index) => (
-                               <ListItem key={index} sx={{ py: 0 }}>
-                                 <ListItemIcon sx={{ minWidth: 30 }}>
-                                   <CheckCircle color="success" fontSize="small" />
-                                 </ListItemIcon>
-                                 <ListItemText primary={element} />
-                               </ListItem>
-                             ))}
-                           </List>
-                         </AccordionDetails>
-                       </Accordion>
+                        {/* Found Elements */}
+                        <Accordion sx={{ mb: 2 }}>
+                          <AccordionSummary expandIcon={<ExpandMore />}>
+                            <Typography variant="h6">
+                              ✅ Found Elements ({documentAnalysis.details.foundElements?.length || 0})
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <List dense>
+                              {documentAnalysis.details.foundElements?.map((element, index) => (
+                                <ListItem key={index} sx={{ py: 0 }}>
+                                  <ListItemIcon sx={{ minWidth: 30 }}>
+                                    <CheckCircle color="success" fontSize="small" />
+                                  </ListItemIcon>
+                                  <ListItemText primary={element} />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </AccordionDetails>
+                        </Accordion>
 
-                       {/* Missing Elements */}
-                       {documentAnalysis.details.missingElements?.length > 0 && (
-                         <Accordion sx={{ mb: 2 }}>
-                           <AccordionSummary expandIcon={<ExpandMore />}>
-                             <Typography variant="h6">
-                               ❌ Missing Elements ({documentAnalysis.details.missingElements.length})
-                             </Typography>
-                           </AccordionSummary>
-                           <AccordionDetails>
-                             <List dense>
-                               {documentAnalysis.details.missingElements.map((element, index) => (
-                                 <ListItem key={index} sx={{ py: 0 }}>
-                                   <ListItemIcon sx={{ minWidth: 30 }}>
-                                     <Error color="error" fontSize="small" />
-                                   </ListItemIcon>
-                                   <ListItemText primary={element} />
-                                 </ListItem>
-                               ))}
-                             </List>
+                        {/* Missing Elements */}
+                        {documentAnalysis.details.missingElements?.length > 0 && (
+                          <Accordion sx={{ mb: 2 }}>
+                            <AccordionSummary expandIcon={<ExpandMore />}>
+                              <Typography variant="h6">
+                                ❌ Missing Elements ({documentAnalysis.details.missingElements.length})
+                              </Typography>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                              <List dense>
+                                {documentAnalysis.details.missingElements.map((element, index) => (
+                                  <ListItem key={index} sx={{ py: 0 }}>
+                                    <ListItemIcon sx={{ minWidth: 30 }}>
+                                      <Error color="error" fontSize="small" />
+                                    </ListItemIcon>
+                                    <ListItemText primary={element} />
+                                  </ListItem>
+                                ))}
+                              </List>
+                            </AccordionDetails>
+                          </Accordion>
+                        )}
+
+                        {/* HSBC Extracted Data */}
+                        {(documentAnalysis.details.riskRating || documentAnalysis.details.periodicReview || documentAnalysis.details.owners?.length > 0) && (
+                          <Accordion sx={{ mb: 2 }}>
+                            <AccordionSummary expandIcon={<ExpandMore />}>
+                              <Typography variant="h6">
+                                📊 Extracted HSBC Data
+                              </Typography>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                              <TableContainer component={Paper} variant="outlined">
+                                <Table size="small">
+                                  <TableHead>
+                                   <TableRow>
+                                     <TableCell><strong>Field</strong></TableCell>
+                                     <TableCell><strong>Status</strong></TableCell>
+                                     <TableCell><strong>Value</strong></TableCell>
+                                   </TableRow>
+                                 </TableHead>
+                                 <TableBody>
+                                   <TableRow>
+                                     <TableCell>Document Owners</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.owners?.length > 0 ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.owners?.length > 0 ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.owners?.join(', ') || 'Not found'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Risk Rating</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.riskRating ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.riskRating ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.riskRating || 'Not specified'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Periodic Review</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.periodicReview ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.periodicReview ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.periodicReview || 'Not specified'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Sign-off Dates</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.signOffDates?.length > 0 ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.signOffDates?.length > 0 ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.signOffDates?.join(', ') || 'Not found'}
+                                     </TableCell>
+                                   </TableRow>
+                                   <TableRow>
+                                     <TableCell>Departments</TableCell>
+                                     <TableCell>
+                                       <Chip 
+                                         label={documentAnalysis.details.departments?.length > 0 ? 'Found' : 'Missing'}
+                                         color={documentAnalysis.details.departments?.length > 0 ? 'success' : 'error'}
+                                         size="small"
+                                       />
+                                     </TableCell>
+                                     <TableCell>
+                                       {documentAnalysis.details.departments?.join(', ') || 'Not found'}
+                                     </TableCell>
+                                   </TableRow>
+                                 </TableBody>
+                               </Table>
+                             </TableContainer>
                            </AccordionDetails>
                          </Accordion>
                        )}
 
-                       {/* HSBC Extracted Data */}
-                       {(documentAnalysis.details.riskRating || documentAnalysis.details.periodicReview || documentAnalysis.details.owners?.length > 0) && (
-                         <Accordion sx={{ mb: 2 }}>
+                       {/* AI Recommendations */}
+                       {documentAnalysis.aiRecommendations?.length > 0 && (
+                         <Accordion>
                            <AccordionSummary expandIcon={<ExpandMore />}>
                              <Typography variant="h6">
-                               📊 Extracted HSBC Data
+                               🤖 InHouse AI Recommendations ({documentAnalysis.aiRecommendations.length})
                              </Typography>
                            </AccordionSummary>
                            <AccordionDetails>
                              <TableContainer component={Paper} variant="outlined">
                                <Table size="small">
                                  <TableHead>
-                                  <TableRow>
-                                    <TableCell><strong>Field</strong></TableCell>
-                                    <TableCell><strong>Status</strong></TableCell>
-                                    <TableCell><strong>Value</strong></TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell>Document Owners</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={documentAnalysis.details.owners?.length > 0 ? 'Found' : 'Missing'}
-                                        color={documentAnalysis.details.owners?.length > 0 ? 'success' : 'error'}
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {documentAnalysis.details.owners?.join(', ') || 'Not found'}
-                                    </TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell>Risk Rating</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={documentAnalysis.details.riskRating ? 'Found' : 'Missing'}
-                                        color={documentAnalysis.details.riskRating ? 'success' : 'error'}
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {documentAnalysis.details.riskRating || 'Not specified'}
-                                    </TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell>Periodic Review</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={documentAnalysis.details.periodicReview ? 'Found' : 'Missing'}
-                                        color={documentAnalysis.details.periodicReview ? 'success' : 'error'}
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {documentAnalysis.details.periodicReview || 'Not specified'}
-                                    </TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell>Sign-off Dates</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={documentAnalysis.details.signOffDates?.length > 0 ? 'Found' : 'Missing'}
-                                        color={documentAnalysis.details.signOffDates?.length > 0 ? 'success' : 'error'}
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {documentAnalysis.details.signOffDates?.join(', ') || 'Not found'}
-                                    </TableCell>
-                                  </TableRow>
-                                  <TableRow>
-                                    <TableCell>Departments</TableCell>
-                                    <TableCell>
-                                      <Chip 
-                                        label={documentAnalysis.details.departments?.length > 0 ? 'Found' : 'Missing'}
-                                        color={documentAnalysis.details.departments?.length > 0 ? 'success' : 'error'}
-                                        size="small"
-                                      />
-                                    </TableCell>
-                                    <TableCell>
-                                      {documentAnalysis.details.departments?.join(', ') || 'Not found'}
-                                    </TableCell>
-                                  </TableRow>
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          </AccordionDetails>
-                        </Accordion>
-                      )}
+                                   <TableRow>
+                                     <TableCell>Priority</TableCell>
+                                     <TableCell>Category</TableCell>
+                                     <TableCell>Recommendation</TableCell>
+                                     <TableCell>Impact</TableCell>
+                                   </TableRow>
+                                 </TableHead>
+                                 <TableBody>
+                                   {documentAnalysis.aiRecommendations.map((rec, index) => (
+                                     <TableRow key={index}>
+                                       <TableCell>
+                                         <Chip 
+                                           label={rec.priority}
+                                           size="small"
+                                           color={rec.priority === 'HIGH' ? 'error' : rec.priority === 'MEDIUM' ? 'warning' : 'info'}
+                                         />
+                                       </TableCell>
+                                       <TableCell>{rec.category}</TableCell>
+                                       <TableCell>{rec.message}</TableCell>
+                                       <TableCell>{rec.impact}</TableCell>
+                                     </TableRow>
+                                   ))}
+                                 </TableBody>
+                               </Table>
+                             </TableContainer>
+                           </AccordionDetails>
+                         </Accordion>
+                       )}
+                     </CardContent>
+                   </Card>
 
-                      {/* AI Recommendations */}
-                      {documentAnalysis.aiRecommendations?.length > 0 && (
-                        <Accordion>
-                          <AccordionSummary expandIcon={<ExpandMore />}>
-                            <Typography variant="h6">
-                              🤖 InHouse AI Recommendations ({documentAnalysis.aiRecommendations.length})
-                            </Typography>
-                          </AccordionSummary>
-                          <AccordionDetails>
-                            <TableContainer component={Paper} variant="outlined">
-                              <Table size="small">
-                                <TableHead>
-                                  <TableRow>
-                                    <TableCell>Priority</TableCell>
-                                    <TableCell>Category</TableCell>
-                                    <TableCell>Recommendation</TableCell>
-                                    <TableCell>Impact</TableCell>
-                                  </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                  {documentAnalysis.aiRecommendations.map((rec, index) => (
-                                    <TableRow key={index}>
-                                      <TableCell>
-                                        <Chip 
-                                          label={rec.priority}
-                                          size="small"
-                                          color={rec.priority === 'HIGH' ? 'error' : rec.priority === 'MEDIUM' ? 'warning' : 'info'}
-                                        />
-                                      </TableCell>
-                                      <TableCell>{rec.category}</TableCell>
-                                      <TableCell>{rec.message}</TableCell>
-                                      <TableCell>{rec.impact}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </TableContainer>
-                          </AccordionDetails>
-                        </Accordion>
-                      )}
-                    </CardContent>
-                  </Card>
+                   {/* Upload Button */}
+                   <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+                     <Button
+                       variant="outlined"
+                       onClick={handleReset}
+                       startIcon={<Refresh />}
+                       disabled={loading}
+                     >
+                       Reset Form
+                     </Button>
+                     <Button
+                       variant="contained"
+                       onClick={handleUploadToSharePoint}
+                       disabled={loading || !documentAnalysis.accepted}
+                       startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                       size="large"
+                       sx={{ minWidth: 200 }}
+                     >
+                       {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
+                     </Button>
+                   </Box>
 
-                  {/* Upload Button */}
-                  <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-                    <Button
-                      variant="outlined"
-                      onClick={handleReset}
-                      startIcon={<Refresh />}
-                      disabled={loading}
-                    >
-                      Reset Form
-                    </Button>
-                    <Button
-                      variant="contained"
-                      onClick={handleUploadToSharePoint}
-                      disabled={loading || !documentAnalysis.accepted}
-                      startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                      size="large"
-                      sx={{ minWidth: 200 }}
-                    >
-                      {loading ? 'Uploading to SharePoint...' : 'Upload to SharePoint'}
-                    </Button>
-                  </Box>
+                   {!documentAnalysis.accepted && (
+                     <Alert severity="warning" sx={{ mt: 2 }}>
+                       <Typography variant="body2" fontWeight="bold">
+                         ⚠️ Upload Blocked: Document must achieve at least 85% quality score before upload.
+                       </Typography>
+                       <Typography variant="body2">
+                         Please address the InHouse AI recommendations above and re-analyze your document.
+                       </Typography>
+                     </Alert>
+                   )}
+                 </Box>
+               )}
+             </CardContent>
+           </Card>
+         </Grid>
 
-                  {!documentAnalysis.accepted && (
-                    <Alert severity="warning" sx={{ mt: 2 }}>
-                      <Typography variant="body2" fontWeight="bold">
-                        ⚠️ Upload Blocked: Document must achieve at least 85% quality score before upload.
-                      </Typography>
-                      <Typography variant="body2">
-                        Please address the InHouse AI recommendations above and re-analyze your document.
-                      </Typography>
-                    </Alert>
-                  )}
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
+         {/* Right Panel - Info & Status */}
+         <Grid item xs={12} lg={4}>
+           {/* User Info Card */}
+           <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+             <CardContent>
+               <Typography variant="h6" gutterBottom>
+                 👤 Current User
+               </Typography>
+               <Box sx={{ mb: 2 }}>
+                 <Typography variant="body2" color="text.secondary">
+                   Display Name
+                 </Typography>
+                 <Typography variant="body1" fontWeight="bold">
+                   {user?.displayName || 'Unknown User'}
+                 </Typography>
+               </Box>
+               <Box sx={{ mb: 2 }}>
+                 <Typography variant="body2" color="text.secondary">
+                   User ID
+                 </Typography>
+                 <Typography variant="body1" fontWeight="bold">
+                   {user?.staffId || 'Unknown ID'}
+                 </Typography>
+               </Box>
+               <Box sx={{ mb: 2 }}>
+                 <Typography variant="body2" color="text.secondary">
+                   Role
+                 </Typography>
+                 <Chip 
+                   label={user?.role || 'User'}
+                   color={user?.role === 'admin' ? 'error' : 'default'}
+                   size="small"
+                 />
+               </Box>
+               <Box>
+                 <Typography variant="body2" color="text.secondary">
+                   Authentication Source
+                 </Typography>
+                 <Typography variant="caption" color="text.secondary">
+                   {user?.source || 'Unknown'}
+                 </Typography>
+               </Box>
+             </CardContent>
+           </Card>
 
-        {/* Right Panel - Info & Status */}
-        <Grid item xs={12} lg={4}>
-          {/* User Info Card */}
-          <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                👤 Current User
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Display Name
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {user?.displayName || 'Unknown User'}
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  User ID
-                </Typography>
-                <Typography variant="body1" fontWeight="bold">
-                  {user?.staffId || 'Unknown ID'}
-                </Typography>
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="text.secondary">
-                  Role
-                </Typography>
-                <Chip 
-                  label={user?.role || 'User'}
-                  color={user?.role === 'admin' ? 'error' : 'default'}
-                  size="small"
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" color="text.secondary">
-                  Authentication Source
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {user?.source || 'Unknown'}
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+           <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+             <CardContent>
+               <Typography variant="h6" gutterBottom>
+                 📋 Upload Status
+               </Typography>
+               <Box sx={{ mb: 2 }}>
+                 <Chip 
+                   label={submitStatus.toUpperCase()}
+                   color={getStatusColor()}
+                   sx={{ mb: 1 }}
+                 />
+               </Box>
+               
+               <Typography variant="body2" color="text.secondary" gutterBottom>
+                 Current Step: {activeStep + 1} of {steps.length}
+               </Typography>
+               
+               {submitStatus === 'analyzing' && (
+                 <Box sx={{ mt: 2 }}>
+                   <LinearProgress />
+                   <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                     AI analyzing document quality...
+                   </Typography>
+                 </Box>
+               )}
+               
+               {submitStatus === 'uploading' && (
+                 <Box sx={{ mt: 2 }}>
+                   <LinearProgress />
+                   <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                     Uploading to SharePoint and updating lists...
+                   </Typography>
+                 </Box>
+               )}
+             </CardContent>
+           </Card>
 
-          <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                📋 Upload Status
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Chip 
-                  label={submitStatus.toUpperCase()}
-                  color={getStatusColor()}
-                  sx={{ mb: 1 }}
-                />
-              </Box>
-              
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Current Step: {activeStep + 1} of {steps.length}
-              </Typography>
-              
-              {submitStatus === 'analyzing' && (
-                <Box sx={{ mt: 2 }}>
-                  <LinearProgress />
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    AI analyzing document quality...
-                  </Typography>
-                </Box>
-              )}
-              
-              {submitStatus === 'uploading' && (
-                <Box sx={{ mt: 2 }}>
-                  <LinearProgress />
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Uploading to SharePoint and updating lists...
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+           {/* Analysis Summary Card */}
+           {documentAnalysis && (
+             <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
+               <CardContent>
+                 <Typography variant="h6" gutterBottom>
+                   🎯 Analysis Summary
+                 </Typography>
+                 
+                 <Box sx={{ mb: 2 }}>
+                   <Typography variant="body2" color="text.secondary">
+                     Quality Score
+                   </Typography>
+                   <Typography variant="h4" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
+                     {documentAnalysis.score}%
+                   </Typography>
+                 </Box>
 
-          {/* Analysis Summary Card */}
-          {documentAnalysis && (
-            <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)', mb: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  🎯 Analysis Summary
-                </Typography>
-                
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Quality Score
-                  </Typography>
-                  <Typography variant="h4" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
-                    {documentAnalysis.score}%
-                  </Typography>
-                </Box>
+                 {documentAnalysis.details?.summary && (
+                   <Box sx={{ mb: 2 }}>
+                     <Typography variant="body2" color="text.secondary">
+                       Template Compliance
+                     </Typography>
+                     <Chip 
+                       label={documentAnalysis.details.summary.templateCompliance}
+                       color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
+                              documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
+                       size="small"
+                     />
+                   </Box>
+                 )}
 
-                {documentAnalysis.details?.summary && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Template Compliance
-                    </Typography>
-                    <Chip 
-                      label={documentAnalysis.details.summary.templateCompliance}
-                      color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
-                             documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
-                      size="small"
-                    />
-                  </Box>
-                )}
+                 <Divider sx={{ my: 2 }} />
 
-                <Divider sx={{ my: 2 }} />
+                 <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, textAlign: 'center' }}>
+                   <Box>
+                     <Typography variant="h5" color="success.main" fontWeight="bold">
+                       {documentAnalysis.details?.foundElements?.length || 0}
+                     </Typography>
+                     <Typography variant="caption" color="text.secondary">
+                       Found Elements
+                     </Typography>
+                   </Box>
+                   <Box>
+                     <Typography variant="h5" color="error.main" fontWeight="bold">
+                       {documentAnalysis.details?.missingElements?.length || 0}
+                     </Typography>
+                     <Typography variant="caption" color="text.secondary">
+                       Missing Elements
+                     </Typography>
+                   </Box>
+                 </Box>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, textAlign: 'center' }}>
-                  <Box>
-                    <Typography variant="h5" color="success.main" fontWeight="bold">
-                      {documentAnalysis.details?.foundElements?.length || 0}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Found Elements
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="h5" color="error.main" fontWeight="bold">
-                      {documentAnalysis.details?.missingElements?.length || 0}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Missing Elements
-                    </Typography>
-                  </Box>
-                </Box>
+                 {documentAnalysis.details?.riskRating && (
+                   <Box sx={{ mt: 2 }}>
+                     <Typography variant="body2" color="text.secondary">
+                       Risk Rating
+                     </Typography>
+                     <Chip 
+                       label={documentAnalysis.details.riskRating}
+                       color={documentAnalysis.details.riskRating === 'High' ? 'error' : 
+                              documentAnalysis.details.riskRating === 'Medium' ? 'warning' : 'success'}
+                       size="small"
+                     />
+                   </Box>
+                 )}
+               </CardContent>
+             </Card>
+           )}
 
-                {documentAnalysis.details?.riskRating && (
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Risk Rating
-                    </Typography>
-                    <Chip 
-                      label={documentAnalysis.details.riskRating}
-                      color={documentAnalysis.details.riskRating === 'High' ? 'error' : 
-                             documentAnalysis.details.riskRating === 'Medium' ? 'warning' : 'success'}
-                      size="small"
-                    />
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          )}
+           {/* Updated Guidelines Card */}
+           <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+             <CardContent>
+               <Typography variant="h6" gutterBottom>
+                 ℹ️ Admin Guidelines
+               </Typography>
+               <List dense>
+                 <ListItem>
+                   <ListItemIcon><Assessment fontSize="small" /></ListItemIcon>
+                   <ListItemText 
+                     primary="Minimum Score: 85%"
+                     secondary="Required for SharePoint upload"
+                   />
+                 </ListItem>
+                 <ListItem>
+                   <ListItemIcon><Security fontSize="small" /></ListItemIcon>
+                   <ListItemText 
+                     primary="Access Control"
+                     secondary="Admin/Uploader access based on User ID"
+                   />
+                 </ListItem>
+                 <ListItem>
+                   <ListItemIcon><Warning fontSize="small" /></ListItemIcon>
+                   <ListItemText 
+                     primary="Error Notifications"
+                     secondary="Prominent dialogs for all errors"
+                   />
+                 </ListItem>
+                 <ListItem>
+                   <ListItemIcon><CalendarToday fontSize="small" /></ListItemIcon>
+                   <ListItemText 
+                     primary="Auto-filled Fields"
+                     secondary="Name and expiry date pre-populated"
+                   />
+                 </ListItem>
+               </List>
+               
+               <Divider sx={{ my: 2 }} />
+               
+               <Typography variant="body2" color="text.secondary">
+                 <strong>Access Granted:</strong> User ID {user?.staffId} has {user?.role} privileges.
+               </Typography>
+             </CardContent>
+           </Card>
+         </Grid>
+       </Grid>
+     </Container>
 
-          {/* Updated Guidelines Card */}
-          <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                ℹ️ Admin Guidelines
-              </Typography>
-              <List dense>
-                <ListItem>
-                  <ListItemIcon><Assessment fontSize="small" /></ListItemIcon>
-                  <ListItemText 
-                    primary="Minimum Score: 85%"
-                    secondary="Required for SharePoint upload"
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon><Security fontSize="small" /></ListItemIcon>
-                  <ListItemText 
-                    primary="Access Control"
-                    secondary="Admin access based on User ID"
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon><Warning fontSize="small" /></ListItemIcon>
-                  <ListItemText 
-                    primary="Error Notifications"
-                    secondary="Prominent dialogs for all errors"
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemIcon><CalendarToday fontSize="small" /></ListItemIcon>
-                  <ListItemText 
-                    primary="Auto-filled Fields"
-                    secondary="Name and expiry date pre-populated"
-                  />
-                </ListItem>
-              </List>
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <Typography variant="body2" color="text.secondary">
-                <strong>Access Granted:</strong> User ID {user?.staffId} has admin privileges.
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Container>
-
-    {/* Loading Backdrop */}
-    <Backdrop
-      sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
-      open={loading && submitStatus === 'uploading'}
-    >
-      <Box sx={{ textAlign: 'center' }}>
-        <CircularProgress color="inherit" size={60} />
-        <Typography variant="h6" sx={{ mt: 2 }}>
-          Uploading to SharePoint...
-        </Typography>
-        <Typography variant="body2">
-          Please wait while we process your procedure
-        </Typography>
-      </Box>
-    </Backdrop>
-  </Box>
-);
+     {/* Loading Backdrop */}
+     <Backdrop
+       sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+       open={loading && submitStatus === 'uploading'}
+     >
+       <Box sx={{ textAlign: 'center' }}>
+         <CircularProgress color="inherit" size={60} />
+         <Typography variant="h6" sx={{ mt: 2 }}>
+           Uploading to SharePoint...
+         </Typography>
+         <Typography variant="body2">
+           Please wait while we process your procedure
+         </Typography>
+       </Box>
+     </Backdrop>
+   </Box>
+ );
 };
 
 export default AdminPanelPage;
