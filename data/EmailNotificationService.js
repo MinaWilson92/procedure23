@@ -256,7 +256,69 @@ async triggerProcedureUploadNotification(uploadResult) {
   }
 }
 
+async triggerProcedureAmendmentNotification(amendmentData) {
+  try {
+    console.log('📧 Triggering procedure amendment notification...');
+    console.log('🔍 Amendment data:', amendmentData);
+    
+    const procedureName = amendmentData.procedureName || 'Unknown Procedure';
+    const lob = amendmentData.lineOfBusiness || amendmentData.lob || 'Unknown';
+    
+    // Get fresh recipients (owners + admins + LOB heads)
+    const recipients = await this.getRecipientsForNotification(
+      'procedure-amended', 
+      lob, 
+      {
+        primary_owner_email: amendmentData.primaryOwnerEmail,
+        secondary_owner_email: amendmentData.secondaryOwnerEmail
+      }
+    );
 
+    // Prepare email variables
+    const emailVariables = {
+      procedureName: procedureName,
+      amendedBy: amendmentData.amendedBy || 'Unknown User',
+      amendmentSummary: amendmentData.amendmentSummary || 'No summary provided',
+      originalQualityScore: amendmentData.originalQualityScore || 'N/A',
+      newQualityScore: amendmentData.newQualityScore || 'N/A',
+      amendmentDate: amendmentData.amendmentDate || new Date().toLocaleDateString(),
+      lob: lob,
+      primaryOwner: amendmentData.primaryOwner || 'Unknown',
+      procedureId: amendmentData.procedureId || 'Unknown'
+    };
+
+    console.log('📧 Amendment Email Variables:', emailVariables);
+
+    // Send notification
+    const result = await this.emailService.sendNotificationEmail(
+      'procedure-amended',
+      recipients,
+      emailVariables
+    );
+
+    // Log the activity
+    await this.logEmailActivity({
+      activityType: 'PROCEDURE_AMENDED_NOTIFICATION',
+      recipients: recipients,
+      procedureId: amendmentData.procedureId,
+      success: result.success,
+      details: { 
+        lob, 
+        procedureName: procedureName,
+        amendedBy: amendmentData.amendedBy,
+        amendmentSummary: amendmentData.amendmentSummary,
+        qualityScoreChange: `${amendmentData.originalQualityScore}% → ${amendmentData.newQualityScore}%`
+      }
+    });
+
+    console.log('✅ Procedure amendment notification completed:', result.success);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Failed to send procedure amendment notification:', error);
+    return { success: false, message: error.message };
+  }
+}
   
   // ✅ FIXED: Enhanced user access notification
 // In EmailNotificationService.js, REPLACE the existing triggerUserChangeNotification method with this:
