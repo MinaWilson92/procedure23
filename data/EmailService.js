@@ -872,6 +872,53 @@ async sendNotificationEmail(templateType, recipients, variables) {
         textContent: 'New procedure uploaded: {{procedureName}} by {{ownerName}} on {{uploadDate}}. Quality Score: {{qualityScore}}%',
         isActive: true
       },
+
+{
+  id: null,
+  type: 'procedure-amended',
+  name: 'Procedure Amended',
+  subject: 'Procedure Amended: {{procedureName}}',
+  htmlContent: `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+    <div style="background: linear-gradient(135deg, #9c27b0, #7b1fa2); padding: 20px; color: white;">
+      <h1 style="margin: 0; font-size: 24px;">HSBC Procedures Hub</h1>
+      <p style="margin: 5px 0 0 0; opacity: 0.9;">Procedure Amendment Notification</p>
+    </div>
+    <div style="padding: 30px; background: #f3e5f5;">
+      <h2 style="color: #7b1fa2; margin-top: 0;">🔄 Procedure Amended</h2>
+      <p style="color: #666; line-height: 1.6;">
+        A procedure has been amended in the HSBC Procedures Hub:
+      </p>
+      <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #9c27b0; margin: 20px 0;">
+        <h3 style="margin: 0 0 10px 0; color: #7b1fa2;">{{procedureName}}</h3>
+        <p style="margin: 5px 0; color: #666;"><strong>Amended by:</strong> {{amendedBy}}</p>
+        <p style="margin: 5px 0; color: #666;"><strong>Amendment Date:</strong> {{amendmentDate}}</p>
+        <p style="margin: 5px 0; color: #666;"><strong>Line of Business:</strong> {{lob}}</p>
+        <p style="margin: 5px 0; color: #666;"><strong>Primary Owner:</strong> {{primaryOwner}}</p>
+        
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;">
+          <h4 style="margin: 0 0 10px 0; color: #7b1fa2;">Quality Score Change:</h4>
+          <p style="margin: 0; color: #666;">
+            <span style="color: #ff9800;">Previous: {{originalQualityScore}}%</span> → 
+            <span style="color: #4caf50;">New: {{newQualityScore}}%</span>
+          </p>
+        </div>
+        
+        <div style="background: #e8f5e9; padding: 15px; border-radius: 6px; margin: 15px 0;">
+          <h4 style="margin: 0 0 10px 0; color: #2e7d32;">Amendment Summary:</h4>
+          <p style="margin: 0; color: #666; font-style: italic;">{{amendmentSummary}}</p>
+        </div>
+      </div>
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        This amendment notification was sent automatically by the HSBC Procedures Hub.
+      </p>
+    </div>
+  </div>
+  `,
+  textContent: 'Procedure {{procedureName}} was amended by {{amendedBy}} on {{amendmentDate}}. Summary: {{amendmentSummary}}. Quality score changed from {{originalQualityScore}}% to {{newQualityScore}}%.',
+  isActive: true
+}
+      
       {
         id: null,
         type: 'procedure-expiring',
