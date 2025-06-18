@@ -312,29 +312,33 @@ const ProcedureAmendModal = ({
 
       // Upload to SharePoint (mock implementation)
       const result = await documentAnalyzer.amendProcedureInSharePoint(amendmentData, selectedFile);
-
-      if (result.success) {
-        console.log('✅ Procedure amended successfully');
-        
-        // Send notifications
-        try {
-          await emailService.triggerProcedureAmendmentNotification({
-            procedureName: procedure.name,
-            amendedBy: user?.displayName,
-            amendmentSummary: formData.amendment_summary,
-            newQualityScore: documentAnalysis.score,
-            primaryOwnerEmail: procedure.primary_owner_email,
-            secondaryOwnerEmail: formData.secondary_owner_email,
-            amendmentDate: new Date().toLocaleDateString()
-          });
-        } catch (emailError) {
-          console.warn('⚠️ Amendment successful but email notification failed:', emailError);
-        }
-        
-        setSubmitStatus('success');
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
+if (result.success) {
+  console.log('✅ Procedure amended successfully');
+  
+  // ✅ ENHANCED: Send comprehensive amendment notification
+  try {
+    await emailService.triggerProcedureAmendmentNotification({
+      procedureName: procedure.name,
+      procedureId: procedure.id,
+      amendedBy: user?.displayName,
+      amendmentSummary: formData.amendment_summary,
+      amendmentDate: new Date().toLocaleDateString(),
+      primaryOwner: procedure.primary_owner,
+      primaryOwnerEmail: procedure.primary_owner_email,
+      secondaryOwnerEmail: formData.secondary_owner_email,
+      lineOfBusiness: procedure.lob,
+      originalQualityScore: procedure.score,
+      newQualityScore: documentAnalysis.score
+    });
+    console.log('✅ Amendment notification sent successfully');
+  } catch (emailError) {
+    console.warn('⚠️ Amendment successful but email notification failed:', emailError);
+  }
+  
+  setSubmitStatus('success');
+  setTimeout(() => {
+    onSuccess();
+  }, 2000);
         
       } else {
         throw new Error(result.message || 'Amendment failed');
