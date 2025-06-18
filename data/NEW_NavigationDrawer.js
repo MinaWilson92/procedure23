@@ -121,15 +121,20 @@ const CompactMenuItem = styled(ListItem)(({ theme, isActive, itemColor }) => ({
   }
 }));
 
-const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardData }) => {
+const NavigationDrawer = ({ open, onClose, user, isAdmin, isUploader, procedures, dashboardData }) => {
   const { currentPage, navigate } = useNavigation();
   const theme = useTheme();
   const [hoveredItem, setHoveredItem] = useState(null);
 
   // ✅ Get real stats from props
   const totalProcedures = procedures?.length || dashboardData?.stats?.total || 0;
+  const userProcedures = procedures?.filter(p => 
+    p.uploaded_by === user?.staffId || 
+    p.uploaded_by === user?.displayName ||
+    p.uploaded_by_user_id === user?.staffId
+  ).length || 0;
 
-  // ✅ Updated menu items - COMPACT VERSION
+  // ✅ Updated menu items with My Dashboard
   const menuItems = [
     { 
       id: 'home', 
@@ -139,6 +144,15 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
       description: 'Overview & Analytics',
       badge: null,
       show: true
+    },
+    { 
+      id: 'my-dashboard', 
+      label: 'My Dashboard', 
+      icon: <ManageAccounts />, 
+      color: '#4caf50',
+      description: 'My Procedures',
+      badge: userProcedures.toString(),
+      show: isAdmin || isUploader
     },
     { 
       id: 'procedures', 
@@ -173,7 +187,18 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
         show: true
       }
     );
+  } else if (isUploader) {
+    menuItems.push({ 
+      id: 'admin-panel',
+      label: 'Upload Procedure', 
+      icon: <CloudUpload />, 
+      color: '#f44336',
+      description: 'Add New Document',
+      badge: '+',
+      show: true
+    });
   }
+
 
   const visibleMenuItems = menuItems.filter(item => item.show);
 
