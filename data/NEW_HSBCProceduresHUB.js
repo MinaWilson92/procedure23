@@ -1,4 +1,4 @@
-// components/HSBCProceduresHub.js - SPECTACULAR TOP BANNER UPGRADE
+// components/HSBCProceduresHub.js - FIXED VERSION
 import React, { useState, useEffect } from 'react';
 import {
   Box, Container, AppBar, Toolbar, IconButton, Typography,
@@ -9,9 +9,11 @@ import {
 import {
   Menu as MenuIcon, Notifications, ArrowBack, AccountCircle,
   Warning, Schedule, CheckCircle, Assignment, Error as ErrorIcon,
-  CloudDone, CloudOff, Settings, Search, TrendingUp, Star
+  CloudDone, CloudOff, Settings, Search, TrendingUp, Star,
+  History, ArrowForward
 } from '@mui/icons-material';
-import { styled, keyframes, alpha } from '@mui/material/styles';
+// ❌ REMOVED: duplicate styled import
+// ✅ USING: styled from @mui/material already imported above
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSharePoint } from '../SharePointContext';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -57,8 +59,7 @@ const rotateHexagon = keyframes`
   100% { transform: rotate(360deg); }
 `;
 
-// 🎨 **Styled Components**
-// 🎨 **FIXED STYLED COMPONENTS** - Replace the styled components section with this:
+// 🎨 **FIXED STYLED COMPONENTS**
 const GlassmorphismAppBar = styled(AppBar)(({ theme }) => ({
   background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
   backdropFilter: 'blur(20px)',
@@ -66,21 +67,7 @@ const GlassmorphismAppBar = styled(AppBar)(({ theme }) => ({
   boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
 }));
 
-const HSBCHexagonLogo = styled(Box)(({ theme }) => ({
-  width: 50,
-  height: 50,
-  background: 'linear-gradient(135deg, #DB0011 0%, #B50010 50%, #8B000C 100%)',
-  clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    transform: 'scale(1.1)'
-  }
-}));
-
+// ✅ FIXED: Remove duplicate HSBCHexagonLogo definition
 const HSBCHexagonLogo = styled(Box)(({ theme, size = 60 }) => ({
   width: size,
   height: size,
@@ -110,129 +97,6 @@ const HSBCHexagonLogo = styled(Box)(({ theme, size = 60 }) => ({
   }
 }));
 
-const PremiumChip = styled(Chip)(({ variant, chipColor }) => ({
-  background: variant === 'success' 
-    ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'
-    : variant === 'warning'
-    ? 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)'
-    : variant === 'error'
-    ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
-    : variant === 'info'
-    ? 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)'
-    : HSBCColors.gradients.glassMorphism,
-  color: 'white',
-  fontWeight: 700,
-  fontSize: '0.75rem',
-  height: 28,
-  borderRadius: '14px',
-  border: variant === 'outlined' ? '1px solid rgba(255,255,255,0.3)' : 'none',
-  backdropFilter: 'blur(10px)',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-  transition: 'all 0.3s ease',
-  position: 'relative',
-  overflow: 'hidden',
-  '&::before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: '-100%',
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-    transition: 'left 0.5s ease'
-  },
-  '&:hover': {
-    transform: 'translateY(-2px) scale(1.05)',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-    '&::before': {
-      left: '100%'
-    }
-  },
-  '& .MuiChip-icon': {
-    color: 'white',
-    animation: `${floatBadge} 3s ease-in-out infinite`
-  }
-}));
-
-const NotificationBadge = styled(Badge)(({ theme }) => ({
-  '& .MuiBadge-badge': {
-    background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
-    color: 'white',
-    fontWeight: 900,
-    fontSize: '0.7rem',
-    boxShadow: '0 0 0 2px rgba(26,26,26,0.9), 0 4px 16px rgba(244,67,54,0.4)',
-    animation: `${pulseGlow} 2s infinite`,
-    '&::after': {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      borderRadius: '50%',
-      border: '1px solid rgba(255,255,255,0.3)',
-      content: '""'
-    }
-  }
-}));
-
-const UserProfileChip = styled(Chip)(({ theme, isAdmin }) => ({
-  background: isAdmin 
-    ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
-    : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-  color: 'white',
-  border: '1px solid rgba(255,255,255,0.2)',
-  borderRadius: '20px',
-  height: 40,
-  fontSize: '0.875rem',
-  fontWeight: 700,
-  backdropFilter: 'blur(10px)',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-  transition: 'all 0.3s ease',
-  cursor: 'pointer',
-  '&:hover': {
-    transform: 'translateY(-2px)',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-    border: `1px solid ${isAdmin ? 'rgba(244,67,54,0.5)' : 'rgba(255,255,255,0.4)'}`,
-    background: isAdmin 
-      ? 'linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)'
-      : 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.1) 100%)'
-  },
-  '& .MuiAvatar-root': {
-    boxShadow: '0 0 0 2px rgba(255,255,255,0.3)'
-  }
-}));
-
-const MenuButton = styled(IconButton)(({ theme }) => ({
-  background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-  border: '1px solid rgba(255,255,255,0.2)',
-  borderRadius: '12px',
-  backdropFilter: 'blur(10px)',
-  transition: 'all 0.3s ease',
-  '&:hover': {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-    transform: 'translateY(-2px)',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-  }
-}));
-
-const NotificationButton = styled(IconButton)(({ theme, unreadCount }) => ({
-  background: unreadCount > 0 
-    ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
-    : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-  border: '1px solid rgba(255,255,255,0.2)',
-  borderRadius: '12px',
-  backdropFilter: 'blur(10px)',
-  transition: 'all 0.3s ease',
-  animation: unreadCount > 0 ? `${pulseGlow} 2s infinite` : 'none',
-  '&:hover': {
-    background: unreadCount > 0
-      ? 'linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)'
-      : 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-    transform: 'translateY(-2px) scale(1.05)',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-  }
-}));
-
 const HSBCProceduresHub = () => {
   const { user, isAuthenticated, isAdmin, isUploader } = useSharePoint();
   const { currentPage, navigate } = useNavigation();
@@ -250,10 +114,19 @@ const HSBCProceduresHub = () => {
   
   const theme = useTheme();
 
-  // 🎯 **CORRECTED: SharePoint API Configuration Using Your Exact Fields**
+  // Helper functions
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Unknown';
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch {
+      return 'Invalid Date';
+    }
+  };
+
+  // 🎯 **SharePoint API Configuration**
   const getSharePointConfig = () => {
     return {
-      // ✅ USING ONLY YOUR EXACT SHAREPOINT FIELDS
       proceduresUrl: 'https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle(\'Procedures\')/items?' +
         '$select=Id,Title,Created,Modified,AuthorId,EditorId,' +
         'ExpiryDate,PrimaryOwner,PrimaryOwnerEmail,SecondaryOwner,SecondaryOwnerEmail,' +
@@ -275,7 +148,6 @@ const HSBCProceduresHub = () => {
     };
   };
 
-  // 🔧 **HELPER METHODS**
   const safeJsonParse = (jsonString, defaultValue = {}) => {
     try {
       return jsonString ? JSON.parse(jsonString) : defaultValue;
@@ -291,19 +163,16 @@ const HSBCProceduresHub = () => {
     }
   }, [user, isAuthenticated]);
 
-  // 🎯 **CORRECTED: Load Data with Your Exact SharePoint Field Mapping**
   const loadInitialData = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      console.log('🚀 Loading data from SharePoint with correct fields...');
+      console.log('🚀 Loading data from SharePoint...');
       const config = getSharePointConfig();
       
-      // 📋 **Load Procedures from SharePoint List with Correct Fields**
       try {
-        console.log('📋 Fetching procedures from SharePoint...');
-        console.log('Correct API URL:', config.proceduresUrl);
+        console.log('📋 Fetching procedures...');
         
         const procResponse = await fetch(config.proceduresUrl, {
           method: 'GET',
@@ -311,86 +180,51 @@ const HSBCProceduresHub = () => {
           credentials: 'include'
         });
 
-        console.log('📋 Response status:', procResponse.status);
-
         if (procResponse.ok) {
           const procData = await procResponse.json();
-          console.log('📋 Raw SharePoint data with correct fields:', procData);
+          console.log('📋 SharePoint data:', procData);
           
-          // 🎯 **CORRECTED FIELD MAPPING - Using Your Exact SharePoint Fields**
           const mappedProcedures = procData.d.results.map(item => ({
-            // Basic Procedure Information
             id: item.Id,
             name: item.Title,
             lob: item.LOB || 'Unknown',
             procedure_subsection: item.ProcedureSubsection || '',
             status: item.Status || 'Active',
-            
-            // 📅 **DATES - Using Your Exact Date Fields**
             uploaded_on: item.UploadedAt || item.Created || new Date().toISOString(),
             last_modified_on: item.Modified || new Date().toISOString(),
             expiry: item.ExpiryDate || new Date().toISOString(),
             sign_off_date: item.SignOffDate || null,
-            
-            // 👥 **PROCEDURE OWNERS - Using Your Exact Owner Fields**
             primary_owner: item.PrimaryOwner || 'Unknown',
             primary_owner_email: item.PrimaryOwnerEmail || '',
             secondary_owner: item.SecondaryOwner || '',
             secondary_owner_email: item.SecondaryOwnerEmail || '',
-            
-            // 👤 **UPLOADED BY - Using Your UploadedBy Field**
             uploaded_by: item.UploadedBy || 'Unknown',
-            uploaded_by_email: '', // Can be enhanced later
-            
-            // 🔄 **SYSTEM FIELDS**
             author_id: item.AuthorId || null,
             editor_id: item.EditorId || null,
-            last_modified_by: 'SharePoint User', // Can be enhanced later
-            
-            // 🔗 **DOCUMENT LINK - Using Your DocumentLink Field**
             document_link: item.DocumentLink || '',
-            sharepoint_url: item.DocumentLink || '', // Same as document link
-            procedure_url: item.DocumentLink || '',   // Same as document link
+            sharepoint_url: item.DocumentLink || '',
             original_filename: item.OriginalFilename || '',
             file_size: item.FileSize || 0,
-            
-            // ⚠️ **RISK RATING - Using Your RiskRating Field**
             risk_rating: item.RiskRating || 'Medium',
-            
-            // 📊 **PERIODIC REVIEW - Using Your PeriodicReview Field**  
             periodic_review: item.PeriodicReview || 'Annual',
-            
-            // ⭐ **DOCUMENT QUALITY SCORE - Using Your QualityScore Field**
             score: item.QualityScore || 0,
-            
-            // 🔍 **AI ANALYSIS DATA - Using Your Exact Analysis Fields**
             analysis_details: item.AnalysisDetails,
             ai_recommendations: item.AIRecommendations,
-            found_elements: item.FoundElements, // Using your FoundElements field
+            found_elements: item.FoundElements,
             document_owners: item.DocumentOwners,
-            
-            // 🔧 **TECHNICAL FIELDS**
-            sharepoint_uploaded: true, // Since it's in SharePoint
+            sharepoint_uploaded: true,
             sharepoint_id: item.Id,
-            
-            // 📱 **UI HELPER FIELDS**
-            file_link: item.DocumentLink || '',
-            owner_display: item.PrimaryOwner || 'Unknown'
+            file_link: item.DocumentLink || ''
           }));
           
           setProcedures(mappedProcedures);
           setSharePointAvailable(true);
           
-          console.log('✅ Procedures loaded from SharePoint with correct fields:', mappedProcedures.length);
-          console.log('📊 Sample procedure data:', mappedProcedures[0]);
-          
-          // Load notifications after procedures are loaded
+          console.log('✅ Procedures loaded:', mappedProcedures.length);
           setTimeout(() => loadNotifications(mappedProcedures), 500);
           
         } else {
-          const errorText = await procResponse.text();
-          console.log('⚠️ SharePoint procedures not accessible (status:', procResponse.status, ')');
-          console.log('Error details:', errorText);
+          console.log('⚠️ SharePoint not accessible');
           setSharePointAvailable(false);
           loadMockData();
         }
@@ -400,53 +234,11 @@ const HSBCProceduresHub = () => {
         loadMockData();
       }
 
-      // 📊 **Load Dashboard Data from SharePoint (Optional)**
-      try {
-        console.log('📊 Fetching dashboard data from SharePoint...');
-        
-        const dashResponse = await fetch(config.dashboardUrl, {
-          method: 'GET',
-          headers: getHeaders(),
-          credentials: 'include'
-        });
-
-        if (dashResponse.ok) {
-          const dashData = await dashResponse.json();
-          console.log('📊 Dashboard data from SharePoint:', dashData);
-          
-          if (dashData.d.results.length > 0) {
-            const dashboardItem = dashData.d.results[0];
-            setDashboardData({
-              stats: {
-                total: dashboardItem.TotalProcedures || procedures.length,
-                expired: dashboardItem.ExpiredProcedures || 0,
-                expiringSoon: dashboardItem.ExpiringSoonProcedures || 0,
-                highQuality: dashboardItem.HighQualityProcedures || 0,
-                averageScore: dashboardItem.AverageQualityScore || 0
-              },
-              userInfo: {
-                displayName: user?.displayName || 'SharePoint User',
-                email: user?.email || 'user@hsbc.com',
-                department: 'Loaded from SharePoint',
-                jobTitle: user?.role || 'User'
-              }
-            });
-          } else {
-            // Calculate dashboard data from procedures
-            generateDashboardFromProcedures();
-          }
-        } else {
-          console.log('⚠️ Dashboard data not available, calculating from procedures');
-          generateDashboardFromProcedures();
-        }
-      } catch (dashError) {
-        console.log('⚠️ Dashboard endpoint not available, calculating from procedures');
-        generateDashboardFromProcedures();
-      }
+      generateDashboardFromProcedures();
       
     } catch (err) {
-      console.error('❌ Error loading initial data:', err);
-      setError('Failed to load data from SharePoint: ' + err.message);
+      console.error('❌ Error loading data:', err);
+      setError('Failed to load data: ' + err.message);
       setSharePointAvailable(false);
       loadMockData();
     } finally {
@@ -454,7 +246,6 @@ const HSBCProceduresHub = () => {
     }
   };
 
-  // 📊 **Generate Dashboard Data from Procedures**
   const generateDashboardFromProcedures = () => {
     if (procedures.length === 0) return;
     
@@ -481,33 +272,24 @@ const HSBCProceduresHub = () => {
         jobTitle: user?.role || 'User'
       }
     });
-
-    console.log('📊 Dashboard stats calculated:', stats);
   };
 
-  // 🔔 **Load Notifications from Procedures Data**
   const loadNotifications = (proceduresList = procedures) => {
     try {
-      console.log('🔔 Generating notifications from procedures...');
+      console.log('🔔 Generating notifications...');
       
       const now = new Date();
       const notificationsList = [];
       
       if (proceduresList && proceduresList.length > 0) {
-        // Expiring procedures
         const expiring = proceduresList.filter(p => {
           const expiry = new Date(p.expiry);
           const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
           return daysLeft > 0 && daysLeft <= 30;
         });
 
-        // Expired procedures
         const expired = proceduresList.filter(p => new Date(p.expiry) < now);
 
-        // Low quality procedures
-        const lowQuality = proceduresList.filter(p => (p.score || 0) < 60);
-
-        // Create notification objects
         expiring.forEach(proc => {
           const daysLeft = Math.ceil((new Date(proc.expiry) - now) / (1000 * 60 * 60 * 24));
           notificationsList.push({
@@ -535,22 +317,8 @@ const HSBCProceduresHub = () => {
             procedureId: proc.id
           });
         });
-
-        lowQuality.forEach(proc => {
-          notificationsList.push({
-            id: `quality-${proc.id}`,
-            type: 'info',
-            icon: <Assignment />,
-            title: `Low Quality Score`,
-            message: `"${proc.name}" has ${proc.score}% quality score`,
-            timestamp: new Date(proc.uploaded_on || Date.now()),
-            priority: 'low',
-            procedureId: proc.id
-          });
-        });
       }
 
-      // Add system notifications
       if (isAdmin) {
         notificationsList.push({
           id: 'system-1',
@@ -565,7 +333,6 @@ const HSBCProceduresHub = () => {
         });
       }
 
-      // Sort by priority and timestamp
       const sortedNotifications = notificationsList.sort((a, b) => {
         const priorityOrder = { high: 3, medium: 2, low: 1 };
         if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
@@ -577,16 +344,13 @@ const HSBCProceduresHub = () => {
       setNotifications(sortedNotifications);
       setUnreadCount(sortedNotifications.filter(n => n.priority === 'high').length);
       
-      console.log('✅ Notifications generated:', sortedNotifications.length);
-      
     } catch (err) {
       console.error('❌ Error generating notifications:', err);
     }
   };
 
-  // 📝 **Load Mock Data for Demo - Updated with Correct Fields**
   const loadMockData = () => {
-    console.log('📝 Loading mock data matching SharePoint fields...');
+    console.log('📝 Loading mock data...');
     
     const mockProcedures = [
       {
@@ -595,23 +359,13 @@ const HSBCProceduresHub = () => {
         lob: "IWPB",
         primary_owner: "John Smith",
         primary_owner_email: "john.smith@hsbc.com",
-        secondary_owner: "Sarah Johnson",
-        secondary_owner_email: "sarah.johnson@hsbc.com",
         uploaded_by: "Michael Chen",
         uploaded_on: "2024-05-15T10:30:00Z",
-        last_modified_on: "2024-06-10T14:20:00Z",
-        expiry: "2024-07-15", // Expiring soon
+        expiry: "2024-07-15",
         score: 92,
         risk_rating: "High",
-        periodic_review: "Annual",
-        sign_off_date: "2024-05-20T09:00:00Z",
-        document_link: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf",
-        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf",
-        procedure_url: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf",
-        original_filename: "HSBC_Risk_Assessment_Framework_v2.1.pdf",
-        file_size: 2450000,
         status: "Active",
-        file_link: "https://sharepoint.hsbc.com/sites/procedures/risk-framework.pdf"
+        file_link: "https://sharepoint.hsbc.com/procedures/risk-framework.pdf"
       },
       {
         id: 2,
@@ -621,67 +375,34 @@ const HSBCProceduresHub = () => {
         primary_owner_email: "sarah.johnson@hsbc.com",
         uploaded_by: "David Park",
         uploaded_on: "2024-04-20T16:45:00Z",
-        expiry: "2024-05-20", // Expired
-        score: 45, // Low quality
+        expiry: "2024-05-20",
+        score: 45,
         risk_rating: "Medium",
-        periodic_review: "Semi-Annual",
-        sign_off_date: "2024-04-25T11:30:00Z",
-        document_link: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf",
-        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf",
-        procedure_url: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf",
-        original_filename: "Trading_Compliance_Guidelines_v1.3.pdf",
-        file_size: 1800000,
         status: "Active",
-        file_link: "https://sharepoint.hsbc.com/sites/procedures/trading-compliance.pdf"
-      },
-      {
-        id: 3,
-              name: "Client Onboarding Process",
-        lob: "GCOO",
-        primary_owner: "Mike Chen",
-        primary_owner_email: "mike.chen@hsbc.com",
-        uploaded_by: "Lisa Wang",
-        uploaded_on: "2024-03-10T09:15:00Z",
-        expiry: "2025-03-15",
-        score: 88,
-        risk_rating: "Low",
-        periodic_review: "Annual",
-        sign_off_date: "2024-03-15T14:00:00Z",
-        document_link: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf",
-        sharepoint_url: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf",
-        procedure_url: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf",
-        original_filename: "Client_Onboarding_Process_v3.0.pdf",
-        file_size: 3200000,
-        status: "Active",
-        file_link: "https://sharepoint.hsbc.com/sites/procedures/client-onboarding.pdf"
+        file_link: "https://sharepoint.hsbc.com/procedures/trading-compliance.pdf"
       }
     ];
 
     setProcedures(mockProcedures);
     
-    const mockStats = {
-      total: 3,
-      expiringSoon: 1,
-      expired: 1,
-      highQuality: 2,
-      averageScore: 75
-    };
-
     setDashboardData({
-      stats: mockStats,
+      stats: {
+        total: 2,
+        expiringSoon: 1,
+        expired: 1,
+        highQuality: 1,
+        averageScore: 68
+      },
       userInfo: {
         displayName: user?.displayName || "Demo User",
         email: user?.email || "demo@hsbc.com",
-        department: "Development Environment",
-        jobTitle: "Demo Mode"
+        department: "Development Environment"
       }
     });
     
-    // Load notifications for mock data
     setTimeout(() => loadNotifications(mockProcedures), 100);
   };
 
-  // 🔔 **Notification Handlers**
   const handleNotificationClick = (event) => {
     setNotificationAnchor(event.currentTarget);
   };
@@ -716,84 +437,45 @@ const HSBCProceduresHub = () => {
     return `${Math.floor(diff / 86400)}d ago`;
   };
 
-  // Show loading while SharePoint context initializes
   if (!isAuthenticated) {
-    return null; // SharePointProvider handles loading/error states
+    return null;
   }
 
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa' }}>
-        {/* 🌟 **SPECTACULAR LOADING HEADER** */}
-        <motion.div
-          initial={{ y: -100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-        >
-          <GlassmorphismAppBar position="fixed">
-            <Toolbar sx={{ position: 'relative', zIndex: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-                {/* 🎨 **PREMIUM HSBC HEXAGON LOGO** */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                >
-                  <HSBCHexagonLogo size={40}>
-                    <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '10px' }}>
-                      HBEG
-                    </Typography>
-                  </HSBCHexagonLogo>
-                </motion.div>
-                
-                <Stack>
-                  <Typography variant="h6" component="div" color="white" fontWeight={800}>
-                    Procedures Hub
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
-                    Next-Generation Document Management
-                  </Typography>
-                </Stack>
-                
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <PremiumChip 
-                    icon={<TrendingUp />}
-                    label="Loading SharePoint Data..."
-                    variant="info"
-                    sx={{ ml: 2 }}
-                  />
-                </motion.div>
-              </Box>
-            </Toolbar>
-          </GlassmorphismAppBar>
-        </motion.div>
+        <GlassmorphismAppBar position="fixed">
+          <Toolbar>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+              <HSBCHexagonLogo size={40}>
+                <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '10px' }}>
+                  HBEG
+                </Typography>
+              </HSBCHexagonLogo>
+              
+              <Stack>
+                <Typography variant="h6" component="div" color="white" fontWeight={800}>
+                  Procedures Hub
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
+                  Loading SharePoint Data...
+                </Typography>
+              </Stack>
+            </Box>
+          </Toolbar>
+        </GlassmorphismAppBar>
 
-        {/* Loading Content */}
         <Container maxWidth="lg" sx={{ pt: 12 }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-          >
-            <Skeleton variant="text" width="60%" height={60} sx={{ mb: 2, borderRadius: 2 }} />
-            <Skeleton variant="text" width="40%" height={30} sx={{ mb: 4, borderRadius: 2 }} />
-            
-            <Grid container spacing={3}>
-              {[1, 2, 3, 4].map(n => (
-                <Grid item xs={12} sm={6} md={3} key={n}>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: n * 0.1 }}
-                  >
-                    <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 3 }} />
-                  </motion.div>
-                </Grid>
-              ))}
-            </Grid>
-          </motion.div>
+          <Skeleton variant="text" width="60%" height={60} sx={{ mb: 2 }} />
+          <Skeleton variant="text" width="40%" height={30} sx={{ mb: 4 }} />
+          
+          <Grid container spacing={3}>
+            {[1, 2, 3, 4].map(n => (
+              <Grid item xs={12} sm={6} md={3} key={n}>
+                <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+              </Grid>
+            ))}
+          </Grid>
         </Container>
       </Box>
     );
@@ -801,484 +483,185 @@ const HSBCProceduresHub = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f6fa' }}>
-      {/* 🌟 **SPECTACULAR NEXT-GEN APP BAR** */}
-      <motion.div
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-      >
-{/* 🌟 **FIXED APP BAR** */}
-<GlassmorphismAppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
-  <Toolbar>
-    <IconButton
-      color="inherit"
-      edge="start"
-      onClick={() => setDrawerOpen(!drawerOpen)}
-      sx={{ 
-        mr: 2,
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255,255,255,0.2)',
-        borderRadius: '12px',
-        '&:hover': {
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.1) 100%)',
-          transform: 'translateY(-2px)'
-        }
-      }}
-    >
-      <MenuIcon />
-    </IconButton>
-    
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-      {/* HSBC Hexagon Logo */}
-      <HSBCHexagonLogo>
-        <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '11px' }}>
-          HBEG
-        </Typography>
-      </HSBCHexagonLogo>
-      
-      <Box>
-        <Typography variant="h6" component="div" color="white" fontWeight={800}>
-          Procedures Hub
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
-          Next-Generation Document Management
-        </Typography>
-      </Box>
-      
-      {/* Status Chips */}
-      <Chip 
-        icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
-        label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
-        size="small"
-        sx={{
-          ml: 2,
-          background: sharePointAvailable 
-            ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'
-            : 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
-          color: 'white',
-          fontWeight: 700,
-          border: 'none',
-          '&:hover': {
-            transform: 'translateY(-2px)'
-          }
-        }}
-      />
-      
-      {sharePointAvailable && (
-        <Chip 
-          label={`${procedures.length} procedures`}
-          size="small"
-          sx={{
-            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
-            color: 'white',
-            fontWeight: 700,
-            border: 'none'
-          }}
-        />
-      )}
-    </Box>
-
-{/* 🔄 **AMENDMENT HISTORY SECTION** */}
-{procedure.amendment_summary && (
-  <motion.div
-    initial={{ opacity: 0, height: 0 }}
-    animate={{ opacity: 1, height: 'auto' }}
-    transition={{ duration: 0.3 }}
-  >
-    <Divider sx={{ my: 2 }} />
-    <Box sx={{ 
-      background: alpha('#9c27b0', 0.05),
-      border: `1px solid ${alpha('#9c27b0', 0.2)}`,
-      borderRadius: 2,
-      p: 2,
-      mb: 2
-    }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-        <History sx={{ color: '#9c27b0', fontSize: 20 }} />
-        <Typography variant="h6" fontWeight={700} color="#7b1fa2">
-          Latest Amendment
-        </Typography>
-        <Chip 
-          label="AMENDED"
-          size="small"
-          sx={{ 
-            backgroundColor: '#9c27b0',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: '0.7rem'
-          }}
-        />
-      </Stack>
-      
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        <strong>Summary:</strong> {procedure.amendment_summary}
-      </Typography>
-      
-      <Stack direction="row" spacing={2} flexWrap="wrap">
-        <Typography variant="caption" color="text.secondary">
-          <strong>Last Modified:</strong> {formatDate(procedure.last_modified_on)}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          <strong>Modified By:</strong> {procedure.last_modified_by || 'System'}
-        </Typography>
-        {procedure.amendment_date && (
-          <Typography variant="caption" color="text.secondary">
-            <strong>Amendment Date:</strong> {formatDate(procedure.amendment_date)}
-          </Typography>
-        )}
-      </Stack>
-    </Box>
-  </motion.div>
-)}
-
-{/* 📊 **QUALITY SCORE COMPARISON** (if amended) */}
-{procedure.previous_score && procedure.previous_score !== procedure.score && (
-  <Box sx={{ 
-    background: alpha('#2196f3', 0.05),
-    border: `1px solid ${alpha('#2196f3', 0.2)}`,
-    borderRadius: 2,
-    p: 2,
-    mb: 2
-  }}>
-    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-      <TrendingUp sx={{ color: '#2196f3', fontSize: 20 }} />
-      <Typography variant="h6" fontWeight={700} color="#1976d2">
-        Quality Score Improvement
-      </Typography>
-    </Stack>
-    
-    <Stack direction="row" spacing={2} alignItems="center">
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">Previous</Typography>
-        <Typography variant="h6" fontWeight={700} color="#ff9800">
-          {procedure.previous_score || 0}%
-        </Typography>
-      </Box>
-      <ArrowForward sx={{ color: '#2196f3' }} />
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="caption" color="text.secondary">Current</Typography>
-        <Typography variant="h6" fontWeight={700} color="#4caf50">
-          {procedure.score || 0}%
-        </Typography>
-      </Box>
-      <Box sx={{ 
-        ml: 2,
-        px: 2,
-        py: 1,
-        backgroundColor: procedure.score > procedure.previous_score ? '#e8f5e9' : '#ffebee',
-        borderRadius: 1
-      }}>
-        <Typography variant="body2" fontWeight={700} 
-          color={procedure.score > procedure.previous_score ? '#2e7d32' : '#c62828'}>
-          {procedure.score > procedure.previous_score ? '+' : ''}
-          {((procedure.score || 0) - (procedure.previous_score || 0)).toFixed(1)}%
-        </Typography>
-      </Box>
-    </Stack>
-  </Box>
-)}
-    {user && (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        {/* Notifications Bell */}
-        <IconButton
-          color="inherit"
-          onClick={handleNotificationClick}
-          sx={{ 
-            background: unreadCount > 0 
-              ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
-              : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: '12px',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.3)'
-            }
-          }}
-        >
-          <Badge 
-            badgeContent={unreadCount} 
-            color="error"
-            invisible={unreadCount === 0}
-            sx={{
-              '& .MuiBadge-badge': {
-                background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
-                color: 'white',
-                fontWeight: 900
-              }
-            }}
+      <GlassmorphismAppBar position="fixed" sx={{ zIndex: theme.zIndex.drawer + 1 }}>
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            edge="start"
+            onClick={() => setDrawerOpen(!drawerOpen)}
+            sx={{ mr: 2 }}
           >
-            <Notifications />
-          </Badge>
-        </IconButton>
-
-        <Chip 
-          avatar={<Avatar sx={{ bgcolor: '#d40000' }}>{user.displayName?.[0] || 'U'}</Avatar>}
-          label={user.displayName || user.staffId}
-          sx={{ 
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.2)',
-            fontWeight: 700,
-            '&:hover': {
-              transform: 'translateY(-2px)'
-            }
-          }}
-        />
-        
-        <Chip 
-          label={user.role || 'User'}
-          size="small"
-          sx={{ 
-            background: user.role === 'admin' 
-              ? 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)'
-              : 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
-            color: 'white',
-            fontWeight: 700,
-            border: 'none'
-          }}
-        />
-      </Box>
-    )}
-  </Toolbar>
-</GlassmorphismAppBar>
-        
-      </motion.div>
-
-      {/* 🔔 **SPECTACULAR NOTIFICATIONS MENU** */}
-      {/* 🔔 **FIXED NOTIFICATIONS MENU** */}
-<Menu
-  anchorEl={notificationAnchor}
-  open={Boolean(notificationAnchor)}
-  onClose={handleNotificationClose}
-  PaperProps={{
-    sx: {
-      width: 420,
-      maxHeight: 550,
-      overflow: 'auto',
-      background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
-      backdropFilter: 'blur(20px)',
-      border: '1px solid rgba(255,255,255,0.1)',
-      borderRadius: '20px',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.4)'
-    }
-  }}
-  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
->
-  {/* Header */}
-  <Box sx={{ 
-    p: 3, 
-    borderBottom: '1px solid rgba(255,255,255,0.1)'
-  }}>
-    <Typography variant="h6" fontWeight="bold" color="white">
-      Notifications
-    </Typography>
-    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-      {notifications.length} total • {unreadCount} high priority
-    </Typography>
-    {sharePointAvailable && (
-      <Chip 
-        label="Live Data" 
-        size="small" 
-        sx={{
-          ml: 1,
-          background: 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)',
-          color: 'white',
-          fontSize: '0.6rem',
-          height: 20
-        }}
-      />
-    )}
-  </Box>
-
-  {notifications.length === 0 ? (
-    <MenuItem sx={{ py: 6 }}>
-      <Box sx={{ textAlign: 'center', width: '100%' }}>
-        <CheckCircle sx={{ fontSize: 64, color: '#4caf50', mb: 2 }} />
-        <Typography variant="h6" color="white" fontWeight={700}>
-          All caught up! 🎉
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-          No notifications at this time
-        </Typography>
-      </Box>
-    </MenuItem>
-  ) : (
-    notifications.slice(0, 10).map((notification) => (
-      <MenuItem
-        key={notification.id}
-        onClick={() => handleNotificationItemClick(notification)}
-        sx={{ 
-          borderLeft: `4px solid ${getNotificationColor(notification.type)}`,
-          py: 2,
-          px: 3,
-          background: 'rgba(255,255,255,0.02)',
-          '&:hover': {
-            background: `${alpha(getNotificationColor(notification.type), 0.1)}`,
-            transform: 'translateX(8px)'
-          }
-        }}
-      >
-        <ListItemIcon sx={{ 
-          color: getNotificationColor(notification.type),
-          minWidth: 40
-        }}>
-          {notification.icon}
-        </ListItemIcon>
-        <ListItemText
-          sx={{ color: 'white' }}
-          primary={
-            <Typography variant="body1" fontWeight={700} color="white">
-              {notification.title}
-            </Typography>
-          }
-          secondary={
-            <Box>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                {notification.message}
+            <MenuIcon />
+          </IconButton>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+            <HSBCHexagonLogo size={40}>
+              <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '11px' }}>
+                HBEG
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
-                {formatTimeAgo(notification.timestamp)}
+            </HSBCHexagonLogo>
+            
+            <Box>
+              <Typography variant="h6" component="div" color="white" fontWeight={800}>
+                Procedures Hub
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>
+                Next-Generation Document Management
               </Typography>
             </Box>
-          }
-        />
-        {notification.priority === 'high' && (
-          <Chip 
-            label="High" 
-            size="small"
-            sx={{
-              background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
-              color: 'white',
-              fontSize: '0.6rem',
-              height: 20
-            }}
-          />
-        )}
-      </MenuItem>
-    ))
-  )}
+            
+            <Chip 
+              icon={sharePointAvailable ? <CloudDone /> : <CloudOff />}
+              label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
+              size="small"
+              sx={{
+                ml: 2,
+                background: sharePointAvailable 
+                  ? 'linear-gradient(135deg, #4caf50 0%, #388e3c 100%)'
+                  : 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
+                color: 'white',
+                fontWeight: 700,
+                border: 'none'
+              }}
+            />
+          </Box>
 
-  {notifications.length > 10 && (
-    <>
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-      <MenuItem 
-        onClick={handleNotificationClose} 
-        sx={{ 
-          justifyContent: 'center',
-          py: 2,
-          '&:hover': {
-            background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)'
+          {user && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <IconButton
+                color="inherit"
+                onClick={handleNotificationClick}
+              >
+                <Badge badgeContent={unreadCount} color="error">
+                  <Notifications />
+                </Badge>
+              </IconButton>
+
+              <Chip 
+                avatar={<Avatar sx={{ bgcolor: '#d40000' }}>{user.displayName?.[0] || 'U'}</Avatar>}
+                label={user.displayName || user.staffId}
+                sx={{ 
+                  color: 'white',
+                  borderColor: 'white'
+                }}
+              />
+              
+              <Chip 
+                label={user.role || 'User'}
+                size="small"
+                sx={{ 
+                  bgcolor: user.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
+                  color: 'white'
+                }}
+              />
+            </Box>
+          )}
+        </Toolbar>
+      </GlassmorphismAppBar>
+
+      <Menu
+        anchorEl={notificationAnchor}
+        open={Boolean(notificationAnchor)}
+        onClose={handleNotificationClose}
+        PaperProps={{
+          sx: {
+            width: 420,
+            maxHeight: 550,
+            overflow: 'auto',
+            background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '20px'
           }
         }}
       >
-        <Typography variant="body2" color="white" fontWeight={700}>
-          View All {notifications.length} Notifications
-        </Typography>
-      </MenuItem>
-    </>
-  )}
-</Menu>
+        <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <Typography variant="h6" fontWeight="bold" color="white">
+            Notifications
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+            {notifications.length} total • {unreadCount} high priority
+          </Typography>
+        </Box>
 
-      {/* Navigation Drawer */}
+        {notifications.length === 0 ? (
+          <MenuItem sx={{ py: 6 }}>
+            <Box sx={{ textAlign: 'center', width: '100%' }}>
+              <CheckCircle sx={{ fontSize: 64, color: '#4caf50', mb: 2 }} />
+              <Typography variant="h6" color="white" fontWeight={700}>
+                All caught up! 🎉
+              </Typography>
+            </Box>
+          </MenuItem>
+        ) : (
+          notifications.slice(0, 10).map((notification) => (
+            <MenuItem
+              key={notification.id}
+              onClick={() => handleNotificationItemClick(notification)}
+              sx={{ 
+                borderLeft: `4px solid ${getNotificationColor(notification.type)}`,
+                py: 2,
+                px: 3,
+                '&:hover': {
+                  background: `${alpha(getNotificationColor(notification.type), 0.1)}`
+                }
+              }}
+            >
+              <ListItemIcon sx={{ color: getNotificationColor(notification.type) }}>
+                {notification.icon}
+              </ListItemIcon>
+              <ListItemText
+                sx={{ color: 'white' }}
+                primary={notification.title}
+                secondary={
+                  <Box>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
+                      {notification.message}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                      {formatTimeAgo(notification.timestamp)}
+                    </Typography>
+                  </Box>
+                }
+              />
+            </MenuItem>
+          ))
+        )}
+      </Menu>
+
       <NavigationDrawer 
         open={drawerOpen} 
         onClose={() => setDrawerOpen(false)}
         user={user}
         isAdmin={isAdmin}
+        isUploader={isUploader}
         procedures={procedures}
         dashboardData={dashboardData}
       />
 
-      {/* Main Content */}
-      <Box component="main" sx={{ 
-        flexGrow: 1, 
-        pt: 8, 
-        minHeight: '100vh'
-      }}>
+      <Box component="main" sx={{ flexGrow: 1, pt: 8, minHeight: '100vh' }}>
         <Container maxWidth="xl" sx={{ py: 3 }}>
-          {/* SharePoint Status Alert */}
           {!sharePointAvailable && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <Alert 
-                severity="info" 
-                sx={{ 
-                  mb: 3,
-                  background: 'linear-gradient(135deg, rgba(33,150,243,0.1) 0%, rgba(33,150,243,0.05) 100%)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(33,150,243,0.2)',
-                  borderRadius: '12px'
-                }}
-              >
-                <Typography variant="body2">
-                  <strong>Demo Mode:</strong> SharePoint connection not available. 
-                  Displaying sample data matching your SharePoint list structure.
-                </Typography>
-                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                  Your SharePoint fields: {[
-                    'Title', 'ExpiryDate', 'PrimaryOwner', 'PrimaryOwnerEmail', 
-                    'LOB', 'QualityScore', 'RiskRating', 'DocumentLink'
-                  ].join(', ')}
-                </Typography>
-              </Alert>
-            </motion.div>
+            <Alert severity="info" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>Demo Mode:</strong> SharePoint connection not available. 
+                Displaying sample data matching your SharePoint list structure.
+              </Typography>
+            </Alert>
           )}
 
-          {/* SharePoint Success Alert */}
           {sharePointAvailable && procedures.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <Alert 
-                severity="success" 
-                sx={{ 
-                  mb: 3,
-                  background: 'linear-gradient(135deg, rgba(76,175,80,0.1) 0%, rgba(76,175,80,0.05) 100%)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(76,175,80,0.2)',
-                  borderRadius: '12px'
-                }}
-              >
-                <Typography variant="body2">
-                  <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures using your exact SharePoint list fields.
-                </Typography>
-                <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                  Mapped fields: Title, ExpiryDate, PrimaryOwner, LOB, QualityScore, RiskRating, DocumentLink, and more.
-                </Typography>
-              </Alert>
-            </motion.div>
+            <Alert severity="success" sx={{ mb: 3 }}>
+              <Typography variant="body2">
+                <strong>SharePoint Connected:</strong> Successfully loaded {procedures.length} procedures.
+              </Typography>
+            </Alert>
           )}
 
-          {/* Error Alert */}
           {error && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Alert 
-                severity="warning" 
-                sx={{ 
-                  mb: 3,
-                  background: 'linear-gradient(135deg, rgba(255,152,0,0.1) 0%, rgba(255,152,0,0.05) 100%)',
-                  backdropFilter: 'blur(10px)',
-                  border: '1px solid rgba(255,152,0,0.2)',
-                  borderRadius: '12px'
-                }}
-                onClose={() => setError(null)}
-              >
-                <Typography variant="body2">
-                  {error}
-                </Typography>
-              </Alert>
-            </motion.div>
+            <Alert severity="warning" sx={{ mb: 3 }} onClose={() => setError(null)}>
+              <Typography variant="body2">{error}</Typography>
+            </Alert>
           )}
 
           <PageRouter
