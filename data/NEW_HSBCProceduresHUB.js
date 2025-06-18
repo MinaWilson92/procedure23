@@ -878,6 +878,58 @@ const HSBCProceduresHub = () => {
         />
       )}
     </Box>
+{/* 🔄 **AMENDMENT HISTORY SECTION** */}
+{procedure.amendment_summary && (
+  <motion.div
+    initial={{ opacity: 0, height: 0 }}
+    animate={{ opacity: 1, height: 'auto' }}
+    transition={{ duration: 0.3 }}
+  >
+    <Divider sx={{ my: 2 }} />
+    <Box sx={{ 
+      background: alpha('#9c27b0', 0.05),
+      border: `1px solid ${alpha('#9c27b0', 0.2)}`,
+      borderRadius: 2,
+      p: 2,
+      mb: 2
+    }}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+        <History sx={{ color: '#9c27b0', fontSize: 20 }} />
+        <Typography variant="h6" fontWeight={700} color="#7b1fa2">
+          Latest Amendment
+        </Typography>
+        <Chip 
+          label="AMENDED"
+          size="small"
+          sx={{ 
+            backgroundColor: '#9c27b0',
+            color: 'white',
+            fontWeight: 700,
+            fontSize: '0.7rem'
+          }}
+        />
+      </Stack>
+      
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <strong>Summary:</strong> {procedure.amendment_summary}
+      </Typography>
+      
+      <Stack direction="row" spacing={2} flexWrap="wrap">
+        <Typography variant="caption" color="text.secondary">
+          <strong>Last Modified:</strong> {formatDate(procedure.last_modified_on)}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          <strong>Modified By:</strong> {procedure.last_modified_by || 'System'}
+        </Typography>
+        {procedure.amendment_date && (
+          <Typography variant="caption" color="text.secondary">
+            <strong>Amendment Date:</strong> {formatDate(procedure.amendment_date)}
+          </Typography>
+        )}
+      </Stack>
+    </Box>
+  </motion.div>
+)}
 
     {user && (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
