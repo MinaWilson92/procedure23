@@ -59,6 +59,36 @@ class DocumentAnalyzer {
   // DOCUMENT PROCESSING METHODS  
   // ============================================================================
 
+// ✅ NEW: Amendment-specific upload method
+async amendProcedureInSharePoint(amendmentData, newFile) {
+  try {
+    console.log('🔄 Processing procedure amendment in SharePoint...');
+    
+    // Simulate SharePoint amendment process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Mock successful amendment
+    const result = {
+      success: true,
+      procedureId: amendmentData.procedureId,
+      message: 'Procedure amended successfully',
+      amendmentId: Date.now(),
+      newFileUrl: `https://sharepoint.hsbc.com/sites/procedures/amended-${newFile.name}`,
+      amendmentTimestamp: new Date().toISOString()
+    };
+    
+    console.log('✅ Procedure amendment completed:', result);
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Amendment failed:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+}
+  
   async analyzeDocument(file, metadata = {}) {
     try {
       console.log('🔍 Starting client-side AI analysis...');
