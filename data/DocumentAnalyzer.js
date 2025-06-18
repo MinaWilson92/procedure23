@@ -60,24 +60,15 @@ class DocumentAnalyzer {
   // ============================================================================
 
 // ✅ NEW: Amendment-specific upload method
-async amendProcedureInSharePoint(amendmentData, newFile) {
+async amendProcedureInSharePoint(amendmentData, selectedFile) {
   try {
-    console.log('🔄 Processing procedure amendment in SharePoint...');
+    console.log('🔄 Processing procedure amendment...');
     
-    // Simulate SharePoint amendment process
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Use the enhanced SharePoint service
+    const spService = new SharePointService();
+    const result = await spService.amendProcedureInSharePoint(amendmentData, selectedFile);
     
-    // Mock successful amendment
-    const result = {
-      success: true,
-      procedureId: amendmentData.procedureId,
-      message: 'Procedure amended successfully',
-      amendmentId: Date.now(),
-      newFileUrl: `https://sharepoint.hsbc.com/sites/procedures/amended-${newFile.name}`,
-      amendmentTimestamp: new Date().toISOString()
-    };
-    
-    console.log('✅ Procedure amendment completed:', result);
+    console.log('✅ Amendment processed via SharePoint service:', result);
     return result;
     
   } catch (error) {
