@@ -1,4 +1,4 @@
-// components/NavigationDrawer.js - COMPLETE SCROLLBAR-FREE VERSION
+// components/NavigationDrawer.js - SLEEK & COMPACT VERSION
 import React, { useState } from 'react';
 import {
   Drawer, Box, Typography, Divider, List, ListItem,
@@ -26,30 +26,25 @@ const HSBCColors = {
 };
 
 // 🌟 **Advanced Animations**
-const slideIn = keyframes`
-  0% { transform: translateX(-100%); opacity: 0; }
-  100% { transform: translateX(0); opacity: 1; }
-`;
-
 const floatIcon = keyframes`
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3px); }
+  50% { transform: translateY(-2px); }
 `;
 
-// 🎨 **Styled Components - SCROLLBAR-FREE**
+// 🎨 **Styled Components - COMPACT & SLEEK**
 const GlassmorphismDrawer = styled(Drawer)(({ theme }) => ({
   '& .MuiDrawer-paper': {
-    width: 380, // ✅ INCREASED from 320 to 380 for more space
+    width: 320, // ✅ REDUCED back to 320px for more compact feel
     background: 'linear-gradient(135deg, rgba(26,26,26,0.95) 0%, rgba(45,45,45,0.9) 100%)',
     backdropFilter: 'blur(20px)',
     border: 'none',
     borderRight: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
-    overflow: 'hidden', // ✅ HIDDEN to prevent any scrollbars
+    overflow: 'hidden',
     marginTop: 64,
     display: 'flex',
     flexDirection: 'column',
-    height: 'calc(100vh - 64px)', // ✅ EXACT HEIGHT to prevent overflow
+    height: 'calc(100vh - 64px)',
   }
 }));
 
@@ -73,10 +68,10 @@ const HSBCHexagon = styled(Box)(({ theme, size = 40 }) => ({
   }
 }));
 
-const ModernMenuItem = styled(ListItem)(({ theme, isActive, itemColor }) => ({
-  margin: '4px 20px', // ✅ INCREASED horizontal margin for wider layout
-  borderRadius: '16px',
-  padding: '16px 20px', // ✅ INCREASED padding for more comfortable spacing
+const CompactMenuItem = styled(ListItem)(({ theme, isActive, itemColor }) => ({
+  margin: '2px 12px', // ✅ MUCH SMALLER margins
+  borderRadius: '12px', // ✅ SMALLER border radius
+  padding: '8px 12px', // ✅ MUCH SMALLER padding
   position: 'relative',
   overflow: 'hidden',
   cursor: 'pointer',
@@ -100,10 +95,10 @@ const ModernMenuItem = styled(ListItem)(({ theme, isActive, itemColor }) => ({
   },
   
   '&:hover': {
-    transform: 'translateX(8px)', // ✅ REDUCED movement to stay within bounds
+    transform: 'translateX(6px)', // ✅ SMALLER movement
     background: `linear-gradient(135deg, ${itemColor}20 0%, ${itemColor}10 100%)`,
     border: `1px solid ${alpha(itemColor, 0.4)}`,
-    boxShadow: `0 8px 32px ${alpha(itemColor, 0.3)}`,
+    boxShadow: `0 6px 24px ${alpha(itemColor, 0.3)}`, // ✅ SMALLER shadow
     
     '&::before': {
       left: '100%'
@@ -131,12 +126,10 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
   const theme = useTheme();
   const [hoveredItem, setHoveredItem] = useState(null);
 
-  // ✅ FIX: Get real stats from props
+  // ✅ Get real stats from props
   const totalProcedures = procedures?.length || dashboardData?.stats?.total || 0;
-  const expiringSoon = dashboardData?.stats?.expiringSoon || 0;
-  const qualityScore = dashboardData?.stats?.averageScore || 0;
 
-  // ✅ FIX: Updated menu items with correct navigation and permissions
+  // ✅ Updated menu items - COMPACT VERSION
   const menuItems = [
     { 
       id: 'home', 
@@ -158,7 +151,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
     }
   ];
 
-  // ✅ FIX: Add admin items with proper permissions and navigation
+  // ✅ Add admin items with proper permissions
   if (isAdmin) {
     menuItems.push(
       { 
@@ -198,14 +191,14 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
         keepMounted: true,
       }}
     >
-      {/* 🌟 **SPECTACULAR HEADER** */}
+      {/* 🌟 **COMPACT HEADER** */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         <Box sx={{ 
-          p: 4, // ✅ INCREASED padding for wider layout
+          p: 2.5, // ✅ SMALLER padding
           background: HSBCColors.gradients.redPrimary,
           position: 'relative',
           overflow: 'hidden',
@@ -223,16 +216,16 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
           }} />
           
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ position: 'relative', zIndex: 1 }}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <HSBCHexagon size={60}> {/* ✅ SLIGHTLY LARGER for wider layout */}
-                <Person sx={{ color: 'white', fontSize: 28 }} />
+            <Stack direction="row" alignItems="center" spacing={1.5}> {/* ✅ SMALLER spacing */}
+              <HSBCHexagon size={40}> {/* ✅ SMALLER hexagon */}
+                <Person sx={{ color: 'white', fontSize: 18 }} /> {/* ✅ SMALLER icon */}
               </HSBCHexagon>
               
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="h5" fontWeight={900} color="white"> {/* ✅ LARGER text */}
+                <Typography variant="h6" fontWeight={800} color="white" sx={{ fontSize: '1.1rem' }}> {/* ✅ SMALLER text */}
                   Navigation
                 </Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 500, fontSize: '0.7rem' }}> {/* ✅ SMALLER text */}
                   HSBC Procedures Hub
                 </Typography>
               </Box>
@@ -240,6 +233,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
             
             <IconButton 
               onClick={onClose} 
+              size="small" // ✅ SMALLER button
               sx={{ 
                 color: 'white',
                 flexShrink: 0,
@@ -249,103 +243,22 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                 }
               }}
             >
-              <Close />
+              <Close fontSize="small" /> {/* ✅ SMALLER icon */}
             </IconButton>
           </Stack>
         </Box>
       </motion.div>
 
-      {/* 👤 **USER PROFILE SECTION** */}
-      {user && (
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-        >
-          <Box sx={{ p: 4, flexShrink: 0 }}> {/* ✅ INCREASED padding */}
-            <Paper sx={{ 
-              p: 4, // ✅ INCREASED padding
-              borderRadius: '20px',
-              background: HSBCColors.gradients.glassMorphism,
-              border: '1px solid rgba(255,255,255,0.1)',
-              backdropFilter: 'blur(10px)'
-            }}>
-              <Stack direction="row" alignItems="center" spacing={3}> {/* ✅ INCREASED spacing */}
-                <Avatar sx={{ 
-                  width: 64, // ✅ LARGER avatar
-                  height: 64,
-                  background: HSBCColors.gradients.redPrimary,
-                  fontSize: '1.8rem', // ✅ LARGER text
-                  fontWeight: 900,
-                  boxShadow: '0 8px 24px rgba(219,0,17,0.3)',
-                  flexShrink: 0
-                }}>
-                  {user.displayName?.[0] || user.staffId?.[0] || 'U'}
-                </Avatar>
-                
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography 
-                    variant="h5" // ✅ LARGER text
-                    fontWeight={800} 
-                    color="white" 
-                    sx={{
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}
-                  >
-                    {user.displayName || user.staffId}
-                  </Typography>
-                  <Typography 
-                    variant="body1" // ✅ LARGER text
-                    sx={{ 
-                      color: 'rgba(255,255,255,0.7)',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      mb: 1
-                    }}
-                  >
-                    {user.email || 'user@hsbc.com'}
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
-                    <Chip 
-                      label={user.role || 'User'}
-                      size="medium" // ✅ LARGER chips
-                      sx={{ 
-                        backgroundColor: user.role === 'admin' ? '#f44336' : 'rgba(255,255,255,0.2)',
-                        color: 'white',
-                        fontWeight: 700,
-                        fontSize: '0.8rem' // ✅ LARGER text
-                      }}
-                    />
-                    <Chip 
-                      icon={<Star />}
-                      label="Active"
-                      size="medium" // ✅ LARGER chips
-                      sx={{ 
-                        backgroundColor: 'rgba(76,175,80,0.3)',
-                        color: 'white',
-                        fontWeight: 700,
-                        fontSize: '0.8rem' // ✅ LARGER text
-                      }}
-                    />
-                  </Stack>
-                </Box>
-              </Stack>
-            </Paper>
-          </Box>
-        </motion.div>
-      )}
+      {/* ✅ REMOVED USER PROFILE SECTION COMPLETELY */}
 
-      {/* 🚀 **NEXT-GEN MENU ITEMS - NO SCROLLING NEEDED** */}
+      {/* 🚀 **COMPACT MENU ITEMS** */}
       <Box sx={{ 
         flex: 1, 
-        py: 2, 
-        overflow: 'visible', // ✅ NO SCROLLING
+        py: 3, // ✅ INCREASED vertical padding to center items better
+        overflow: 'visible',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center' // ✅ CENTER the menu items
+        justifyContent: 'center'
       }}>
         <List sx={{ px: 0 }}>
           <AnimatePresence>
@@ -358,14 +271,14 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <ModernMenuItem 
+                <CompactMenuItem 
                   isActive={currentPage === item.id}
                   itemColor={item.color}
                   onClick={() => handleNavigation(item.id)}
                   onMouseEnter={() => setHoveredItem(item.id)}
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  <ListItemIcon sx={{ minWidth: 56, flexShrink: 0 }}> {/* ✅ LARGER icon area */}
+                  <ListItemIcon sx={{ minWidth: 36, flexShrink: 0 }}> {/* ✅ SMALLER icon area */}
                     <Box className="menu-icon" sx={{ 
                       color: currentPage === item.id ? item.color : 'rgba(255,255,255,0.7)',
                       transition: 'all 0.3s ease',
@@ -373,7 +286,7 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
-                      {React.cloneElement(item.icon, { fontSize: 'large' })} {/* ✅ LARGER icons */}
+                      {React.cloneElement(item.icon, { fontSize: 'medium' })} {/* ✅ SMALLER icons */}
                     </Box>
                   </ListItemIcon>
                   
@@ -382,11 +295,12 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                     primary={
                       <Typography 
                         className="menu-text"
-                        variant="h6" // ✅ LARGER text
-                        fontWeight={currentPage === item.id ? 800 : 600}
+                        variant="body1" // ✅ SMALLER text
+                        fontWeight={currentPage === item.id ? 700 : 600}
                         sx={{ 
                           color: currentPage === item.id ? item.color : 'rgba(255,255,255,0.9)',
-                          transition: 'all 0.3s ease'
+                          transition: 'all 0.3s ease',
+                          fontSize: '0.9rem' // ✅ SMALLER font size
                         }}
                       >
                         {item.label}
@@ -394,10 +308,10 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                     }
                     secondary={
                       <Typography 
-                        variant="body2" // ✅ LARGER text
+                        variant="caption" // ✅ SMALLER text
                         sx={{ 
                           color: 'rgba(255,255,255,0.6)',
-                          fontSize: '0.9rem' // ✅ LARGER text
+                          fontSize: '0.7rem' // ✅ SMALLER font size
                         }}
                       >
                         {item.description}
@@ -405,17 +319,17 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                     }
                   />
                   
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flexShrink: 0 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}> {/* ✅ SMALLER spacing */}
                     {item.badge && (
                       <Chip 
                         label={item.badge}
-                        size="medium" // ✅ LARGER badges
+                        size="small" // ✅ SMALLER badges
                         sx={{ 
                           backgroundColor: alpha(item.color, 0.2),
                           color: item.color,
                           fontWeight: 700,
-                          fontSize: '0.8rem', // ✅ LARGER text
-                          height: 28, // ✅ LARGER height
+                          fontSize: '0.65rem', // ✅ SMALLER text
+                          height: 20, // ✅ SMALLER height
                           minWidth: 'auto'
                         }}
                       />
@@ -425,38 +339,36 @@ const NavigationDrawer = ({ open, onClose, user, isAdmin, procedures, dashboardD
                       className="chevron-icon"
                       sx={{ 
                         color: alpha(item.color, 0.6),
-                        fontSize: 24, // ✅ LARGER chevron
+                        fontSize: 18, // ✅ SMALLER chevron
                         opacity: hoveredItem === item.id ? 1 : 0,
                         transform: hoveredItem === item.id ? 'translateX(0px)' : 'translateX(-10px)',
                         transition: 'all 0.3s ease'
                       }} 
                     />
                   </Stack>
-                </ModernMenuItem>
+                </CompactMenuItem>
               </motion.div>
             ))}
           </AnimatePresence>
         </List>
       </Box>
 
-      {/* ✅ REMOVED QUICK STATS SECTION COMPLETELY - NO MORE SCROLLING! */}
-      
-      {/* 🔗 **FOOTER** */}
+      {/* 🔗 **COMPACT FOOTER** */}
       <Box sx={{ 
-        p: 4, // ✅ INCREASED padding
+        p: 2, // ✅ SMALLER padding
         borderTop: '1px solid rgba(255,255,255,0.1)', 
         flexShrink: 0 
       }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 500, fontSize: '0.7rem' }}> {/* ✅ SMALLER text */}
             HSBC Procedures Hub v4.2.0
           </Typography>
-          <Stack direction="row" spacing={1}>
-            <IconButton size="medium" sx={{ color: 'rgba(255,255,255,0.6)' }}> {/* ✅ LARGER buttons */}
-              <Settings />
+          <Stack direction="row" spacing={0.5}> {/* ✅ SMALLER spacing */}
+            <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.6)' }}> {/* ✅ SMALLER buttons */}
+              <Settings fontSize="small" /> {/* ✅ SMALLER icons */}
             </IconButton>
-            <IconButton size="medium" sx={{ color: 'rgba(255,255,255,0.6)' }}> {/* ✅ LARGER buttons */}
-              <Notifications />
+            <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.6)' }}> {/* ✅ SMALLER buttons */}
+              <Notifications fontSize="small" /> {/* ✅ SMALLER icons */}
             </IconButton>
           </Stack>
         </Stack>
