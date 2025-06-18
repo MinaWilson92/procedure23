@@ -1,5 +1,6 @@
 // services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration
-import { sharePointPaths } from '../config/paths';
+import { sharePointPaths } from './paths';
+import { SharePointService } from './SharePointService';
 
 class DocumentAnalyzer {
   constructor() {
