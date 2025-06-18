@@ -169,42 +169,33 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
 
   // 🎯 **FIXED: Role-based Quick Links - corrected logic**
   const quickLinks = [
-    { 
-      title: 'All Procedures', 
-      path: 'procedures', 
-      icon: <Folder />, 
-      color: '#1976d2',
-      description: 'View all procedures',
-      count: stats.total,
-      showFor: 'all' // Show for everyone
-    }
-  ];
-
-  // Add admin-only links
-  if (isAdmin) {
-    quickLinks.push({ 
-      title: 'Admin Dashboard', 
-      path: 'admin-dashboard', 
-      icon: <AdminPanelSettings />, 
-      color: '#f44336',
-      description: 'Admin management panel',
-      count: '⚙️',
-      showFor: 'admin'
-    });
+  { 
+    title: 'All Procedures', 
+    path: 'procedures', 
+    icon: <Folder />, 
+    color: HSBCColors.primary,
+    description: 'View all procedures',
+    count: stats.total,
+    showFor: 'all'
   }
+];
 
-  // Add uploader links (admins + uploaders)
-  if (isAdmin || isUploader) {
-    quickLinks.push({ 
-      title: 'Upload New', 
-      path: 'admin-panel', 
-      icon: <CloudUpload />, 
-      color: '#7b1fa2',
-      description: 'Upload procedure',
-      count: '+',
-      showFor: 'uploader'
-    });
-  }
+// Add My Dashboard link for uploaders/admins
+if (isAdmin || isUploader) {
+  quickLinks.unshift({ 
+    title: 'My Dashboard', 
+    path: 'my-dashboard', 
+    icon: <ManageAccounts />, 
+    color: '#4caf50',
+    description: 'Manage my procedures',
+    count: procedures?.filter(p => 
+      p.uploaded_by === user?.staffId || 
+      p.uploaded_by === user?.displayName ||
+      p.uploaded_by_user_id === user?.staffId
+    ).length || 0,
+    showFor: 'uploader'
+  });
+}
 
   // Custom tooltip for charts
   const CustomTooltip = ({ active, payload, label }) => {
@@ -761,8 +752,8 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
 
      {/* 🎯 **FIXED: Role-based Quick Access Links** */}
      <Grid container spacing={3} sx={{ mb: 4 }}>
-       {quickLinks.map((link, index) => (
-         <Grid item xs={12} md={quickLinks.length === 3 ? 4 : 6} key={link.path}>
+       {s.map((link, index) => (
+         <Grid item xs={12} md={s.length === 3 ? 4 : 6} key={link.path}>
            <motion.div
              initial={{ opacity: 0, y: 20 }}
              animate={{ opacity: 1, y: 0 }}
