@@ -878,6 +878,7 @@ const HSBCProceduresHub = () => {
         />
       )}
     </Box>
+
 {/* 🔄 **AMENDMENT HISTORY SECTION** */}
 {procedure.amendment_summary && (
   <motion.div
@@ -931,6 +932,52 @@ const HSBCProceduresHub = () => {
   </motion.div>
 )}
 
+{/* 📊 **QUALITY SCORE COMPARISON** (if amended) */}
+{procedure.previous_score && procedure.previous_score !== procedure.score && (
+  <Box sx={{ 
+    background: alpha('#2196f3', 0.05),
+    border: `1px solid ${alpha('#2196f3', 0.2)}`,
+    borderRadius: 2,
+    p: 2,
+    mb: 2
+  }}>
+    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+      <TrendingUp sx={{ color: '#2196f3', fontSize: 20 }} />
+      <Typography variant="h6" fontWeight={700} color="#1976d2">
+        Quality Score Improvement
+      </Typography>
+    </Stack>
+    
+    <Stack direction="row" spacing={2} alignItems="center">
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography variant="caption" color="text.secondary">Previous</Typography>
+        <Typography variant="h6" fontWeight={700} color="#ff9800">
+          {procedure.previous_score || 0}%
+        </Typography>
+      </Box>
+      <ArrowForward sx={{ color: '#2196f3' }} />
+      <Box sx={{ textAlign: 'center' }}>
+        <Typography variant="caption" color="text.secondary">Current</Typography>
+        <Typography variant="h6" fontWeight={700} color="#4caf50">
+          {procedure.score || 0}%
+        </Typography>
+      </Box>
+      <Box sx={{ 
+        ml: 2,
+        px: 2,
+        py: 1,
+        backgroundColor: procedure.score > procedure.previous_score ? '#e8f5e9' : '#ffebee',
+        borderRadius: 1
+      }}>
+        <Typography variant="body2" fontWeight={700} 
+          color={procedure.score > procedure.previous_score ? '#2e7d32' : '#c62828'}>
+          {procedure.score > procedure.previous_score ? '+' : ''}
+          {((procedure.score || 0) - (procedure.previous_score || 0)).toFixed(1)}%
+        </Typography>
+      </Box>
+    </Stack>
+  </Box>
+)}
     {user && (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {/* Notifications Bell */}
