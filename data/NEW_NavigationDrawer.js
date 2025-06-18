@@ -8,7 +8,7 @@ import {
 import {
   Home, Dashboard, Description, AdminPanelSettings, CloudUpload,
   Person, Notifications, Settings, TrendingUp, Star,
-  ChevronRight, Close, BarChart
+  ChevronRight, Close, BarChart, ManageAccounts
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
