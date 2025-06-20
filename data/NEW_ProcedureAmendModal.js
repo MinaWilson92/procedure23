@@ -14,22 +14,33 @@ import {
   History, Refresh, Assignment, Security, ExpandMore, Psychology
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigation } from '../contexts/NavigationContext';
 import DocumentAnalyzer from '../services/DocumentAnalyzer';
 import EmailNotificationService from '../services/EmailNotificationService';
 
 class AmendmentErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorDetails: null };
   }
 
   static getDerivedStateFromError(error) {
-    console.error('Amendment Error Boundary caught:', error);
-    return { hasError: true, error };
+    console.error('🚨 Amendment Error Boundary caught:', error);
+    return { 
+      hasError: true, 
+      error: error.message || 'Unknown error',
+      errorDetails: error.stack || 'No stack trace'
+    };
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Amendment Error Details:', error, errorInfo);
+    console.error('🚨 Amendment Error Details:', {
+      error,
+      errorInfo,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString()
+    });
   }
 
   render() {
@@ -40,21 +51,37 @@ class AmendmentErrorBoundary extends React.Component {
             ❌ Amendment Processing Error
           </Typography>
           <Typography variant="body2" sx={{ mb: 2 }}>
-            An error occurred during the amendment process. This might be due to:
-            • Special characters in the amendment data
-            • AI analysis response formatting
-            • Network connectivity issues
+            <strong>Error:</strong> {this.state.error}
           </Typography>
-          <Button
-            variant="outlined"
-            onClick={() => {
-              this.setState({ hasError: false, error: null });
-              window.location.reload(); // Force refresh to reset state
-            }}
-            sx={{ mt: 1 }}
-          >
-            Reset and Try Again
-          </Button>
+          <Typography variant="caption" sx={{ mb: 2, display: 'block' }}>
+            This error might be caused by:
+            • URL encoding issues in data (%2, %20, etc.)
+            • React state management conflicts
+            • SharePoint environment compatibility
+          </Typography>
+          <Stack direction="row" spacing={2}>
+            <Button 
+              variant="outlined" 
+              onClick={() => {
+                this.setState({ hasError: false, error: null, errorDetails: null });
+              }}
+            >
+              Try Again
+            </Button>
+            <Button 
+              variant="contained" 
+              onClick={() => {
+                // ✅ SharePoint-safe page refresh
+                if (window.location.reload) {
+                  window.location.reload();
+                } else {
+                  window.location.href = window.location.href;
+                }
+              }}
+            >
+              Refresh Page
+            </Button>
+          </Stack>
         </Alert>
       );
     }
@@ -149,6 +176,7 @@ const ProcedureAmendModal = ({
   sharePointAvailable,
   onSuccess
 }) => {
+    const { navigate } = useNavigation();
   const theme = useTheme();
 
   // Form state
@@ -240,6 +268,7 @@ const ProcedureAmendModal = ({
     }
   };
 
+  
   const analyzeDocument = async () => {
     if (!selectedFile) {
       alert('Please select a document file before analyzing.');
@@ -249,31 +278,71 @@ const ProcedureAmendModal = ({
     try {
       setSubmitStatus('analyzing');
       setLoading(true);
-
+      
       console.log('🔍 Starting AI document analysis for amendment...');
 
-      const analysisResult = await documentAnalyzer.analyzeDocument(selectedFile, {
-        name: procedure.name,
-        lob: procedure.lob,
-        subsection: procedure.procedure_subsection,
+      // ✅ COMPLETELY SANITIZED METADATA - Remove ALL potential problematic characters
+      const cleanMetadata = {
+        name: String(procedure?.name || 'Unknown Procedure').replace(/[%&+#]/g, ''),
+        lob: String(procedure?.lob || 'Unknown').replace(/[%&+#]/g, ''),
+        subsection: String(procedure?.procedure_subsection || 'Unknown').replace(/[%&+#]/g, ''),
         isAmendment: true,
-        originalScore: procedure.score
-      });
+        originalScore: Number(procedure?.score) || 0
+      };
 
-      setDocumentAnalysis(analysisResult);
+      console.log('🔍 Using completely sanitized metadata:', cleanMetadata);
+
+      // ✅ WRAP ANALYSIS IN TRY-CATCH
+      let analysisResult;
+      try {
+        analysisResult = await documentAnalyzer.analyzeDocument(selectedFile, cleanMetadata);
+      } catch (analysisError) {
+        console.error('❌ AI Analysis error:', analysisError);
+        throw new Error(`AI Analysis failed: ${analysisError.message}`);
+      }
+
+      // ✅ SANITIZE ALL ANALYSIS RESULTS
+      const safeCopyObject = (obj) => {
+        if (!obj || typeof obj !== 'object') return obj;
+        
+        try {
+          // Deep clone and sanitize
+          return JSON.parse(JSON.stringify(obj).replace(/[%&+#]/g, ''));
+        } catch (e) {
+          console.warn('Could not sanitize object:', e);
+          return {};
+        }
+      };
+
+      const sanitizedResult = {
+        score: Number(analysisResult?.score) || 0,
+        accepted: Boolean(analysisResult?.accepted),
+        details: safeCopyObject(analysisResult?.details) || {},
+        aiRecommendations: Array.isArray(analysisResult?.aiRecommendations) 
+          ? analysisResult.aiRecommendations.map(rec => String(rec).replace(/[%&+#]/g, ''))
+          : []
+      };
+
+      console.log('✅ Sanitized analysis result:', sanitizedResult);
+
+      setDocumentAnalysis(sanitizedResult);
       setActiveStep(2);
       setSubmitStatus('ready');
 
-      console.log('✅ Document analysis completed:', analysisResult);
-
     } catch (err) {
       console.error('❌ Analysis failed:', err);
-      alert(`Analysis failed: ${err.message}`);
+      
+      // ✅ SAFE ERROR MESSAGE
+      const safeErrorMessage = String(err.message || 'Unknown error').replace(/[%&+#]/g, '');
+      alert(`Analysis failed: ${safeErrorMessage}`);
+      
       setSubmitStatus('ready');
+      setDocumentAnalysis(null);
     } finally {
       setLoading(false);
     }
   };
+
 
   const validateAmendmentForm = () => {
     const errors = [];
@@ -319,78 +388,84 @@ const ProcedureAmendModal = ({
       setLoading(true);
       setSubmitStatus('uploading');
       setActiveStep(3);
-
+      
       console.log('🚀 Starting procedure amendment process...');
 
-      // Prepare amendment data
-      const amendmentData = {
-        procedureId: procedure.id,
-        originalName: procedure.name,
-        originalLOB: procedure.lob,
-        originalPrimaryOwner: procedure.primary_owner,
-        originalPrimaryOwnerEmail: procedure.primary_owner_email,
-        originalExpiry: procedure.expiry,
-
-        // Updated fields
-        secondary_owner: formData.secondary_owner,
-        secondary_owner_email: formData.secondary_owner_email,
-        amendment_summary: formData.amendment_summary,
-
+      // ✅ COMPLETELY SANITIZE ALL AMENDMENT DATA
+      const sanitizedAmendmentData = {
+        procedureId: Number(procedure?.id) || 0,
+        originalName: String(procedure?.name || '').replace(/[%&+#]/g, ''),
+        originalLOB: String(procedure?.lob || '').replace(/[%&+#]/g, ''),
+        originalPrimaryOwner: String(procedure?.primary_owner || '').replace(/[%&+#]/g, ''),
+        originalPrimaryOwnerEmail: String(procedure?.primary_owner_email || '').replace(/[%&+#]/g, ''),
+        originalExpiry: procedure?.expiry || new Date().toISOString(),
+        
+        // Sanitized updated fields
+        secondary_owner: String(formData.secondary_owner || '').replace(/[%&+#]/g, ''),
+        secondary_owner_email: String(formData.secondary_owner_email || '').replace(/[%&+#]/g, ''),
+        amendment_summary: String(formData.amendment_summary || '').replace(/[%&+#]/g, ''),
+        
         // Amendment metadata
-        amended_by: user?.staffId,
-        amended_by_name: user?.displayName,
-        amended_by_role: user?.role,
+        amended_by: String(user?.staffId || 'Unknown').replace(/[%&+#]/g, ''),
+        amended_by_name: String(user?.displayName || 'Unknown').replace(/[%&+#]/g, ''),
+        amended_by_role: String(user?.role || 'User').replace(/[%&+#]/g, ''),
         amendment_date: new Date().toISOString(),
         last_modified_on: new Date().toISOString(),
-        last_modified_by: user?.displayName,
-
-        // New quality data
-        new_score: documentAnalysis.score,
-        new_analysis_details: documentAnalysis.details,
-        new_ai_recommendations: documentAnalysis.aiRecommendations,
-
+        last_modified_by: String(user?.displayName || 'Unknown').replace(/[%&+#]/g, ''),
+        
+        // Sanitized quality data
+        new_score: Number(documentAnalysis?.score) || 0,
+        new_analysis_details: documentAnalysis?.details || {},
+        new_ai_recommendations: documentAnalysis?.aiRecommendations || [],
+        
         // File information
-        original_filename: selectedFile.name,
-        file_size: selectedFile.size
+        original_filename: selectedFile?.name || 'unknown.pdf',
+        file_size: selectedFile?.size || 0
       };
 
-      // Upload to SharePoint (mock implementation)
-      const result = await documentAnalyzer.amendProcedureInSharePoint(amendmentData, selectedFile);
+      console.log('🔍 Sanitized amendment data:', sanitizedAmendmentData);
+
+      // ✅ PROCESS AMENDMENT
+      const result = await documentAnalyzer.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
+
       if (result.success) {
         console.log('✅ Procedure amended successfully');
-
-        // ✅ ENHANCED: Send comprehensive amendment notification
+        
+        // ✅ Send notifications with sanitized data
         try {
           await emailService.triggerProcedureAmendmentNotification({
-            procedureName: procedure.name,
-            procedureId: procedure.id,
-            amendedBy: user?.displayName,
-            amendmentSummary: formData.amendment_summary,
+            procedureName: sanitizedAmendmentData.originalName,
+            procedureId: sanitizedAmendmentData.procedureId,
+            amendedBy: sanitizedAmendmentData.amended_by_name,
+            amendmentSummary: sanitizedAmendmentData.amendment_summary,
             amendmentDate: new Date().toLocaleDateString(),
-            primaryOwner: procedure.primary_owner,
-            primaryOwnerEmail: procedure.primary_owner_email,
-            secondaryOwnerEmail: formData.secondary_owner_email,
-            lineOfBusiness: procedure.lob,
-            originalQualityScore: procedure.score,
-            newQualityScore: documentAnalysis.score
+            primaryOwner: sanitizedAmendmentData.originalPrimaryOwner,
+            primaryOwnerEmail: sanitizedAmendmentData.originalPrimaryOwnerEmail,
+            secondaryOwnerEmail: sanitizedAmendmentData.secondary_owner_email,
+            lineOfBusiness: sanitizedAmendmentData.originalLOB,
+            originalQualityScore: procedure?.score || 0,
+            newQualityScore: sanitizedAmendmentData.new_score
           });
           console.log('✅ Amendment notification sent successfully');
         } catch (emailError) {
           console.warn('⚠️ Amendment successful but email notification failed:', emailError);
         }
-
+        
         setSubmitStatus('success');
         setTimeout(() => {
           onSuccess();
+          // ✅ Use custom navigation instead of React Router
+          navigate('user-dashboard'); // or whatever page you want to go to
         }, 2000);
-
+        
       } else {
         throw new Error(result.message || 'Amendment failed');
       }
 
     } catch (err) {
       console.error('❌ Amendment failed:', err);
-      alert(`Amendment failed: ${err.message}`);
+      const safeError = String(err.message || 'Unknown error').replace(/[%&+#]/g, '');
+      alert(`Amendment failed: ${safeError}`);
       setSubmitStatus('error');
     } finally {
       setLoading(false);
