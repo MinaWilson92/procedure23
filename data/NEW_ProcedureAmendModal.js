@@ -18,6 +18,51 @@ import { motion, AnimatePresence } from 'framer-motion';
 import DocumentAnalyzer from '../services/DocumentAnalyzer';
 import EmailNotificationService from '../services/EmailNotificationService';
 
+class AmendmentErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    console.error('Amendment Error Boundary caught:', error);
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Amendment Error Details:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Alert severity="error" sx={{ m: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            ❌ Amendment Processing Error
+          </Typography>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            An error occurred during the amendment process. This might be due to:
+            • Special characters in the amendment data
+            • AI analysis response formatting
+            • Network connectivity issues
+          </Typography>
+          <Button 
+            variant="outlined" 
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload(); // Force refresh to reset state
+            }}
+            sx={{ mt: 1 }}
+          >
+            Reset and Try Again
+          </Button>
+        </Alert>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 // 🎨 **HSBC Brand Colors**
 const HSBCColors = {
   primary: '#DB0011',
@@ -32,6 +77,15 @@ const HSBCColors = {
     errorGlass: 'linear-gradient(135deg, rgba(244,67,54,0.1) 0%, rgba(244,67,54,0.05) 100%)'
   }
 };
+
+const ProcedureAmendModal = ({ 
+  open, 
+  onClose, 
+  procedure, 
+  user, 
+  sharePointAvailable, 
+  onSuccess 
+}) => {
 
 // 🌟 **Advanced Animations**
 const pulseGlow = keyframes`
@@ -1004,7 +1058,8 @@ if (result.success) {
           </Typography>
         </Box>
       </Backdrop>
-    </EnhancedDialog>
+   </EnhancedDialog>
+    </AmendmentErrorBoundary>
   );
 };
 
