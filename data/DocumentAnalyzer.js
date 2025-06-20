@@ -61,13 +61,34 @@ class DocumentAnalyzer {
   // ============================================================================
 
 // ✅ NEW: Amendment-specific upload method
+
 async amendProcedureInSharePoint(amendmentData, selectedFile) {
   try {
     console.log('🔄 Processing procedure amendment...');
     
-    // Use the enhanced SharePoint service
+    // ✅ SANITIZE DATA BEFORE PROCESSING
+    const sanitizedAmendmentData = {
+      procedureId: amendmentData.procedureId,
+      originalName: this.sanitizeString(amendmentData.originalName || ''),
+      originalLOB: amendmentData.originalLOB,
+      amendment_summary: this.sanitizeString(amendmentData.amendment_summary || ''),
+      amendment_date: amendmentData.amendment_date || new Date().toISOString(),
+      amended_by: amendmentData.amended_by || 'User',
+      amended_by_name: this.sanitizeString(amendmentData.amended_by_name || 'User'),
+      secondary_owner: this.sanitizeString(amendmentData.secondary_owner || ''),
+      secondary_owner_email: this.sanitizeEmail(amendmentData.secondary_owner_email || ''),
+      // Only add analysis data if file was re-analyzed
+      ...(amendmentData.new_analysis_details && {
+        new_score: amendmentData.new_score,
+        new_analysis_details: amendmentData.new_analysis_details,
+        new_ai_recommendations: amendmentData.new_ai_recommendations
+      })
+    };
+
+    console.log('✅ Sanitized amendment data:', sanitizedAmendmentData);
+    
     const spService = new SharePointService();
-    const result = await spService.amendProcedureInSharePoint(amendmentData, selectedFile);
+    const result = await spService.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
     
     console.log('✅ Amendment processed via SharePoint service:', result);
     return result;
@@ -76,9 +97,30 @@ async amendProcedureInSharePoint(amendmentData, selectedFile) {
     console.error('❌ Amendment failed:', error);
     return {
       success: false,
-      message: error.message
+      message: `Amendment failed: ${error.message}`
     };
   }
+}
+
+// ✅ ADD THESE HELPER METHODS
+sanitizeString(str) {
+  if (!str || typeof str !== 'string') return '';
+  
+  // Remove potentially problematic characters and decode any URL encoding
+  return str
+    .replace(/%[0-9A-Fa-f]{2}/g, '') // Remove URL encoded characters
+    .replace(/[<>]/g, '') // Remove HTML brackets
+    .trim();
+}
+
+sanitizeEmail(email) {
+  if (!email || typeof email !== 'string') return '';
+  
+  // Basic email sanitization
+  return email
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9@._-]/g, '') // Keep only valid email characters
+    .trim();
 }
   
   async analyzeDocument(file, metadata = {}) {
