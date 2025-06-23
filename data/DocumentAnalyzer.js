@@ -1,4 +1,4 @@
-// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration
+// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration + Amendment Support
 import { sharePointPaths } from './paths';
 import SharePointService  from './SharePointService';
 
@@ -57,71 +57,352 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // DOCUMENT PROCESSING METHODS  
+  // ✅ FIXED: AMENDMENT SUPPORT METHODS WITH SITEASSETS
   // ============================================================================
 
-// ✅ NEW: Amendment-specific upload method
+  // ✅ SMART FOLDER DETECTION - Parse existing document URL with SiteAssets
+  parseExistingDocumentPath(documentLink) {
+    try {
+      if (!documentLink) {
+        console.warn('⚠️ No document link provided, using default folder structure');
+        return {
+          baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/employeeeng',
+          lobFolder: 'IWPB',
+          subFolder: 'General',
+          fullFolderPath: '/sites/employeeeng/SiteAssets/IWPB/General',
+          sharePointPath: 'SiteAssets/IWPB/General'
+        };
+      }
 
-async amendProcedureInSharePoint(amendmentData, selectedFile) {
-  try {
-    console.log('🔄 Processing procedure amendment...');
-    
-    // ✅ SANITIZE DATA BEFORE PROCESSING
-    const sanitizedAmendmentData = {
-      procedureId: amendmentData.procedureId,
-      originalName: this.sanitizeString(amendmentData.originalName || ''),
-      originalLOB: amendmentData.originalLOB,
-      amendment_summary: this.sanitizeString(amendmentData.amendment_summary || ''),
-      amendment_date: amendmentData.amendment_date || new Date().toISOString(),
-      amended_by: amendmentData.amended_by || 'User',
-      amended_by_name: this.sanitizeString(amendmentData.amended_by_name || 'User'),
-      secondary_owner: this.sanitizeString(amendmentData.secondary_owner || ''),
-      secondary_owner_email: this.sanitizeEmail(amendmentData.secondary_owner_email || ''),
-      // Only add analysis data if file was re-analyzed
-      ...(amendmentData.new_analysis_details && {
-        new_score: amendmentData.new_score,
-        new_analysis_details: amendmentData.new_analysis_details,
-        new_ai_recommendations: amendmentData.new_ai_recommendations
-      })
-    };
+      console.log('🔍 Analyzing existing document URL:', documentLink);
 
-    console.log('✅ Sanitized amendment data:', sanitizedAmendmentData);
-    
-    const spService = new SharePointService();
-    const result = await spService.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
-    
-    console.log('✅ Amendment processed via SharePoint service:', result);
-    return result;
-    
-  } catch (error) {
-    console.error('❌ Amendment failed:', error);
-    return {
-      success: false,
-      message: `Amendment failed: ${error.message}`
-    };
+      // Parse the URL to extract folder structure
+      const url = new URL(documentLink);
+      const pathname = url.pathname;
+
+      // ✅ CORRECT PATTERN: /sites/employeeeng/SiteAssets/IWPB/Risk Management/document.docx
+      const pathParts = pathname.split('/').filter(part => part.length > 0);
+      
+      console.log('📂 URL path parts:', pathParts);
+
+      // Find the base site structure
+      const siteIndex = pathParts.findIndex(part => part === 'sites');
+      const employeeEngIndex = pathParts.findIndex(part => part.toLowerCase() === 'employeeeng');
+      const siteAssetsIndex = pathParts.findIndex(part => part.toLowerCase() === 'siteassets');
+      
+      if (siteIndex === -1 || employeeEngIndex === -1 || siteAssetsIndex === -1) {
+        throw new Error('Invalid SharePoint URL structure - missing SiteAssets');
+      }
+
+      // Extract folder structure
+      const baseUrl = `${url.protocol}//${url.host}`;
+      
+      // ✅ CORRECT: The folder after /sites/employeeeng/SiteAssets/ should be the LOB folder
+      const lobFolderIndex = siteAssetsIndex + 1;
+      const lobFolder = pathParts[lobFolderIndex] || 'IWPB';
+      
+      // ✅ CORRECT: The folder after LOB should be the subfolder
+      const subFolderIndex = lobFolderIndex + 1;
+      const subFolder = pathParts[subFolderIndex] || 'General';
+      
+      // ✅ CORRECT: Reconstruct paths with SiteAssets
+      const folderPathParts = pathParts.slice(siteIndex, subFolderIndex + 1);
+      const fullFolderPath = `/${folderPathParts.join('/')}`;
+      
+      // ✅ CORRECT: SharePoint API path (without /sites/employeeeng)
+      const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
+
+      const result = {
+        baseUrl,
+        lobFolder,
+        subFolder,
+        fullFolderPath,
+        sharePointPath,
+        originalUrl: documentLink
+      };
+
+      console.log('✅ Parsed folder structure with SiteAssets:', result);
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error parsing document URL:', error);
+      
+      // ✅ CORRECT FALLBACK: Default structure with SiteAssets
+      const fallback = {
+        baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/employeeeng',
+        lobFolder: 'IWPB',
+        subFolder: 'General',
+        fullFolderPath: '/sites/employeeeng/SiteAssets/IWPB/General',
+        sharePointPath: 'SiteAssets/IWPB/General',
+        error: error.message
+      };
+      
+      console.log('🔄 Using fallback folder structure with SiteAssets:', fallback);
+      return fallback;
+    }
   }
-}
 
-// ✅ ADD THESE HELPER METHODS
-sanitizeString(str) {
-  if (!str || typeof str !== 'string') return '';
-  
-  // Remove potentially problematic characters and decode any URL encoding
-  return str
-    .replace(/%[0-9A-Fa-f]{2}/g, '') // Remove URL encoded characters
-    .replace(/[<>]/g, '') // Remove HTML brackets
-    .trim();
-}
+  // ✅ AMENDMENT UPLOAD METHOD - Uses existing SiteAssets folder structure
+  async amendProcedureInSharePoint(amendmentData, selectedFile) {
+    try {
+      console.log('🔄 Processing procedure amendment...');
+      
+      // ✅ PARSE EXISTING DOCUMENT URL TO GET SITEASSETS PATH
+      const existingDocumentPath = this.parseExistingDocumentPath(
+        amendmentData.original_document_link || 
+        amendmentData.targetFolderPath
+      );
+      
+      console.log('📂 Using existing SiteAssets folder structure:', existingDocumentPath);
+      
+      // ✅ SANITIZE DATA BEFORE PROCESSING
+      const sanitizedAmendmentData = {
+        procedureId: amendmentData.procedureId,
+        originalName: this.sanitizeString(amendmentData.originalName || ''),
+        originalLOB: amendmentData.originalLOB,
+        amendment_summary: this.sanitizeString(amendmentData.amendment_summary || ''),
+        amendment_date: amendmentData.amendment_date || new Date().toISOString(),
+        amended_by: amendmentData.amended_by || 'User',
+        amended_by_name: this.sanitizeString(amendmentData.amended_by_name || 'User'),
+        secondary_owner: this.sanitizeString(amendmentData.secondary_owner || ''),
+        secondary_owner_email: this.sanitizeEmail(amendmentData.secondary_owner_email || ''),
+        
+        // ✅ CORRECT: Use SiteAssets folder structure
+        sharePointPath: existingDocumentPath.sharePointPath,
+        lobFolder: existingDocumentPath.lobFolder,
+        subFolder: existingDocumentPath.subFolder,
+        
+        // Only add analysis data if file was re-analyzed
+        ...(amendmentData.new_analysis_details && {
+          new_score: amendmentData.new_score,
+          new_analysis_details: amendmentData.new_analysis_details,
+          new_ai_recommendations: amendmentData.new_ai_recommendations
+        })
+      };
 
-sanitizeEmail(email) {
-  if (!email || typeof email !== 'string') return '';
-  
-  // Basic email sanitization
-  return email
-    .toLowerCase()
-    .replace(/[^a-zA-Z0-9@._-]/g, '') // Keep only valid email characters
-    .trim();
-}
+      console.log('✅ Sanitized amendment data with SiteAssets:', sanitizedAmendmentData);
+      
+      // ✅ UPLOAD AMENDMENT WITH EXISTING SITEASSETS FOLDER STRUCTURE
+      const result = await this.uploadAmendmentWithAnalysis(sanitizedAmendmentData, selectedFile);
+      
+      console.log('✅ Amendment processed:', result);
+      return result;
+      
+    } catch (error) {
+      console.error('❌ Amendment failed:', error);
+      return {
+        success: false,
+        message: `Amendment failed: ${error.message}`
+      };
+    }
+  }
+
+  // ✅ UPLOAD AMENDMENT WITH ANALYSIS - Uses existing SiteAssets folder path
+  async uploadAmendmentWithAnalysis(amendmentData, file) {
+    try {
+      console.log('🚀 Starting amendment upload with AI analysis...');
+      
+      // 1. Analyze the new document
+      const analysisResult = await this.analyzeDocument(file, {
+        name: amendmentData.originalName,
+        lob: amendmentData.originalLOB,
+        subsection: amendmentData.subFolder
+      });
+      
+      if (!analysisResult.accepted) {
+        throw new Error(`Document quality score is ${analysisResult.score}% (minimum ${this.minimumScore}% required)`);
+      }
+
+      console.log('✅ Amendment document passed AI analysis:', {
+        score: analysisResult.score,
+        templateCompliance: analysisResult.details?.summary?.templateCompliance
+      });
+
+      // 2. Get SharePoint context
+      const requestDigest = await this.getRequestDigest();
+      
+      // 3. ✅ CORRECT: USE EXISTING SITEASSETS FOLDER PATH
+      const sharePointPath = amendmentData.sharePointPath; // Already includes SiteAssets/LOB/subfolder
+      console.log('📂 Using existing SiteAssets SharePoint path:', sharePointPath);
+      
+      // 4. Upload amendment file to existing SiteAssets folder
+      const fileUploadResult = await this.uploadFileToSharePoint(file, sharePointPath, requestDigest);
+      
+      // 5. Create amended procedure list item
+      const amendedProcedureData = {
+        __metadata: { type: 'SP.Data.ProceduresListItem' },
+        Title: amendmentData.originalName,
+        ExpiryDate: new Date().toISOString(), // Could update expiry as needed
+        PrimaryOwner: amendmentData.originalPrimaryOwner || 'Unknown',
+        PrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail || '',
+        SecondaryOwner: amendmentData.secondary_owner || '',
+        SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
+        LOB: amendmentData.originalLOB || 'Unknown',
+        ProcedureSubsection: amendmentData.subFolder || '',
+        SharePointPath: sharePointPath || '',
+        DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
+        OriginalFilename: (file && file.name) || 'unknown.doc',
+        FileSize: (file && file.size) || 0,
+        
+        // ✅ NEW AI ANALYSIS RESULTS
+        QualityScore: (analysisResult && analysisResult.score) || 0,
+        TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
+        AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
+        AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations) || []),
+        
+        // ✅ HSBC-SPECIFIC DATA
+        RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
+        PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
+        DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || []),
+        SignOffDates: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.signOffDates) || []),
+        Departments: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.departments) || []),
+        
+        // ✅ AMENDMENT METADATA
+        IsAmendment: true,
+        AmendmentOfProcedureId: amendmentData.procedureId,
+        AmendmentSummary: amendmentData.amendment_summary,
+        AmendmentDate: amendmentData.amendment_date,
+        AmendedBy: amendmentData.amended_by_name,
+        AmendedByUserId: amendmentData.amended_by,
+        
+        // Upload metadata
+        UploadedBy: amendmentData.amended_by_name || 'Unknown',
+        UploadedAt: new Date().toISOString(),
+        Status: 'Active',
+        SharePointUploaded: true
+      };
+     
+      const procedureResult = await this.createProcedureListItem(amendedProcedureData, requestDigest);
+      
+      // 6. ✅ UPDATE ORIGINAL PROCEDURE RECORD
+      await this.updateOriginalProcedureRecord(amendmentData.procedureId, {
+        status: 'Amended',
+        amended_date: amendmentData.amendment_date,
+        amended_by: amendmentData.amended_by_name,
+        new_version_id: procedureResult.Id,
+        amendment_summary: amendmentData.amendment_summary
+      }, requestDigest);
+     
+      // 7. Create audit log entry for amendment
+      await this.createAuditLogEntry({
+        __metadata: { type: 'SP.Data.AuditLogListItem' },
+        Title: `Procedure Amended: ${amendmentData.originalName}`,
+        ActionType: 'AMEND',
+        UserId: amendmentData.amended_by,
+        LogTimestamp: new Date().toISOString(),
+        Details: JSON.stringify({
+          originalProcedureId: amendmentData.procedureId,
+          newProcedureId: procedureResult.Id,
+          procedureName: amendmentData.originalName,
+          lob: amendmentData.originalLOB,
+          amendmentSummary: amendmentData.amendment_summary,
+          qualityScore: analysisResult.score,
+          templateCompliance: analysisResult.details?.summary?.templateCompliance,
+          sharePointPath: sharePointPath,
+          fileSize: file.size,
+          fileName: file.name
+        }),
+        ProcedureId: procedureResult.Id,
+        LOB: amendmentData.originalLOB
+      }, requestDigest);
+
+      // ✅ CORRECT: SharePoint URL with SiteAssets
+      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
+     
+      console.log('🎉 Amendment upload completed successfully:', {
+        newProcedureId: procedureResult.Id,
+        originalProcedureId: amendmentData.procedureId,
+        qualityScore: analysisResult.score,
+        sharePointUrl,
+        sharePointPath
+      });
+
+      return {
+        success: true,
+        procedureId: procedureResult.Id,
+        qualityScore: analysisResult.score,
+        templateCompliance: analysisResult.details?.summary?.templateCompliance,
+        sharePointPath: sharePointPath,
+        sharePointUrl: sharePointUrl,
+        analysisResult: analysisResult,
+        message: 'Amendment uploaded successfully to SiteAssets'
+      };
+     
+    } catch (error) {
+      console.error('❌ Upload amendment failed:', error);
+      throw new Error(`Amendment upload failed: ${error.message}`);
+    }
+  }
+
+  // ✅ UPDATE ORIGINAL PROCEDURE RECORD - Mark as amended
+  async updateOriginalProcedureRecord(originalProcedureId, updateData, requestDigest) {
+    try {
+      console.log('🔄 Updating original procedure record:', originalProcedureId);
+      
+      const updatePayload = {
+        Status: updateData.status,
+        AmendedDate: updateData.amended_date,
+        AmendedBy: updateData.amended_by,
+        NewVersionId: updateData.new_version_id,
+        AmendmentSummary: updateData.amendment_summary,
+        LastModifiedOn: new Date().toISOString(),
+        LastModifiedBy: updateData.amended_by
+      };
+
+      const response = await fetch(
+        `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('Procedures')/items(${originalProcedureId})`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest,
+            'X-HTTP-Method': 'MERGE',
+            'If-Match': '*'
+          },
+          body: JSON.stringify(updatePayload)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to update original procedure: ${response.status}`);
+      }
+
+      console.log('✅ Original procedure record updated successfully');
+      return true;
+
+    } catch (error) {
+      console.error('❌ Failed to update original procedure record:', error);
+      // Don't fail the entire amendment process for this
+      console.warn('⚠️ Continuing amendment process despite update failure');
+      return false;
+    }
+  }
+
+  // ✅ SANITIZATION HELPER METHODS
+  sanitizeString(str) {
+    if (!str || typeof str !== 'string') return '';
+    
+    // Remove potentially problematic characters and decode any URL encoding
+    return str
+      .replace(/%[0-9A-Fa-f]{2}/g, '') // Remove URL encoded characters
+      .replace(/[<>]/g, '') // Remove HTML brackets
+      .trim();
+  }
+
+  sanitizeEmail(email) {
+    if (!email || typeof email !== 'string') return '';
+    
+    // Basic email sanitization
+    return email
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9@._-]/g, '') // Keep only valid email characters
+      .trim();
+  }
+
+  // ============================================================================
+  // EXISTING DOCUMENT PROCESSING METHODS  
+  // ============================================================================
   
   async analyzeDocument(file, metadata = {}) {
     try {
@@ -229,7 +510,7 @@ sanitizeEmail(email) {
   }
 
   // ============================================================================
-  // SHAREPOINT INTEGRATION METHODS
+  // ✅ FIXED: SHAREPOINT INTEGRATION WITH SITEASSETS
   // ============================================================================
 
   async uploadProcedureWithAnalysis(formData, file) {
@@ -244,7 +525,7 @@ sanitizeEmail(email) {
       });
       
       if (!analysisResult.accepted) {
-        throw new Error(`Document quality score is ${analysisResult.score}% (minimum 80% required)`);
+        throw new Error(`Document quality score is ${analysisResult.score}% (minimum ${this.minimumScore}% required)`);
       }
 
       console.log('✅ Document passed AI analysis:', {
@@ -255,141 +536,157 @@ sanitizeEmail(email) {
       // 2. Get SharePoint context
       const requestDigest = await this.getRequestDigest();
       
-      // 3. Upload file to SharePoint
-      const sharePointPath = sharePointPaths.getSharePointPath(formData.lob, formData.procedure_subsection);
+      // 3. ✅ CORRECT: Generate SiteAssets path
+      const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
       const fileUploadResult = await this.uploadFileToSharePoint(file, sharePointPath, requestDigest);
       
       // 4. Create procedure list item with comprehensive AI data
-// 4. Create procedure list item with comprehensive AI data
-const procedureData = {
-  __metadata: { type: 'SP.Data.ProceduresListItem' },
-  Title: formData.name || 'Untitled Procedure',
-  ExpiryDate: formData.expiry || new Date().toISOString(),
-  PrimaryOwner: formData.primary_owner || 'Unknown',
-  PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
-  SecondaryOwner: formData.secondary_owner || '',
-  SecondaryOwnerEmail: formData.secondary_owner_email || '',
-  LOB: formData.lob || 'Unknown',
-  ProcedureSubsection: formData.procedure_subsection || '',
-  SharePointPath: sharePointPath || '',
-  DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
-  OriginalFilename: (file && file.name) || 'unknown.doc',
-  FileSize: (file && file.size) || 0,
-  
-  // ✅ SAFE AI ANALYSIS RESULTS
-  QualityScore: (analysisResult && analysisResult.score) || 0,
-  TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
-  AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
-  AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations) || []),
-  
-  // ✅ SAFE HSBC-SPECIFIC DATA
-  RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
-  PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
-  DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || []),
-  SignOffDates: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.signOffDates) || []),
-  Departments: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.departments) || []),
-  
-  // ✅ SAFE ANALYSIS METRICS
-  FoundElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.foundElements) || []),
-  MissingElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.missingElements) || []),
-  HasDocumentControl: (analysisResult && analysisResult.details && analysisResult.details.hasDocumentControl) || false,
-  HasRiskAssessment: (analysisResult && analysisResult.details && analysisResult.details.hasRiskAssessment) || false,
-  HasPeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.hasPeriodicReview) || false,
-  StructureScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.structureScore) || 0,
-  GovernanceScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.governanceScore) || 0,
-  
-  // Upload metadata
-  UploadedBy: formData.primary_owner || 'Unknown',
-  UploadedAt: new Date().toISOString(),
-  Status: 'Active',
-  SharePointUploaded: true
-};
+      const procedureData = {
+        __metadata: { type: 'SP.Data.ProceduresListItem' },
+        Title: formData.name || 'Untitled Procedure',
+        ExpiryDate: formData.expiry || new Date().toISOString(),
+        PrimaryOwner: formData.primary_owner || 'Unknown',
+        PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
+        SecondaryOwner: formData.secondary_owner || '',
+        SecondaryOwnerEmail: formData.secondary_owner_email || '',
+        LOB: formData.lob || 'Unknown',
+        ProcedureSubsection: formData.procedure_subsection || '',
+        SharePointPath: sharePointPath || '',
+        DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
+        OriginalFilename: (file && file.name) || 'unknown.doc',
+        FileSize: (file && file.size) || 0,
+        
+        // ✅ SAFE AI ANALYSIS RESULTS
+        QualityScore: (analysisResult && analysisResult.score) || 0,
+        TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
+        AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
+        AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations) || []),
+        
+        // ✅ SAFE HSBC-SPECIFIC DATA
+        RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
+        PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
+        DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || []),
+        SignOffDates: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.signOffDates) || []),
+        Departments: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.departments) || []),
+        
+        // ✅ SAFE ANALYSIS METRICS
+        FoundElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.foundElements) || []),
+        MissingElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.missingElements) || []),
+        HasDocumentControl: (analysisResult && analysisResult.details && analysisResult.details.hasDocumentControl) || false,
+        HasRiskAssessment: (analysisResult && analysisResult.details && analysisResult.details.hasRiskAssessment) || false,
+        HasPeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.hasPeriodicReview) || false,
+        StructureScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.structureScore) || 0,
+        GovernanceScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.governanceScore) || 0,
+        
+        // Upload metadata
+        UploadedBy: formData.primary_owner || 'Unknown',
+        UploadedAt: new Date().toISOString(),
+        Status: 'Active',
+        SharePointUploaded: true
+      };
      
-     const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
+      const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
      
-     // 5. Create comprehensive audit log entry
-     await this.createAuditLogEntry({
-       __metadata: { type: 'SP.Data.AuditLogListItem' },
-       Title: `Procedure Created: ${formData.name}`,
-       ActionType: 'CREATE',
-       UserId: formData.primary_owner,
-       LogTimestamp: new Date().toISOString(),
-       Details: JSON.stringify({
-         procedureId: procedureResult.Id,
-         procedureName: formData.name,
-         lob: formData.lob,
-         subsection: formData.procedure_subsection,
-         qualityScore: analysisResult.score,
-         templateCompliance: analysisResult.details?.summary?.templateCompliance,
-         riskRating: analysisResult.details?.riskRating,
-         periodicReview: analysisResult.details?.periodicReview,
-         documentOwners: analysisResult.details?.owners,
-         foundElements: analysisResult.details?.foundElements?.length,
-         missingElements: analysisResult.details?.missingElements?.length,
-         fileSize: file.size,
-         fileName: file.name,
-         sharePointPath: sharePointPath
-       }),
-       ProcedureId: procedureResult.Id,
-       LOB: formData.lob
-     }, requestDigest);
+      // 5. Create comprehensive audit log entry
+      await this.createAuditLogEntry({
+        __metadata: { type: 'SP.Data.AuditLogListItem' },
+        Title: `Procedure Created: ${formData.name}`,
+        ActionType: 'CREATE',
+        UserId: formData.primary_owner,
+        LogTimestamp: new Date().toISOString(),
+        Details: JSON.stringify({
+          procedureId: procedureResult.Id,
+          procedureName: formData.name,
+          lob: formData.lob,
+          subsection: formData.procedure_subsection,
+          qualityScore: analysisResult.score,
+          templateCompliance: analysisResult.details?.summary?.templateCompliance,
+          riskRating: analysisResult.details?.riskRating,
+          periodicReview: analysisResult.details?.periodicReview,
+          documentOwners: analysisResult.details?.owners,
+          foundElements: analysisResult.details?.foundElements?.length,
+          missingElements: analysisResult.details?.missingElements?.length,
+          fileSize: file.size,
+          fileName: file.name,
+          sharePointPath: sharePointPath
+        }),
+        ProcedureId: procedureResult.Id,
+        LOB: formData.lob
+      }, requestDigest);
 
-     const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
+      // ✅ CORRECT: SharePoint URL with SiteAssets
+      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
      
-     console.log('🎉 Procedure upload completed successfully:', {
-       procedureId: procedureResult.Id,
-       qualityScore: analysisResult.score,
-       sharePointUrl
-     });
+      console.log('🎉 Procedure upload completed successfully:', {
+        procedureId: procedureResult.Id,
+        qualityScore: analysisResult.score,
+        sharePointUrl,
+        sharePointPath
+      });
 
-     return {
-       success: true,
-       procedureId: procedureResult.Id,
-       qualityScore: analysisResult.score,
-       templateCompliance: analysisResult.details?.summary?.templateCompliance,
-       sharePointPath: sharePointPath,
-       sharePointUrl: sharePointUrl,
-       analysisResult: analysisResult
-     };
+      return {
+        success: true,
+        procedureId: procedureResult.Id,
+        qualityScore: analysisResult.score,
+        templateCompliance: analysisResult.details?.summary?.templateCompliance,
+        sharePointPath: sharePointPath,
+        sharePointUrl: sharePointUrl,
+        analysisResult: analysisResult
+      };
      
-   } catch (error) {
-     console.error('❌ Upload procedure failed:', error);
-     throw new Error(`Upload failed: ${error.message}`);
-   }
- }
+    } catch (error) {
+      console.error('❌ Upload procedure failed:', error);
+      throw new Error(`Upload failed: ${error.message}`);
+    }
+  }
 
- async getRequestDigest() {
-   try {
-     const response = await fetch(`${sharePointPaths.baseSite}/_api/contextinfo`, {
-       method: 'POST',
-       headers: {
-         'Accept': 'application/json; odata=verbose',
-         'Content-Type': 'application/json; odata=verbose'
-       }
-     });
+  // ✅ NEW: Generate SiteAssets path for uploads
+  generateSiteAssetsPath(lob, subsection) {
+    // Clean subsection name for folder path
+    const cleanSubsection = (subsection || 'General')
+      .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .trim();
+    
+    // ✅ CORRECT: Always include SiteAssets as base
+    return `SiteAssets/${lob}/${cleanSubsection}`;
+  }
 
-     if (!response.ok) {
-       throw new Error(`Failed to get SharePoint context: ${response.status}`);
-     }
+  async getRequestDigest() {
+    try {
+      const response = await fetch(`${sharePointPaths.baseSite}/_api/contextinfo`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        }
+      });
 
-     const data = await response.json();
-     return data.d.GetContextWebInformation.FormDigestValue;
+      if (!response.ok) {
+        throw new Error(`Failed to get SharePoint context: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.d.GetContextWebInformation.FormDigestValue;
      
-   } catch (error) {
-     throw new Error(`Failed to get SharePoint request digest: ${error.message}`);
-   }
- }
+    } catch (error) {
+      throw new Error(`Failed to get SharePoint request digest: ${error.message}`);
+    }
+  }
 
- async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
-  try {
-    const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
+  async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
+    try {
+      // ✅ CORRECT: Upload URL with SiteAssets path
+      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
      
-     const response = await fetch(uploadUrl, {
-       method: 'POST',
-       headers: {
-         'Accept': 'application/json; odata=verbose',
-         'X-RequestDigest': requestDigest,
-         'Content-Type': 'application/octet-stream'
+      console.log('📤 Uploading to SiteAssets path:', uploadUrl);
+
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+          'Content-Type': 'application/octet-stream'
        },
        body: file
      });
@@ -400,16 +697,16 @@ const procedureData = {
      }
 
      const result = await response.json();
-     
-     console.log('✅ File uploaded to SharePoint:', result.d.ServerRelativeUrl);
-     
+    
+     console.log('✅ File uploaded to SiteAssets SharePoint:', result.d.ServerRelativeUrl);
+    
      return {
        serverRelativeUrl: result.d.ServerRelativeUrl,
        webUrl: `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`
      };
-     
+    
    } catch (error) {
-     throw new Error(`File upload to SharePoint failed: ${error.message}`);
+     throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
    }
  }
 
@@ -435,9 +732,9 @@ const procedureData = {
 
      const result = await response.json();
      console.log('✅ Procedure created in SharePoint List:', result.d.Id);
-     
+    
      return result.d;
-     
+    
    } catch (error) {
      throw new Error(`Failed to create procedure list item: ${error.message}`);
    }
@@ -465,7 +762,7 @@ const procedureData = {
        console.warn('⚠️ Failed to create audit log entry, but continuing...');
        return null;
      }
-     
+    
    } catch (error) {
      console.warn('⚠️ Audit log creation failed:', error.message);
      return null; // Don't fail the whole process for audit log
