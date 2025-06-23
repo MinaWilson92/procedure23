@@ -1,4 +1,4 @@
-// components/ProcedureAmendModal.js - Enhanced Procedure Amendment Modal
+// components/ProcedureAmendModal.js - FIXED VERSION with Admin Panel AI Analysis Logic
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography,
@@ -6,7 +6,8 @@ import {
   Stack, Paper, Chip, Divider, useTheme, styled, keyframes, alpha,
   FormControl, InputLabel, Select, MenuItem, CircularProgress, Backdrop,
   Stepper, Step, StepLabel, StepContent, Accordion, AccordionSummary, AccordionDetails,
-  List, ListItem, ListItemIcon, ListItemText
+  List, ListItem, ListItemIcon, ListItemText,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 import {
   Close, CloudUpload, Analytics, Save, Cancel, Warning, CheckCircle,
@@ -15,7 +16,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
-import DocumentAnalyzer from '../services/DocumentAnalyzer';
+import DocumentAnalyzer from '../services/DocumentAnalyzer'; // ✅ SAME SERVICE AS ADMIN PANEL
 import EmailNotificationService from '../services/EmailNotificationService';
 
 class AmendmentErrorBoundary extends React.Component {
@@ -104,18 +105,6 @@ const HSBCColors = {
   }
 };
 
-// 🌟 **Advanced Animations**
-const pulseGlow = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(219, 0, 17, 0.4); }
-  70% { box-shadow: 0 0 0 15px rgba(219, 0, 17, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(219, 0, 17, 0); }
-`;
-
-const shimmerAnimation = keyframes`
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
-`;
-
 // 🎨 **Styled Components**
 const GlassmorphismCard = styled(Card)(({ theme, variant = 'default' }) => ({
   background: variant === 'primary'
@@ -176,7 +165,7 @@ const ProcedureAmendModal = ({
   sharePointAvailable,
   onSuccess
 }) => {
-    const { navigate } = useNavigation();
+  const { navigate } = useNavigation();
   const theme = useTheme();
 
   // Form state
@@ -193,7 +182,7 @@ const ProcedureAmendModal = ({
   const [submitStatus, setSubmitStatus] = useState('ready');
   const [activeStep, setActiveStep] = useState(0);
 
-  // Services
+  // Services - ✅ SAME AS ADMIN PANEL
   const [documentAnalyzer] = useState(() => new DocumentAnalyzer());
   const [emailService] = useState(() => new EmailNotificationService());
 
@@ -216,13 +205,11 @@ const ProcedureAmendModal = ({
     }
   }, [procedure]);
 
-  // 🎯 **Helper Functions**
+  // 🎯 **Helper Functions - SAME AS ADMIN PANEL**
   const getScoreColor = (score) => {
-    if (score >= 90) return '#4caf50';
-    if (score >= 80) return '#8bc34a';
-    if (score >= 70) return '#ff9800';
-    if (score >= 60) return '#f44336';
-    return '#d32f2f';
+    if (score >= 80) return '#4caf50';
+    if (score >= 60) return '#ff9800';
+    return '#f44336';
   };
 
   const getQualityInfo = (score) => {
@@ -268,7 +255,7 @@ const ProcedureAmendModal = ({
     }
   };
 
-  
+  // ✅ FIXED: Use EXACT SAME ANALYSIS LOGIC as Admin Panel
   const analyzeDocument = async () => {
     if (!selectedFile) {
       alert('Please select a document file before analyzing.');
@@ -281,68 +268,39 @@ const ProcedureAmendModal = ({
       
       console.log('🔍 Starting AI document analysis for amendment...');
 
-      // ✅ COMPLETELY SANITIZED METADATA - Remove ALL potential problematic characters
-      const cleanMetadata = {
-        name: String(procedure?.name || 'Unknown Procedure').replace(/[%&+#]/g, ''),
-        lob: String(procedure?.lob || 'Unknown').replace(/[%&+#]/g, ''),
-        subsection: String(procedure?.procedure_subsection || 'Unknown').replace(/[%&+#]/g, ''),
-        isAmendment: true,
-        originalScore: Number(procedure?.score) || 0
+      // ✅ USE EXACT SAME METADATA STRUCTURE AS ADMIN PANEL
+      const analysisMetadata = {
+        name: procedure?.name || 'Unknown Procedure',
+        lob: procedure?.lob || 'Unknown',
+        subsection: procedure?.procedure_subsection || 'Unknown'
       };
 
-      console.log('🔍 Using completely sanitized metadata:', cleanMetadata);
+      console.log('🔍 Using analysis metadata:', analysisMetadata);
 
-      // ✅ WRAP ANALYSIS IN TRY-CATCH
-      let analysisResult;
-      try {
-        analysisResult = await documentAnalyzer.analyzeDocument(selectedFile, cleanMetadata);
-      } catch (analysisError) {
-        console.error('❌ AI Analysis error:', analysisError);
-        throw new Error(`AI Analysis failed: ${analysisError.message}`);
-      }
+      // ✅ CALL SAME ANALYSIS METHOD AS ADMIN PANEL
+      const analysisResult = await documentAnalyzer.analyzeDocument(selectedFile, analysisMetadata);
 
-      // ✅ SANITIZE ALL ANALYSIS RESULTS
-      const safeCopyObject = (obj) => {
-        if (!obj || typeof obj !== 'object') return obj;
-        
-        try {
-          // Deep clone and sanitize
-          return JSON.parse(JSON.stringify(obj).replace(/[%&+#]/g, ''));
-        } catch (e) {
-          console.warn('Could not sanitize object:', e);
-          return {};
-        }
-      };
+      console.log('✅ Analysis result:', analysisResult);
 
-      const sanitizedResult = {
-        score: Number(analysisResult?.score) || 0,
-        accepted: Boolean(analysisResult?.accepted),
-        details: safeCopyObject(analysisResult?.details) || {},
-        aiRecommendations: Array.isArray(analysisResult?.aiRecommendations) 
-          ? analysisResult.aiRecommendations.map(rec => String(rec).replace(/[%&+#]/g, ''))
-          : []
-      };
-
-      console.log('✅ Sanitized analysis result:', sanitizedResult);
-
-      setDocumentAnalysis(sanitizedResult);
+      setDocumentAnalysis(analysisResult);
       setActiveStep(2);
       setSubmitStatus('ready');
 
+      if (analysisResult.accepted) {
+        console.log('✅ Document accepted with score:', analysisResult.score);
+      } else {
+        console.log('❌ Document rejected with score:', analysisResult.score);
+      }
+
     } catch (err) {
       console.error('❌ Analysis failed:', err);
-      
-      // ✅ SAFE ERROR MESSAGE
-      const safeErrorMessage = String(err.message || 'Unknown error').replace(/[%&+#]/g, '');
-      alert(`Analysis failed: ${safeErrorMessage}`);
-      
+      alert(`Analysis failed: ${err.message}`);
       setSubmitStatus('ready');
       setDocumentAnalysis(null);
     } finally {
       setLoading(false);
     }
   };
-
 
   const validateAmendmentForm = () => {
     const errors = [];
@@ -454,8 +412,7 @@ const ProcedureAmendModal = ({
         setSubmitStatus('success');
         setTimeout(() => {
           onSuccess();
-          // ✅ Use custom navigation instead of React Router
-          navigate('user-dashboard'); // or whatever page you want to go to
+          navigate('user-dashboard');
         }, 2000);
         
       } else {
@@ -786,560 +743,505 @@ const ProcedureAmendModal = ({
                             </Alert>
                           </Box>
                         )}
-{/* Step 2: AI Analysis Results */}
-{index === 2 && documentAnalysis && (
-  <Box>
-    <GlassmorphismCard 
-      variant={documentAnalysis.accepted ? 'success' : 'error'}
-      sx={{ mb: 3 }}
-    >
-      <CardContent>
-        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-          <Typography variant="h3" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
-            {documentAnalysis.score}%
-          </Typography>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              New Quality Score (Minimum Required: 85%)
-            </Typography>
-            <LinearProgress 
-              variant="determinate" 
-              value={documentAnalysis.score} 
-              sx={{ 
-                height: 10, 
-                borderRadius: 5,
-                backgroundColor: '#e0e0e0',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: getScoreColor(documentAnalysis.score),
-                  borderRadius: 5
-                }
-              }}
-            />
-          </Box>
-          <Chip 
-            label={documentAnalysis.accepted ? 'ACCEPTED' : 'REJECTED'} 
-            color={documentAnalysis.accepted ? 'success' : 'error'}
-            icon={documentAnalysis.accepted ? <CheckCircle /> : <ErrorIcon />}
-            sx={{ fontWeight: 800 }}
-          />
-        </Stack>
+{/* Step 2: AI Analysis Results - ✅ EXACT SAME AS ADMIN PANEL */}
+                       {index === 2 && documentAnalysis && (
+                         <Box>
+                           <Card 
+                             variant="outlined" 
+                             sx={{ 
+                               mt: 3,
+                               bgcolor: documentAnalysis.accepted ? '#e8f5e9' : '#ffebee',
+                               border: documentAnalysis.accepted ? '2px solid #4caf50' : '2px solid #f44336'
+                             }}
+                           >
+                             <CardContent>
+                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                                 <Typography variant="h3" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
+                                   {documentAnalysis.score}%
+                                 </Typography>
+                                 <Box sx={{ flex: 1 }}>
+                                   <Typography variant="body2" color="text.secondary" gutterBottom>
+                                     Quality Score (Minimum Required: 85%)
+                                   </Typography>
+                                   <LinearProgress 
+                                     variant="determinate" 
+                                     value={documentAnalysis.score} 
+                                     sx={{ 
+                                       height: 10, 
+                                       borderRadius: 5,
+                                       backgroundColor: '#e0e0e0',
+                                       '& .MuiLinearProgress-bar': {
+                                         backgroundColor: getScoreColor(documentAnalysis.score),
+                                         borderRadius: 5
+                                       }
+                                     }}
+                                   />
+                                 </Box>
+                                 <Chip 
+                                   label={documentAnalysis.accepted ? 'ACCEPTED' : 'REJECTED'} 
+                                   color={documentAnalysis.accepted ? 'success' : 'error'}
+                                   icon={documentAnalysis.accepted ? <CheckCircle /> : <ErrorIcon />}
+                                   sx={{ fontWeight: 800 }}
+                                 />
+                               </Box>
 
-        {/* ✅ ENHANCED: Show 5 Critical HSBC Deciders */}
+                               {/* ✅ TEMPLATE COMPLIANCE BADGE - SAME AS ADMIN PANEL */}
+                               {documentAnalysis.details?.summary?.templateCompliance && (
+                                 <Box sx={{ mb: 2 }}>
+                                   <Chip 
+                                     label={`Template Compliance: ${documentAnalysis.details.summary.templateCompliance}`}
+                                     color={documentAnalysis.details.summary.templateCompliance === 'High' ? 'success' : 
+                                            documentAnalysis.details.summary.templateCompliance === 'Medium' ? 'warning' : 'error'}
+                                     variant="outlined"
+                                   />
+                                 </Box>
+                               )}
 
-// In ProcedureAmendModal.js - Fix the HSBC Critical Deciders section
+                               {/* ✅ FOUND ELEMENTS ACCORDION - SAME AS ADMIN PANEL */}
+                               <Accordion sx={{ mb: 2 }}>
+                                 <AccordionSummary expandIcon={<ExpandMore />}>
+                                   <Typography variant="h6">
+                                     ✅ Found Elements ({documentAnalysis.details?.foundElements?.length || 0})
+                                   </Typography>
+                                 </AccordionSummary>
+                                 <AccordionDetails>
+                                   <List dense>
+                                     {documentAnalysis.details?.foundElements?.map((element, idx) => (
+                                       <ListItem key={idx} sx={{ py: 0 }}>
+                                         <ListItemIcon sx={{ minWidth: 30 }}>
+                                           <CheckCircle color="success" fontSize="small" />
+                                         </ListItemIcon>
+                                         <ListItemText primary={element} />
+                                       </ListItem>
+                                     ))}
+                                   </List>
+                                 </AccordionDetails>
+                               </Accordion>
 
-{/* ✅ FIXED: Show 5 Critical HSBC Deciders with correct logic */}
-{documentAnalysis.details && (
-  <Box sx={{ mb: 3 }}>
-    <Typography variant="h6" fontWeight={700} gutterBottom>
-      🎯 HSBC Critical Deciders Analysis
-    </Typography>
-    
-    <Grid container spacing={2}>
-      {[
-        { 
-          key: 'documentOwners', 
-          label: 'Document Owners', 
-          icon: '👥',
-          checkField: 'Document Owners' // ✅ Match exact field name from analysis
-        },
-        { 
-          key: 'riskRating', 
-          label: 'Risk Rating', 
-          icon: '⚠️',
-          checkField: 'Risk Rating'
-        },
-        { 
-          key: 'periodicReview', 
-          label: 'Periodic Review', 
-          icon: '📅',
-          checkField: 'Periodic Review'
-        },
-        { 
-          key: 'signOffDates', 
-          label: 'Sign-off Dates', 
-          icon: '✍️',
-          checkField: 'Sign-off Dates'
-        },
-        { 
-          key: 'departments', 
-          label: 'Departments', 
-          icon: '🏢',
-          checkField: 'Departments'
-        }
-      ].map((decider) => {
-        // ✅ CORRECT LOGIC: Check foundElements array for exact match
-        const found = documentAnalysis.details.foundElements?.includes(decider.checkField) || false;
-        
-        // ✅ Get the actual extracted value
-        const extractedValue = documentAnalysis.details[decider.key] || 
-                             documentAnalysis.details[decider.checkField] || 
-                             '';
-        
-        console.log(`🔍 Checking decider ${decider.label}:`, {
-          found,
-          extractedValue,
-          foundElements: documentAnalysis.details.foundElements
-        });
-        
-        return (
-          <Grid item xs={12} sm={6} md={4} key={decider.key}>
-            <Paper sx={{ 
-              p: 2, 
-              border: `2px solid ${found ? '#4caf50' : '#f44336'}`,
-              backgroundColor: found ? '#e8f5e9' : '#ffebee'
-            }}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography variant="h6">{decider.icon}</Typography>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" fontWeight={700}>
-                    {decider.label}
-                  </Typography>
-                  <Chip 
-                    label={found ? 'FOUND' : 'MISSING'}
-                    size="small"
-                    color={found ? 'success' : 'error'}
-                    sx={{ mt: 0.5 }}
-                  />
-                </Box>
-              </Stack>
-              
-              {/* ✅ SHOW EXTRACTED VALUE IF FOUND */}
-              {found && extractedValue && (
-                <Typography variant="caption" sx={{ mt: 1, display: 'block', fontWeight: 600 }}>
-                  {typeof extractedValue === 'string' 
-                    ? extractedValue
-                    : Array.isArray(extractedValue)
-                    ? extractedValue.join(', ')
-                    : JSON.stringify(extractedValue)
-                  }
-                </Typography>
-              )}
-              
-              {/* ✅ SHOW MISSING MESSAGE */}
-              {!found && (
-                <Typography variant="caption" sx={{ mt: 1, display: 'block', color: '#f44336', fontStyle: 'italic' }}>
-                  This critical element was not detected in the document
-                </Typography>
-              )}
-            </Paper>
-          </Grid>
-        );
-      })}
-    </Grid>
-    
-    {/* ✅ SHOW PENALTY APPLIED IF ANY DECIDERS MISSING */}
-    {documentAnalysis.details.foundElements && (
-      <Box sx={{ mt: 2 }}>
-        {(() => {
-          const criticalDeciders = ['Document Owners', 'Risk Rating', 'Periodic Review', 'Sign-off Dates', 'Departments'];
-          const foundCount = criticalDeciders.filter(d => 
-            documentAnalysis.details.foundElements.includes(d)
-          ).length;
-          const missedCount = criticalDeciders.length - foundCount;
-          
-          if (missedCount > 0) {
-            return (
-              <Alert severity="warning">
-                <Typography variant="body2">
-                  <strong>⚠️ Quality Score Penalty Applied:</strong> {missedCount} critical decider(s) missing. 
-                  Score reduced by {missedCount * 20}% (20% penalty per missing decider).
-                </Typography>
-              </Alert>
-            );
-          }
-          return null;
-        })()}
-      </Box>
-    )}
-  </Box>
-)}
+                               {/* ✅ MISSING ELEMENTS ACCORDION - SAME AS ADMIN PANEL */}
+                               {documentAnalysis.details?.missingElements?.length > 0 && (
+                                 <Accordion sx={{ mb: 2 }}>
+                                   <AccordionSummary expandIcon={<ExpandMore />}>
+                                     <Typography variant="h6">
+                                       ❌ Missing Elements ({documentAnalysis.details.missingElements.length})
+                                     </Typography>
+                                   </AccordionSummary>
+                                   <AccordionDetails>
+                                     <List dense>
+                                       {documentAnalysis.details.missingElements.map((element, idx) => (
+                                         <ListItem key={idx} sx={{ py: 0 }}>
+                                           <ListItemIcon sx={{ minWidth: 30 }}>
+                                             <ErrorIcon color="error" fontSize="small" />
+                                           </ListItemIcon>
+                                           <ListItemText primary={element} />
+                                         </ListItem>
+                                       ))}
+                                     </List>
+                                   </AccordionDetails>
+                                 </Accordion>
+                               )}
 
-        {/* ✅ ENHANCED: Detailed Scoring Breakdown */}
-        {documentAnalysis.details?.summary && (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              📊 Detailed Scoring Breakdown
-            </Typography>
-            
-            <Grid container spacing={2}>
-              {[
-                { key: 'structureScore', label: 'Document Structure', max: 40 },
-                { key: 'governanceScore', label: 'Governance Elements', max: 35 },
-                { key: 'complianceScore', label: 'Compliance Standards', max: 25 }
-              ].map((scoreType) => {
-                const score = documentAnalysis.details.summary[scoreType.key] || 0;
-                const percentage = Math.round((score / scoreType.max) * 100);
-                
-                return (
-                  <Grid item xs={12} sm={4} key={scoreType.key}>
-                    <Paper sx={{ p: 2, textAlign: 'center' }}>
-                      <Typography variant="h4" fontWeight={700} color={getScoreColor(percentage)}>
-                        {score}/{scoreType.max}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {scoreType.label}
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={percentage} 
-                        sx={{ 
-                          mt: 1,
-                          '& .MuiLinearProgress-bar': {
-                            backgroundColor: getScoreColor(percentage)
-                          }
-                        }}
-                      />
-                    </Paper>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
-        )}
-       {/* Score Comparison */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            📊 Score Comparison
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={6}>
-              <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: alpha('#ff9800', 0.1) }}>
-                <Typography variant="body2" color="text.secondary">Original Score</Typography>
-                <Typography variant="h4" fontWeight={700} color="#ff9800">
-                  {procedure?.score || 0}%
-                </Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={6}>
-              <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: alpha(getScoreColor(documentAnalysis.score), 0.1) }}>
-                <Typography variant="body2" color="text.secondary">New Score</Typography>
-                <Typography variant="h4" fontWeight={700} color={getScoreColor(documentAnalysis.score)}>
-                  {documentAnalysis.score}%
-                </Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
+                               {/* ✅ HSBC EXTRACTED DATA TABLE - SAME AS ADMIN PANEL */}
+                               {(documentAnalysis.details?.riskRating || documentAnalysis.details?.periodicReview || documentAnalysis.details?.owners?.length > 0) && (
+                                 <Accordion sx={{ mb: 2 }}>
+                                   <AccordionSummary expandIcon={<ExpandMore />}>
+                                     <Typography variant="h6">
+                                       📊 Extracted HSBC Data
+                                     </Typography>
+                                   </AccordionSummary>
+                                   <AccordionDetails>
+                                     <TableContainer component={Paper} variant="outlined">
+                                       <Table size="small">
+                                         <TableHead>
+                                           <TableRow>
+                                             <TableCell><strong>Field</strong></TableCell>
+                                             <TableCell><strong>Status</strong></TableCell>
+                                             <TableCell><strong>Value</strong></TableCell>
+                                           </TableRow>
+                                         </TableHead>
+                                         <TableBody>
+                                           <TableRow>
+                                             <TableCell>Document Owners</TableCell>
+                                             <TableCell>
+                                               <Chip 
+                                                 label={documentAnalysis.details.owners?.length > 0 ? 'Found' : 'Missing'}
+                                                 color={documentAnalysis.details.owners?.length > 0 ? 'success' : 'error'}
+                                                 size="small"
+                                               />
+                                             </TableCell>
+                                             <TableCell>
+                                               {documentAnalysis.details.owners?.join(', ') || 'Not found'}
+                                             </TableCell>
+                                           </TableRow>
+                                           <TableRow>
+                                             <TableCell>Risk Rating</TableCell>
+                                             <TableCell>
+                                               <Chip 
+                                                 label={documentAnalysis.details.riskRating ? 'Found' : 'Missing'}
+                                                 color={documentAnalysis.details.riskRating ? 'success' : 'error'}
+                                                 size="small"
+                                               />
+                                             </TableCell>
+                                             <TableCell>
+                                               {documentAnalysis.details.riskRating || 'Not specified'}
+                                             </TableCell>
+                                           </TableRow>
+                                           <TableRow>
+                                             <TableCell>Periodic Review</TableCell>
+                                             <TableCell>
+                                               <Chip 
+                                                 label={documentAnalysis.details.periodicReview ? 'Found' : 'Missing'}
+                                                 color={documentAnalysis.details.periodicReview ? 'success' : 'error'}
+                                                 size="small"
+                                               />
+                                             </TableCell>
+                                             <TableCell>
+                                               {documentAnalysis.details.periodicReview || 'Not specified'}
+                                             </TableCell>
+                                           </TableRow>
+                                           <TableRow>
+                                             <TableCell>Sign-off Dates</TableCell>
+                                             <TableCell>
+                                               <Chip 
+                                                 label={documentAnalysis.details.signOffDates?.length > 0 ? 'Found' : 'Missing'}
+                                                 color={documentAnalysis.details.signOffDates?.length > 0 ? 'success' : 'error'}
+                                                 size="small"
+                                               />
+                                             </TableCell>
+                                             <TableCell>
+                                               {documentAnalysis.details.signOffDates?.join(', ') || 'Not found'}
+                                             </TableCell>
+                                           </TableRow>
+                                           <TableRow>
+                                             <TableCell>Departments</TableCell>
+                                             <TableCell>
+                                               <Chip 
+                                                 label={documentAnalysis.details.departments?.length > 0 ? 'Found' : 'Missing'}
+                                                 color={documentAnalysis.details.departments?.length > 0 ? 'success' : 'error'}
+                                                 size="small"
+                                               />
+                                             </TableCell>
+                                             <TableCell>
+                                               {documentAnalysis.details.departments?.join(', ') || 'Not found'}
+                                             </TableCell>
+                                           </TableRow>
+                                         </TableBody>
+                                       </Table>
+                                     </TableContainer>
+                                   </AccordionDetails>
+                                 </Accordion>
+                               )}
 
-        {/* ✅ ENHANCED: Found Elements List */}
-        {documentAnalysis.details?.foundElements?.length > 0 && (
-          <Accordion sx={{ mb: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography variant="h6">
-                ✅ Found Elements ({documentAnalysis.details.foundElements.length})
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <List dense>
-                {documentAnalysis.details.foundElements.map((element, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemIcon>
-                      <CheckCircle color="success" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary={element} />
-                  </ListItem>
-                ))}
-              </List>
-            </AccordionDetails>
-          </Accordion>
-        )}
+                               {/* ✅ AI RECOMMENDATIONS TABLE - SAME AS ADMIN PANEL */}
+                               {documentAnalysis.aiRecommendations?.length > 0 && (
+                                 <Accordion>
+                                   <AccordionSummary expandIcon={<ExpandMore />}>
+                                     <Typography variant="h6">
+                                       🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
+                                     </Typography>
+                                   </AccordionSummary>
+                                   <AccordionDetails>
+                                     <TableContainer component={Paper} variant="outlined">
+                                       <Table size="small">
+                                         <TableHead>
+                                           <TableRow>
+                                             <TableCell>Priority</TableCell>
+                                             <TableCell>Category</TableCell>
+                                             <TableCell>Recommendation</TableCell>
+                                             <TableCell>Impact</TableCell>
+                                           </TableRow>
+                                         </TableHead>
+                                         <TableBody>
+                                           {documentAnalysis.aiRecommendations.map((rec, index) => (
+                                             <TableRow key={index}>
+                                               <TableCell>
+                                                 <Chip 
+                                                   label={rec.priority}
+                                                   size="small"
+                                                   color={rec.priority === 'HIGH' ? 'error' : rec.priority === 'MEDIUM' ? 'warning' : 'info'}
+                                                 />
+                                               </TableCell>
+                                               <TableCell>{rec.category}</TableCell>
+                                               <TableCell>{rec.message}</TableCell>
+                                               <TableCell>{rec.impact}</TableCell>
+                                             </TableRow>
+                                           ))}
+                                         </TableBody>
+                                       </Table>
+                                     </TableContainer>
+                                   </AccordionDetails>
+                                 </Accordion>
+                               )}
+                             </CardContent>
+                           </Card>
 
-        {/* ✅ ENHANCED: Missing Elements List */}
-        {documentAnalysis.details?.missingElements?.length > 0 && (
-          <Accordion sx={{ mb: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography variant="h6">
-                ❌ Missing Elements ({documentAnalysis.details.missingElements.length})
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <List dense>
-                {documentAnalysis.details.missingElements.map((element, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemIcon>
-                      <ErrorIcon color="error" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary={element} />
-                  </ListItem>
-                ))}
-              </List>
-            </AccordionDetails>
-          </Accordion>
-        )}
+                           {/* ✅ STATUS ALERT - SAME AS ADMIN PANEL */}
+                           {documentAnalysis.accepted ? (
+                             <Alert severity="success" sx={{ mt: 2 }}>
+                               <Typography variant="body2">
+                                 <strong>✅ Document Approved!</strong> The new document meets quality requirements and can be submitted.
+                               </Typography>
+                             </Alert>
+                           ) : (
+                             <Alert severity="error" sx={{ mt: 2 }}>
+                               <Typography variant="body2">
+                                 <strong>❌ Document Rejected!</strong> Please improve the document quality and re-analyze before proceeding.
+                               </Typography>
+                             </Alert>
+                           )}
 
-        {/* AI Recommendations */}
-// In ProcedureAmendModal.js - Fix AI Recommendations section
+                           {/* ✅ UPLOAD BUTTON - SAME AS ADMIN PANEL */}
+                           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
+                             <Button
+                               variant="outlined"
+                               onClick={handleReset}
+                               startIcon={<Refresh />}
+                               disabled={loading}
+                             >
+                               Reset Form
+                             </Button>
+                             <Button
+                               variant="contained"
+                               onClick={() => setActiveStep(3)}
+                               disabled={loading || !documentAnalysis.accepted}
+                               startIcon={<Save />}
+                               size="large"
+                               sx={{ 
+                                 minWidth: 200,
+                                 background: HSBCColors.gradients.redPrimary,
+                                 borderRadius: '12px'
+                               }}
+                             >
+                               Continue to Submit
+                             </Button>
+                           </Box>
 
-{/* ✅ FIXED: AI Recommendations Display */}
-{documentAnalysis.aiRecommendations && documentAnalysis.aiRecommendations.length > 0 && (
-  <Accordion>
-    <AccordionSummary expandIcon={<ExpandMore />}>
-      <Typography variant="h6">
-        🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
-      </Typography>
-    </AccordionSummary>
-    <AccordionDetails>
-      <List dense>
-        {documentAnalysis.aiRecommendations.map((rec, idx) => {
-          // ✅ HANDLE BOTH STRING AND OBJECT RECOMMENDATIONS
-          const recommendation = typeof rec === 'string' 
-            ? rec 
-            : typeof rec === 'object' && rec.text 
-            ? rec.text 
-            : typeof rec === 'object' && rec.message
-            ? rec.message
-            : JSON.stringify(rec);
-            
-          return (
-            <ListItem key={idx}>
-              <ListItemIcon>
-                <Psychology color="info" fontSize="small" />
-              </ListItemIcon>
-              <ListItemText 
-                primary={recommendation}
-                secondary={typeof rec === 'object' && rec.priority ? `Priority: ${rec.priority}` : null}
-              />
-            </ListItem>
-          );
-        })}
-      </List>
-    </AccordionDetails>
-  </Accordion>
-)}
-      </CardContent>
-    </GlassmorphismCard>
+                           {!documentAnalysis.accepted && (
+                             <Alert severity="warning" sx={{ mt: 2 }}>
+                               <Typography variant="body2" fontWeight="bold">
+                                 ⚠️ Amendment Blocked: Document must achieve at least 85% quality score before submission.
+                               </Typography>
+                               <Typography variant="body2">
+                                 Please address the AI recommendations above and re-analyze your document.
+                               </Typography>
+                             </Alert>
+                           )}
+                         </Box>
+                       )}
 
-    {/* Status Alert */}
-    {documentAnalysis.accepted ? (
-      <Alert severity="success" sx={{ mb: 2 }}>
-        <Typography variant="body2">
-          <strong>✅ Document Approved!</strong> The new document meets quality requirements and can be submitted.
-        </Typography>
-      </Alert>
-    ) : (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        <Typography variant="body2">
-          <strong>❌ Document Rejected!</strong> Please improve the document quality and re-analyze before proceeding.
-        </Typography>
-      </Alert>
-    )}
-  </Box>
-)}
+                       {/* Step 3: Submit Amendment */}
+                       {index === 3 && (
+                         <Box>
+                           <Alert severity="info" sx={{ mb: 3 }}>
+                             <Typography variant="h6" gutterBottom>
+                               📋 Amendment Summary
+                             </Typography>
+                             <Typography variant="body2" sx={{ mb: 2 }}>
+                               <strong>Procedure:</strong> {procedure?.name}
+                             </Typography>
+                             <Typography variant="body2" sx={{ mb: 2 }}>
+                               <strong>Changes:</strong> {formData.amendment_summary}
+                             </Typography>
+                             <Typography variant="body2" sx={{ mb: 2 }}>
+                               <strong>New Quality Score:</strong> {documentAnalysis?.score}%
+                               (Previous: {procedure?.score || 0}%)
+                             </Typography>
+                             <Typography variant="body2">
+                               <strong>Notifications will be sent to:</strong>
+                               <br />• Primary Owner: {procedure?.primary_owner} ({procedure?.primary_owner_email})
+                               {formData.secondary_owner_email && (
+                                 <>
+                                   <br />• Secondary Owner: {formData.secondary_owner} ({formData.secondary_owner_email})
+                                 </>
+                               )}
+                               <br />• All administrators
+                             </Typography>
+                           </Alert>
 
+                           <Stack direction="row" spacing={2}>
+                             <Button
+                               variant="outlined"
+                               onClick={handleReset}
+                               startIcon={<Refresh />}
+                               disabled={loading}
+                             >
+                               Reset Form
+                             </Button>
+                             <Button
+                               variant="contained"
+                               onClick={handleSubmitAmendment}
+                               disabled={loading || !documentAnalysis?.accepted}
+                               startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                               sx={{
+                                 background: HSBCColors.gradients.redPrimary,
+                                 borderRadius: '12px',
+                                 px: 4,
+                                 py: 1.5,
+                                 fontWeight: 700,
+                                 flex: 1
+                               }}
+                             >
+                               {loading ? 'Submitting Amendment...' : 'Submit Amendment'}
+                             </Button>
+                           </Stack>
+                         </Box>
+                       )}
+                     </StepContent>
+                   </Step>
+                 ))}
+               </Stepper>
+             </CardContent>
+           </GlassmorphismCard>
+         </motion.div>
 
-                        {/* Step 3: Submit Amendment */}
-                        {index === 3 && (
-                          <Box>
-                            <Alert severity="info" sx={{ mb: 3 }}>
-                              <Typography variant="h6" gutterBottom>
-                                📋 Amendment Summary
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 2 }}>
-                                <strong>Procedure:</strong> {procedure?.name}
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 2 }}>
-                                <strong>Changes:</strong> {formData.amendment_summary}
-                              </Typography>
-                              <Typography variant="body2" sx={{ mb: 2 }}>
-                                <strong>New Quality Score:</strong> {documentAnalysis?.score}%
-                                (Previous: {procedure?.score || 0}%)
-                              </Typography>
-                              <Typography variant="body2">
-                                <strong>Notifications will be sent to:</strong>
-                                <br />• Primary Owner: {procedure?.primary_owner} ({procedure?.primary_owner_email})
-                                {formData.secondary_owner_email && (
-                                  <>
-                                    <br />• Secondary Owner: {formData.secondary_owner} ({formData.secondary_owner_email})
-                                  </>
-                                )}
-                                <br />• All administrators
-                              </Typography>
-                            </Alert>
+         {/* 📊 **STATUS MESSAGES** */}
+         {submitStatus === 'success' && (
+           <motion.div
+             initial={{ opacity: 0, scale: 0.9 }}
+             animate={{ opacity: 1, scale: 1 }}
+             transition={{ duration: 0.5 }}
+           >
+             <Alert severity="success" sx={{ mb: 3 }}>
+               <Typography variant="h6" gutterBottom>
+                 🎉 Amendment Successful!
+               </Typography>
+               <Typography variant="body2">
+                 The procedure has been successfully amended and all stakeholders have been notified.
+                 You will be redirected shortly.
+               </Typography>
+             </Alert>
+           </motion.div>
+         )}
 
-                            <Stack direction="row" spacing={2}>
-                              <Button
-                                variant="outlined"
-                                onClick={handleReset}
-                                startIcon={<Refresh />}
-                                disabled={loading}
-                              >
-                                Reset Form
-                              </Button>
-                              <Button
-                                variant="contained"
-                                onClick={handleSubmitAmendment}
-                                disabled={loading || !documentAnalysis?.accepted}
-                                startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                                sx={{
-                                  background: HSBCColors.gradients.redPrimary,
-                                  borderRadius: '12px',
-                                  px: 4,
-                                  py: 1.5,
-                                  fontWeight: 700,
-                                  flex: 1
-                                }}
-                              >
-                                {loading ? 'Submitting Amendment...' : 'Submit Amendment'}
-                              </Button>
-                            </Stack>
-                          </Box>
-                        )}
-                      </StepContent>
-                    </Step>
-                  ))}
-                </Stepper>
-              </CardContent>
-            </GlassmorphismCard>
-          </motion.div>
+         {submitStatus === 'error' && (
+           <motion.div
+             initial={{ opacity: 0, scale: 0.9 }}
+             animate={{ opacity: 1, scale: 1 }}
+             transition={{ duration: 0.5 }}
+           >
+             <Alert severity="error" sx={{ mb: 3 }}>
+               <Typography variant="h6" gutterBottom>
+                 ❌ Amendment Failed
+               </Typography>
+               <Typography variant="body2">
+                 There was an error processing the amendment. Please try again or contact support.
+               </Typography>
+             </Alert>
+           </motion.div>
+         )}
+       </DialogContent>
 
-          {/* 📊 **STATUS MESSAGES** */}
-          {submitStatus === 'success' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Alert severity="success" sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  🎉 Amendment Successful!
-                </Typography>
-                <Typography variant="body2">
-                  The procedure has been successfully amended and all stakeholders have been notified.
-                  You will be redirected shortly.
-                </Typography>
-              </Alert>
-            </motion.div>
-          )}
+       {/* 🚀 **ENHANCED ACTION BUTTONS** */}
+       <DialogActions sx={{ p: 3, background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)' }}>
+         <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
+           <Button
+             onClick={onClose}
+             variant="outlined"
+             disabled={loading}
+             sx={{
+               borderRadius: '12px',
+               px: 3,
+               py: 1.5,
+               fontWeight: 700,
+               flex: 1
+             }}
+           >
+             {submitStatus === 'success' ? 'Close' : 'Cancel'}
+           </Button>
 
-          {submitStatus === 'error' && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-            >
-              <Alert severity="error" sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  ❌ Amendment Failed
-                </Typography>
-                <Typography variant="body2">
-                  There was an error processing the amendment. Please try again or contact support.
-                </Typography>
-              </Alert>
-            </motion.div>
-          )}
-        </DialogContent>
+           {activeStep > 0 && activeStep < 3 && (
+             <Button
+               onClick={() => setActiveStep(prev => prev - 1)}
+               variant="outlined"
+               disabled={loading}
+               sx={{
+                 borderRadius: '12px',
+                 px: 3,
+                 py: 1.5,
+                 fontWeight: 700
+               }}
+             >
+               Previous Step
+             </Button>
+           )}
 
-        {/* 🚀 **ENHANCED ACTION BUTTONS** */}
-        <DialogActions sx={{ p: 3, background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)' }}>
-          <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
-            <Button
-              onClick={onClose}
-              variant="outlined"
-              disabled={loading}
-              sx={{
-                borderRadius: '12px',
-                px: 3,
-                py: 1.5,
-                fontWeight: 700,
-                flex: 1
-              }}
-            >
-              {submitStatus === 'success' ? 'Close' : 'Cancel'}
-            </Button>
+           {activeStep === 0 && formData.amendment_summary.length >= 10 && (
+             <Button
+               onClick={() => setActiveStep(1)}
+               variant="contained"
+               sx={{
+                 background: HSBCColors.gradients.redPrimary,
+                 borderRadius: '12px',
+                 px: 4,
+                 py: 1.5,
+                 fontWeight: 700,
+                 flex: 2
+               }}
+             >
+               Continue to Upload
+             </Button>
+           )}
 
-            {activeStep > 0 && activeStep < 3 && (
-              <Button
-                onClick={() => setActiveStep(prev => prev - 1)}
-                variant="outlined"
-                disabled={loading}
-                sx={{
-                  borderRadius: '12px',
-                  px: 3,
-                  py: 1.5,
-                  fontWeight: 700
-                }}
-              >
-                Previous Step
-              </Button>
-            )}
+           {activeStep === 1 && selectedFile && (
+             <Button
+               onClick={analyzeDocument}
+               variant="contained"
+               disabled={submitStatus === 'analyzing'}
+               startIcon={submitStatus === 'analyzing' ? <CircularProgress size={20} /> : <Analytics />}
+               sx={{
+                 background: HSBCColors.gradients.redPrimary,
+                 borderRadius: '12px',
+                 px: 4,
+                 py: 1.5,
+                 fontWeight: 700,
+                 flex: 2
+               }}
+             >
+               {submitStatus === 'analyzing' ? 'Analyzing...' : 'Analyze Document'}
+             </Button>
+           )}
 
-            {activeStep === 0 && formData.amendment_summary.length >= 10 && (
-              <Button
-                onClick={() => setActiveStep(1)}
-                variant="contained"
-                sx={{
-                  background: HSBCColors.gradients.redPrimary,
-                  borderRadius: '12px',
-                  px: 4,
-                  py: 1.5,
-                  fontWeight: 700,
-                  flex: 2
-                }}
-              >
-                Continue to Upload
-              </Button>
-            )}
+           {activeStep === 2 && documentAnalysis?.accepted && (
+             <Button
+               onClick={() => setActiveStep(3)}
+               variant="contained"
+               sx={{
+                 background: HSBCColors.gradients.redPrimary,
+                 borderRadius: '12px',
+                 px: 4,
+                 py: 1.5,
+                 fontWeight: 700,
+                 flex: 2
+               }}
+             >
+               Continue to Submit
+             </Button>
+           )}
+         </Stack>
+       </DialogActions>
 
-            {activeStep === 1 && selectedFile && (
-              <Button
-                onClick={analyzeDocument}
-                variant="contained"
-                disabled={submitStatus === 'analyzing'}
-                startIcon={submitStatus === 'analyzing' ? <CircularProgress size={20} /> : <Analytics />}
-                sx={{
-                  background: HSBCColors.gradients.redPrimary,
-                  borderRadius: '12px',
-                  px: 4,
-                  py: 1.5,
-                  fontWeight: 700,
-                  flex: 2
-                }}
-              >
-                {submitStatus === 'analyzing' ? 'Analyzing...' : 'Analyze Document'}
-              </Button>
-            )}
-
-            {activeStep === 2 && documentAnalysis?.accepted && (
-              <Button
-                onClick={() => setActiveStep(3)}
-                variant="contained"
-                sx={{
-                  background: HSBCColors.gradients.redPrimary,
-                  borderRadius: '12px',
-                  px: 4,
-                  py: 1.5,
-                  fontWeight: 700,
-                  flex: 2
-                }}
-              >
-                Continue to Submit
-              </Button>
-            )}
-          </Stack>
-        </DialogActions>
-
-        {/* 🌟 **LOADING BACKDROP** */}
-        <Backdrop
-          sx={{
-            color: '#fff',
-            zIndex: (theme) => theme.zIndex.drawer + 1,
-            backdropFilter: 'blur(10px)'
-          }}
-          open={loading && submitStatus === 'uploading'}
-        >
-          <Box sx={{ textAlign: 'center' }}>
-            <CircularProgress color="inherit" size={60} />
-            <Typography variant="h6" sx={{ mt: 2 }}>
-              Processing Amendment...
-            </Typography>
-            <Typography variant="body2">
-              Updating SharePoint and sending notifications
-            </Typography>
-          </Box>
-        </Backdrop>
-      </EnhancedDialog>
-    </AmendmentErrorBoundary>
-  );
+       {/* 🌟 **LOADING BACKDROP** */}
+       <Backdrop
+         sx={{
+           color: '#fff',
+           zIndex: (theme) => theme.zIndex.drawer + 1,
+           backdropFilter: 'blur(10px)'
+         }}
+         open={loading && submitStatus === 'uploading'}
+       >
+         <Box sx={{ textAlign: 'center' }}>
+           <CircularProgress color="inherit" size={60} />
+           <Typography variant="h6" sx={{ mt: 2 }}>
+             Processing Amendment...
+           </Typography>
+           <Typography variant="body2">
+             Updating SharePoint and sending notifications
+           </Typography>
+         </Box>
+       </Backdrop>
+     </EnhancedDialog>
+   </AmendmentErrorBoundary>
+ );
 };
+
 export default ProcedureAmendModal;
