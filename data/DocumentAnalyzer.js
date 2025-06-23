@@ -1,6 +1,6 @@
 // services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration
 import { sharePointPaths } from './paths';
-import { SharePointService } from './SharePointService';
+import  SharePointService  from './SharePointService';
 
 class DocumentAnalyzer {
   constructor() {
@@ -65,6 +65,9 @@ class DocumentAnalyzer {
 async amendProcedureInSharePoint(amendmentData, selectedFile) {
   try {
     console.log('🔄 Processing procedure amendment...');
+
+
+    
     
     // ✅ SANITIZE DATA BEFORE PROCESSING
     const sanitizedAmendmentData = {
@@ -86,7 +89,8 @@ async amendProcedureInSharePoint(amendmentData, selectedFile) {
     };
 
     console.log('✅ Sanitized amendment data:', sanitizedAmendmentData);
-    
+
+        const freshDigest = await this.getFreshRequestDigest();
     const spService = new SharePointService();
     const result = await spService.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
     
@@ -179,6 +183,35 @@ sanitizeEmail(email) {
       reader.readAsArrayBuffer(file);
     });
   }
+
+  async getFreshRequestDigest() {
+  try {
+    console.log('🔑 Getting fresh SharePoint request digest...');
+    
+    const response = await fetch(`${sharePointPaths.baseSite}/_api/contextinfo`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json; odata=verbose',
+        'Content-Type': 'application/json; odata=verbose'
+      },
+      credentials: 'include'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to get fresh digest: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const digest = data.d.GetContextWebInformation.FormDigestValue;
+    
+    console.log('✅ Fresh request digest obtained');
+    return digest;
+    
+  } catch (error) {
+    console.error('❌ Failed to get fresh request digest:', error);
+    throw new Error(`Failed to get SharePoint digest: ${error.message}`);
+  }
+}
 
   async extractPDFText(arrayBuffer) {
     try {
