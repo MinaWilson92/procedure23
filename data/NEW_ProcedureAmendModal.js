@@ -1069,27 +1069,44 @@ const ProcedureAmendModal = ({
         )}
 
         {/* AI Recommendations */}
-        {documentAnalysis.aiRecommendations?.length > 0 && (
-          <Accordion>
-            <AccordionSummary expandIcon={<ExpandMore />}>
-              <Typography variant="h6">
-                🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
-              </Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <List dense>
-                {documentAnalysis.aiRecommendations.map((rec, idx) => (
-                  <ListItem key={idx}>
-                    <ListItemIcon>
-                      <Psychology color="info" fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary={rec} />
-                  </ListItem>
-                ))}
-              </List>
-            </AccordionDetails>
-          </Accordion>
-        )}
+// In ProcedureAmendModal.js - Fix AI Recommendations section
+
+{/* ✅ FIXED: AI Recommendations Display */}
+{documentAnalysis.aiRecommendations && documentAnalysis.aiRecommendations.length > 0 && (
+  <Accordion>
+    <AccordionSummary expandIcon={<ExpandMore />}>
+      <Typography variant="h6">
+        🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
+      </Typography>
+    </AccordionSummary>
+    <AccordionDetails>
+      <List dense>
+        {documentAnalysis.aiRecommendations.map((rec, idx) => {
+          // ✅ HANDLE BOTH STRING AND OBJECT RECOMMENDATIONS
+          const recommendation = typeof rec === 'string' 
+            ? rec 
+            : typeof rec === 'object' && rec.text 
+            ? rec.text 
+            : typeof rec === 'object' && rec.message
+            ? rec.message
+            : JSON.stringify(rec);
+            
+          return (
+            <ListItem key={idx}>
+              <ListItemIcon>
+                <Psychology color="info" fontSize="small" />
+              </ListItemIcon>
+              <ListItemText 
+                primary={recommendation}
+                secondary={typeof rec === 'object' && rec.priority ? `Priority: ${rec.priority}` : null}
+              />
+            </ListItem>
+          );
+        })}
+      </List>
+    </AccordionDetails>
+  </Accordion>
+)}
       </CardContent>
     </GlassmorphismCard>
 
