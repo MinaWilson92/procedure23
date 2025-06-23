@@ -786,133 +786,257 @@ const ProcedureAmendModal = ({
                             </Alert>
                           </Box>
                         )}
+{/* Step 2: AI Analysis Results */}
+{index === 2 && documentAnalysis && (
+  <Box>
+    <GlassmorphismCard 
+      variant={documentAnalysis.accepted ? 'success' : 'error'}
+      sx={{ mb: 3 }}
+    >
+      <CardContent>
+        <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+          <Typography variant="h3" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
+            {documentAnalysis.score}%
+          </Typography>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              New Quality Score (Minimum Required: 85%)
+            </Typography>
+            <LinearProgress 
+              variant="determinate" 
+              value={documentAnalysis.score} 
+              sx={{ 
+                height: 10, 
+                borderRadius: 5,
+                backgroundColor: '#e0e0e0',
+                '& .MuiLinearProgress-bar': {
+                  backgroundColor: getScoreColor(documentAnalysis.score),
+                  borderRadius: 5
+                }
+              }}
+            />
+          </Box>
+          <Chip 
+            label={documentAnalysis.accepted ? 'ACCEPTED' : 'REJECTED'} 
+            color={documentAnalysis.accepted ? 'success' : 'error'}
+            icon={documentAnalysis.accepted ? <CheckCircle /> : <ErrorIcon />}
+            sx={{ fontWeight: 800 }}
+          />
+        </Stack>
 
-                        {/* Step 2: AI Analysis Results */}
-                        {index === 2 && documentAnalysis && (
-                          <Box>
-                            <GlassmorphismCard
-                              variant={documentAnalysis.accepted ? 'success' : 'error'}
-                              sx={{ mb: 3 }}
-                            >
-                              <CardContent>
-                                <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-                                  <Typography variant="h3" sx={{ color: getScoreColor(documentAnalysis.score), fontWeight: 'bold' }}>
-                                    {documentAnalysis.score}%
-                                  </Typography>
-                                  <Box sx={{ flex: 1 }}>
-                                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                                      New Quality Score (Minimum Required: 85%)
-                                    </Typography>
-                                    <LinearProgress
-                                      variant="determinate"
-                                      value={documentAnalysis.score}
-                                      sx={{
-                                        height: 10,
-                                        borderRadius: 5,
-                                        backgroundColor: '#e0e0e0',
-                                        '& .MuiLinearProgress-bar': {
-                                          backgroundColor: getScoreColor(documentAnalysis.score),
-                                          borderRadius: 5
-                                        }
-                                      }}
-                                    />
-                                  </Box>
-                                  <Chip
-                                    label={documentAnalysis.accepted ? 'ACCEPTED' : 'REJECTED'}
-                                    color={documentAnalysis.accepted ? 'success' : 'error'}
-                                    icon={documentAnalysis.accepted ? <CheckCircle /> : <ErrorIcon />}
-                                    sx={{ fontWeight: 800 }}
-                                  />
-                                </Stack>
+        {/* ✅ ENHANCED: Show 5 Critical HSBC Deciders */}
+        {documentAnalysis.details && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              🎯 HSBC Critical Deciders Analysis
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {[
+                { key: 'documentOwners', label: 'Document Owners', icon: '👥' },
+                { key: 'riskRating', label: 'Risk Rating', icon: '⚠️' },
+                { key: 'periodicReview', label: 'Periodic Review', icon: '📅' },
+                { key: 'signOffDates', label: 'Sign-off Dates', icon: '✍️' },
+                { key: 'departments', label: 'Departments', icon: '🏢' }
+              ].map((decider) => {
+                const found = documentAnalysis.details.foundElements?.includes(decider.label) || 
+                            documentAnalysis.details[decider.key];
+                
+                return (
+                  <Grid item xs={12} sm={6} md={4} key={decider.key}>
+                    <Paper sx={{ 
+                      p: 2, 
+                      border: `2px solid ${found ? '#4caf50' : '#f44336'}`,
+                      backgroundColor: found ? '#e8f5e9' : '#ffebee'
+                    }}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Typography variant="h6">{decider.icon}</Typography>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" fontWeight={700}>
+                            {decider.label}
+                          </Typography>
+                          <Chip 
+                            label={found ? 'FOUND' : 'MISSING'}
+                            size="small"
+                            color={found ? 'success' : 'error'}
+                            sx={{ mt: 0.5 }}
+                          />
+                        </Box>
+                      </Stack>
+                      
+                      {found && documentAnalysis.details[decider.key] && (
+                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
+                          {typeof documentAnalysis.details[decider.key] === 'string' 
+                            ? documentAnalysis.details[decider.key]
+                            : Array.isArray(documentAnalysis.details[decider.key])
+                            ? documentAnalysis.details[decider.key].join(', ')
+                            : JSON.stringify(documentAnalysis.details[decider.key])
+                          }
+                        </Typography>
+                      )}
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        )}
 
-                                {/* Score Comparison */}
-                                <Box sx={{ mb: 3 }}>
-                                  <Typography variant="h6" gutterBottom>
-                                    📊 Score Comparison
-                                  </Typography>
-                                  <Grid container spacing={2}>
-                                    <Grid item xs={6}>
-                                      <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: alpha('#ff9800', 0.1) }}>
-                                        <Typography variant="body2" color="text.secondary">Original Score</Typography>
-                                        <Typography variant="h4" fontWeight={700} color="#ff9800">
-                                          {procedure?.score || 0}%
-                                        </Typography>
-                                      </Paper>
-                                    </Grid>
-                                    <Grid item xs={6}>
-                                      <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: alpha(getScoreColor(documentAnalysis.score), 0.1) }}>
-                                        <Typography variant="body2" color="text.secondary">New Score</Typography>
-                                        <Typography variant="h4" fontWeight={700} color={getScoreColor(documentAnalysis.score)}>
-                                          {documentAnalysis.score}%
-                                        </Typography>
-                                      </Paper>
-                                    </Grid>
-                                  </Grid>
-                                </Box>
+        {/* ✅ ENHANCED: Detailed Scoring Breakdown */}
+        {documentAnalysis.details?.summary && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              📊 Detailed Scoring Breakdown
+            </Typography>
+            
+            <Grid container spacing={2}>
+              {[
+                { key: 'structureScore', label: 'Document Structure', max: 40 },
+                { key: 'governanceScore', label: 'Governance Elements', max: 35 },
+                { key: 'complianceScore', label: 'Compliance Standards', max: 25 }
+              ].map((scoreType) => {
+                const score = documentAnalysis.details.summary[scoreType.key] || 0;
+                const percentage = Math.round((score / scoreType.max) * 100);
+                
+                return (
+                  <Grid item xs={12} sm={4} key={scoreType.key}>
+                    <Paper sx={{ p: 2, textAlign: 'center' }}>
+                      <Typography variant="h4" fontWeight={700} color={getScoreColor(percentage)}>
+                        {score}/{scoreType.max}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {scoreType.label}
+                      </Typography>
+                      <LinearProgress 
+                        variant="determinate" 
+                        value={percentage} 
+                        sx={{ 
+                          mt: 1,
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: getScoreColor(percentage)
+                          }
+                        }}
+                      />
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          </Box>
+        )}
+       {/* Score Comparison */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>
+            📊 Score Comparison
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: alpha('#ff9800', 0.1) }}>
+                <Typography variant="body2" color="text.secondary">Original Score</Typography>
+                <Typography variant="h4" fontWeight={700} color="#ff9800">
+                  {procedure?.score || 0}%
+                </Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={6}>
+              <Paper sx={{ p: 2, textAlign: 'center', backgroundColor: alpha(getScoreColor(documentAnalysis.score), 0.1) }}>
+                <Typography variant="body2" color="text.secondary">New Score</Typography>
+                <Typography variant="h4" fontWeight={700} color={getScoreColor(documentAnalysis.score)}>
+                  {documentAnalysis.score}%
+                </Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
 
-                                {/* Analysis Details */}
-                                {documentAnalysis.details?.foundElements?.length > 0 && (
-                                  <Accordion sx={{ mb: 2 }}>
-                                    <AccordionSummary expandIcon={<ExpandMore />}>
-                                      <Typography variant="h6">
-                                        ✅ Found Elements ({documentAnalysis.details.foundElements.length})
-                                      </Typography>
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                      <List dense>
-                                        {documentAnalysis.details.foundElements.map((element, idx) => (
-                                          <ListItem key={idx}>
-                                            <ListItemIcon>
-                                              <CheckCircle color="success" fontSize="small" />
-                                            </ListItemIcon>
-                                            <ListItemText primary={element} />
-                                          </ListItem>
-                                        ))}
-                                      </List>
-                                    </AccordionDetails>
-                                  </Accordion>
-                                )}
+        {/* ✅ ENHANCED: Found Elements List */}
+        {documentAnalysis.details?.foundElements?.length > 0 && (
+          <Accordion sx={{ mb: 2 }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography variant="h6">
+                ✅ Found Elements ({documentAnalysis.details.foundElements.length})
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List dense>
+                {documentAnalysis.details.foundElements.map((element, idx) => (
+                  <ListItem key={idx}>
+                    <ListItemIcon>
+                      <CheckCircle color="success" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary={element} />
+                  </ListItem>
+                ))}
+              </List>
+            </AccordionDetails>
+          </Accordion>
+        )}
 
-                                {/* AI Recommendations */}
-                                {documentAnalysis.aiRecommendations?.length > 0 && (
-                                  <Accordion>
-                                    <AccordionSummary expandIcon={<ExpandMore />}>
-                                      <Typography variant="h6">
-                                        🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
-                                      </Typography>
-                                    </AccordionSummary>
-                                    <AccordionDetails>
-                                      <List dense>
-                                        {documentAnalysis.aiRecommendations.map((rec, idx) => (
-                                          <ListItem key={idx}>
-                                            <ListItemIcon>
-                                              <Psychology color="info" fontSize="small" />
-                                            </ListItemIcon>
-                                            <ListItemText primary={rec} />
-                                          </ListItem>
-                                        ))}
-                                      </List>
-                                    </AccordionDetails>
-                                  </Accordion>
-                                )}
-                              </CardContent>
-                            </GlassmorphismCard>
+        {/* ✅ ENHANCED: Missing Elements List */}
+        {documentAnalysis.details?.missingElements?.length > 0 && (
+          <Accordion sx={{ mb: 2 }}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography variant="h6">
+                ❌ Missing Elements ({documentAnalysis.details.missingElements.length})
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List dense>
+                {documentAnalysis.details.missingElements.map((element, idx) => (
+                  <ListItem key={idx}>
+                    <ListItemIcon>
+                      <ErrorIcon color="error" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary={element} />
+                  </ListItem>
+                ))}
+              </List>
+            </AccordionDetails>
+          </Accordion>
+        )}
 
-                            {documentAnalysis.accepted ? (
-                              <Alert severity="success" sx={{ mb: 2 }}>
-                                <Typography variant="body2">
-                                  <strong>✅ Document Approved!</strong> The new document meets quality requirements and can be submitted.
-                                </Typography>
-                              </Alert>
-                            ) : (
-                              <Alert severity="error" sx={{ mb: 2 }}>
-                                <Typography variant="body2">
-                                  <strong>❌ Document Rejected!</strong> Please improve the document quality and re-analyze before proceeding.
-                                </Typography>
-                              </Alert>
-                            )}
-                          </Box>
-                        )}
+        {/* AI Recommendations */}
+        {documentAnalysis.aiRecommendations?.length > 0 && (
+          <Accordion>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Typography variant="h6">
+                🤖 AI Recommendations ({documentAnalysis.aiRecommendations.length})
+              </Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <List dense>
+                {documentAnalysis.aiRecommendations.map((rec, idx) => (
+                  <ListItem key={idx}>
+                    <ListItemIcon>
+                      <Psychology color="info" fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary={rec} />
+                  </ListItem>
+                ))}
+              </List>
+            </AccordionDetails>
+          </Accordion>
+        )}
+      </CardContent>
+    </GlassmorphismCard>
+
+    {/* Status Alert */}
+    {documentAnalysis.accepted ? (
+      <Alert severity="success" sx={{ mb: 2 }}>
+        <Typography variant="body2">
+          <strong>✅ Document Approved!</strong> The new document meets quality requirements and can be submitted.
+        </Typography>
+      </Alert>
+    ) : (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        <Typography variant="body2">
+          <strong>❌ Document Rejected!</strong> Please improve the document quality and re-analyze before proceeding.
+        </Typography>
+      </Alert>
+    )}
+  </Box>
+)}
+
 
                         {/* Step 3: Submit Amendment */}
                         {index === 3 && (
