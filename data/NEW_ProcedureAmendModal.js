@@ -825,62 +825,135 @@ const ProcedureAmendModal = ({
         </Stack>
 
         {/* ✅ ENHANCED: Show 5 Critical HSBC Deciders */}
-        {documentAnalysis.details && (
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              🎯 HSBC Critical Deciders Analysis
-            </Typography>
-            
-            <Grid container spacing={2}>
-              {[
-                { key: 'documentOwners', label: 'Document Owners', icon: '👥' },
-                { key: 'riskRating', label: 'Risk Rating', icon: '⚠️' },
-                { key: 'periodicReview', label: 'Periodic Review', icon: '📅' },
-                { key: 'signOffDates', label: 'Sign-off Dates', icon: '✍️' },
-                { key: 'departments', label: 'Departments', icon: '🏢' }
-              ].map((decider) => {
-                const found = documentAnalysis.details.foundElements?.includes(decider.label) || 
-                            documentAnalysis.details[decider.key];
-                
-                return (
-                  <Grid item xs={12} sm={6} md={4} key={decider.key}>
-                    <Paper sx={{ 
-                      p: 2, 
-                      border: `2px solid ${found ? '#4caf50' : '#f44336'}`,
-                      backgroundColor: found ? '#e8f5e9' : '#ffebee'
-                    }}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Typography variant="h6">{decider.icon}</Typography>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" fontWeight={700}>
-                            {decider.label}
-                          </Typography>
-                          <Chip 
-                            label={found ? 'FOUND' : 'MISSING'}
-                            size="small"
-                            color={found ? 'success' : 'error'}
-                            sx={{ mt: 0.5 }}
-                          />
-                        </Box>
-                      </Stack>
-                      
-                      {found && documentAnalysis.details[decider.key] && (
-                        <Typography variant="caption" sx={{ mt: 1, display: 'block' }}>
-                          {typeof documentAnalysis.details[decider.key] === 'string' 
-                            ? documentAnalysis.details[decider.key]
-                            : Array.isArray(documentAnalysis.details[decider.key])
-                            ? documentAnalysis.details[decider.key].join(', ')
-                            : JSON.stringify(documentAnalysis.details[decider.key])
-                          }
-                        </Typography>
-                      )}
-                    </Paper>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Box>
-        )}
+
+// In ProcedureAmendModal.js - Fix the HSBC Critical Deciders section
+
+{/* ✅ FIXED: Show 5 Critical HSBC Deciders with correct logic */}
+{documentAnalysis.details && (
+  <Box sx={{ mb: 3 }}>
+    <Typography variant="h6" fontWeight={700} gutterBottom>
+      🎯 HSBC Critical Deciders Analysis
+    </Typography>
+    
+    <Grid container spacing={2}>
+      {[
+        { 
+          key: 'documentOwners', 
+          label: 'Document Owners', 
+          icon: '👥',
+          checkField: 'Document Owners' // ✅ Match exact field name from analysis
+        },
+        { 
+          key: 'riskRating', 
+          label: 'Risk Rating', 
+          icon: '⚠️',
+          checkField: 'Risk Rating'
+        },
+        { 
+          key: 'periodicReview', 
+          label: 'Periodic Review', 
+          icon: '📅',
+          checkField: 'Periodic Review'
+        },
+        { 
+          key: 'signOffDates', 
+          label: 'Sign-off Dates', 
+          icon: '✍️',
+          checkField: 'Sign-off Dates'
+        },
+        { 
+          key: 'departments', 
+          label: 'Departments', 
+          icon: '🏢',
+          checkField: 'Departments'
+        }
+      ].map((decider) => {
+        // ✅ CORRECT LOGIC: Check foundElements array for exact match
+        const found = documentAnalysis.details.foundElements?.includes(decider.checkField) || false;
+        
+        // ✅ Get the actual extracted value
+        const extractedValue = documentAnalysis.details[decider.key] || 
+                             documentAnalysis.details[decider.checkField] || 
+                             '';
+        
+        console.log(`🔍 Checking decider ${decider.label}:`, {
+          found,
+          extractedValue,
+          foundElements: documentAnalysis.details.foundElements
+        });
+        
+        return (
+          <Grid item xs={12} sm={6} md={4} key={decider.key}>
+            <Paper sx={{ 
+              p: 2, 
+              border: `2px solid ${found ? '#4caf50' : '#f44336'}`,
+              backgroundColor: found ? '#e8f5e9' : '#ffebee'
+            }}>
+              <Stack direction="row" alignItems="center" spacing={1}>
+                <Typography variant="h6">{decider.icon}</Typography>
+                <Box sx={{ flex: 1 }}>
+                  <Typography variant="body2" fontWeight={700}>
+                    {decider.label}
+                  </Typography>
+                  <Chip 
+                    label={found ? 'FOUND' : 'MISSING'}
+                    size="small"
+                    color={found ? 'success' : 'error'}
+                    sx={{ mt: 0.5 }}
+                  />
+                </Box>
+              </Stack>
+              
+              {/* ✅ SHOW EXTRACTED VALUE IF FOUND */}
+              {found && extractedValue && (
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', fontWeight: 600 }}>
+                  {typeof extractedValue === 'string' 
+                    ? extractedValue
+                    : Array.isArray(extractedValue)
+                    ? extractedValue.join(', ')
+                    : JSON.stringify(extractedValue)
+                  }
+                </Typography>
+              )}
+              
+              {/* ✅ SHOW MISSING MESSAGE */}
+              {!found && (
+                <Typography variant="caption" sx={{ mt: 1, display: 'block', color: '#f44336', fontStyle: 'italic' }}>
+                  This critical element was not detected in the document
+                </Typography>
+              )}
+            </Paper>
+          </Grid>
+        );
+      })}
+    </Grid>
+    
+    {/* ✅ SHOW PENALTY APPLIED IF ANY DECIDERS MISSING */}
+    {documentAnalysis.details.foundElements && (
+      <Box sx={{ mt: 2 }}>
+        {(() => {
+          const criticalDeciders = ['Document Owners', 'Risk Rating', 'Periodic Review', 'Sign-off Dates', 'Departments'];
+          const foundCount = criticalDeciders.filter(d => 
+            documentAnalysis.details.foundElements.includes(d)
+          ).length;
+          const missedCount = criticalDeciders.length - foundCount;
+          
+          if (missedCount > 0) {
+            return (
+              <Alert severity="warning">
+                <Typography variant="body2">
+                  <strong>⚠️ Quality Score Penalty Applied:</strong> {missedCount} critical decider(s) missing. 
+                  Score reduced by {missedCount * 20}% (20% penalty per missing decider).
+                </Typography>
+              </Alert>
+            );
+          }
+          return null;
+        })()}
+      </Box>
+    )}
+  </Box>
+)}
 
         {/* ✅ ENHANCED: Detailed Scoring Breakdown */}
         {documentAnalysis.details?.summary && (
