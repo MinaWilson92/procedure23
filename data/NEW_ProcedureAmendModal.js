@@ -1,4 +1,4 @@
-// components/ProcedureAmendModal.js - FIXED VERSION with Admin Panel AI Analysis Logic
+// components/ProcedureAmendModal.js - Enhanced Procedure Amendment Modal with Smart Folder Detection
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography,
@@ -12,11 +12,12 @@ import {
 import {
   Close, CloudUpload, Analytics, Save, Cancel, Warning, CheckCircle,
   Description, Person, Schedule, AutoAwesome, Error as ErrorIcon,
-  History, Refresh, Assignment, Security, ExpandMore, Psychology
+  History, Refresh, Assignment, Security, ExpandMore, Psychology,
+  Folder, FolderOpen
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
-import DocumentAnalyzer from '../services/DocumentAnalyzer'; // ✅ SAME SERVICE AS ADMIN PANEL
+import DocumentAnalyzer from '../services/DocumentAnalyzer';
 import EmailNotificationService from '../services/EmailNotificationService';
 
 class AmendmentErrorBoundary extends React.Component {
@@ -205,6 +206,83 @@ const ProcedureAmendModal = ({
     }
   }, [procedure]);
 
+  // ✅ NEW: Smart folder detection from existing document URL
+  const parseExistingDocumentPath = (documentLink) => {
+    try {
+      if (!documentLink) {
+        console.warn('⚠️ No document link provided, using default folder structure');
+        return {
+          baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
+          lobFolder: procedure?.lob || 'IWPB',
+          subFolder: 'General',
+          fullFolderPath: `/sites/employeeeng/${procedure?.lob || 'IWPB'}/General`
+        };
+      }
+
+      console.log('🔍 Analyzing existing document URL:', documentLink);
+
+      // Parse the URL to extract folder structure
+      const url = new URL(documentLink);
+      const pathname = url.pathname;
+
+      // Expected pattern: /sites/employeeeng/IWPB/Risk Management/document.docx
+      const pathParts = pathname.split('/').filter(part => part.length > 0);
+      
+      console.log('📂 URL path parts:', pathParts);
+
+      // Find the base site structure
+      const siteIndex = pathParts.findIndex(part => part === 'sites');
+      const employeeEngIndex = pathParts.findIndex(part => part.toLowerCase() === 'employeeeng');
+      
+      if (siteIndex === -1 || employeeEngIndex === -1) {
+        throw new Error('Invalid SharePoint URL structure');
+      }
+
+      // Extract folder structure
+      const baseUrl = `${url.protocol}//${url.host}`;
+      const sitePath = `/${pathParts.slice(siteIndex, employeeEngIndex + 1).join('/')}`;
+      
+      // The folder after /sites/employeeeng/ should be the LOB folder
+      const lobFolderIndex = employeeEngIndex + 1;
+      const lobFolder = pathParts[lobFolderIndex] || procedure?.lob || 'IWPB';
+      
+      // The folder after LOB should be the subfolder
+      const subFolderIndex = lobFolderIndex + 1;
+      const subFolder = pathParts[subFolderIndex] || 'General';
+      
+      // Reconstruct the full folder path (without the document name)
+      const folderPathParts = pathParts.slice(siteIndex, subFolderIndex + 1);
+      const fullFolderPath = `/${folderPathParts.join('/')}`;
+
+      const result = {
+        baseUrl,
+        sitePath,
+        lobFolder,
+        subFolder,
+        fullFolderPath,
+        originalUrl: documentLink
+      };
+
+      console.log('✅ Parsed folder structure:', result);
+      return result;
+
+    } catch (error) {
+      console.error('❌ Error parsing document URL:', error);
+      
+      // Fallback to default structure
+      const fallback = {
+        baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
+        lobFolder: procedure?.lob || 'IWPB',
+        subFolder: 'General',
+        fullFolderPath: `/sites/employeeeng/${procedure?.lob || 'IWPB'}/General`,
+        error: error.message
+      };
+      
+      console.log('🔄 Using fallback folder structure:', fallback);
+      return fallback;
+    }
+  };
+
   // 🎯 **Helper Functions - SAME AS ADMIN PANEL**
   const getScoreColor = (score) => {
     if (score >= 80) return '#4caf50';
@@ -337,6 +415,7 @@ const ProcedureAmendModal = ({
     return true;
   };
 
+  // ✅ ENHANCED: Amendment submission with smart folder detection
   const handleSubmitAmendment = async () => {
     if (!validateAmendmentForm()) {
       return;
@@ -348,6 +427,17 @@ const ProcedureAmendModal = ({
       setActiveStep(3);
       
       console.log('🚀 Starting procedure amendment process...');
+
+      // ✅ SMART FOLDER DETECTION - Parse existing document URL
+      const existingDocumentPath = parseExistingDocumentPath(
+        procedure?.file_link || 
+        procedure?.document_link || 
+        procedure?.sharepoint_url ||
+        procedure?.DocumentLink ||
+        procedure?.SharePointURL
+      );
+      
+      console.log('📂 Using existing folder structure:', existingDocumentPath);
 
       // ✅ COMPLETELY SANITIZE ALL AMENDMENT DATA
       const sanitizedAmendmentData = {
@@ -362,6 +452,12 @@ const ProcedureAmendModal = ({
         secondary_owner: String(formData.secondary_owner || '').replace(/[%&+#]/g, ''),
         secondary_owner_email: String(formData.secondary_owner_email || '').replace(/[%&+#]/g, ''),
         amendment_summary: String(formData.amendment_summary || '').replace(/[%&+#]/g, ''),
+        
+        // ✅ SMART FOLDER STRUCTURE - Use existing folder path
+        targetFolderPath: existingDocumentPath.fullFolderPath,
+        lobFolder: existingDocumentPath.lobFolder,
+        subFolder: existingDocumentPath.subFolder,
+        baseUrl: existingDocumentPath.baseUrl,
         
         // Amendment metadata
         amended_by: String(user?.staffId || 'Unknown').replace(/[%&+#]/g, ''),
@@ -378,16 +474,19 @@ const ProcedureAmendModal = ({
         
         // File information
         original_filename: selectedFile?.name || 'unknown.pdf',
-        file_size: selectedFile?.size || 0
+        file_size: selectedFile?.size || 0,
+        
+        // ✅ PRESERVE ORIGINAL DOCUMENT INFO
+        original_document_link: existingDocumentPath.originalUrl
       };
 
-      console.log('🔍 Sanitized amendment data:', sanitizedAmendmentData);
+      console.log('🔍 Sanitized amendment data with smart folders:', sanitizedAmendmentData);
 
-      // ✅ PROCESS AMENDMENT
+      // ✅ PROCESS AMENDMENT WITH SMART FOLDER DETECTION
       const result = await documentAnalyzer.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
 
       if (result.success) {
-        console.log('✅ Procedure amended successfully');
+        console.log('✅ Procedure amended successfully with smart folder detection');
         
         // ✅ Send notifications with sanitized data
         try {
@@ -402,7 +501,8 @@ const ProcedureAmendModal = ({
             secondaryOwnerEmail: sanitizedAmendmentData.secondary_owner_email,
             lineOfBusiness: sanitizedAmendmentData.originalLOB,
             originalQualityScore: procedure?.score || 0,
-            newQualityScore: sanitizedAmendmentData.new_score
+            newQualityScore: sanitizedAmendmentData.new_score,
+            folderPath: sanitizedAmendmentData.targetFolderPath
           });
           console.log('✅ Amendment notification sent successfully');
         } catch (emailError) {
@@ -443,6 +543,15 @@ const ProcedureAmendModal = ({
     const fileInput = document.getElementById('amend-file-input');
     if (fileInput) fileInput.value = '';
   };
+
+  // ✅ ADD DEBUG INFO IN THE UI
+  const existingDocumentInfo = procedure ? parseExistingDocumentPath(
+    procedure?.file_link || 
+    procedure?.document_link || 
+    procedure?.sharepoint_url ||
+    procedure?.DocumentLink ||
+    procedure?.SharePointURL
+  ) : null;
 
   if (!open) return null;
 
@@ -505,7 +614,7 @@ const ProcedureAmendModal = ({
         </motion.div>
 
         <DialogContent sx={{ p: 4 }}>
-          {/* 📋 **CURRENT PROCEDURE INFO** */}
+          {/* 📋 **CURRENT PROCEDURE INFO WITH FOLDER DEBUG** */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -540,6 +649,46 @@ const ProcedureAmendModal = ({
                         <Typography variant="body2" color="text.secondary">Expiry Date</Typography>
                         <Typography variant="body1" fontWeight={600}>{formatDate(procedure?.expiry)}</Typography>
                       </Box>
+
+                      {/* ✅ NEW: Folder Structure Info */}
+                      {existingDocumentInfo && (
+                        <Box>
+                          <Typography variant="body2" color="text.secondary">Current SharePoint Location</Typography>
+                          <Paper sx={{ p: 2, mt: 1, bgcolor: '#f8f9fa', border: '1px solid #e0e0e0' }}>
+                            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                              <Folder sx={{ color: '#1976d2', fontSize: 20 }} />
+                              <Typography variant="body2" fontWeight={600}>Folder Structure Analysis</Typography>
+                            </Stack>
+                            
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
+                              <strong>Base URL:</strong> {existingDocumentInfo.baseUrl}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
+                              <strong>LOB Folder:</strong> {existingDocumentInfo.lobFolder}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
+                              <strong>Sub Folder:</strong> {existingDocumentInfo.subFolder}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 1 }}>
+                              <strong>Full Path:</strong> {existingDocumentInfo.fullFolderPath}
+                            </Typography>
+                            
+                            {existingDocumentInfo.error ? (
+                              <Alert severity="warning" sx={{ mt: 1 }}>
+                                <Typography variant="caption">
+                                  ⚠️ Could not parse existing URL: {existingDocumentInfo.error}
+                                </Typography>
+                              </Alert>
+                            ) : (
+                              <Alert severity="success" sx={{ mt: 1 }}>
+                                <Typography variant="caption">
+                                  ✅ Amendment will use existing folder structure
+                                </Typography>
+                              </Alert>
+                            )}
+                          </Paper>
+                        </Box>
+                      )}
                     </Stack>
                   </Grid>
 
@@ -587,163 +736,164 @@ const ProcedureAmendModal = ({
                         {/* Step 0: Amendment Details */}
                         {index === 0 && (
                           <Grid container spacing={3}>
-                            <Grid item xs={12} sm={6}>
-                              <TextField
-                                fullWidth
-                                label="Secondary Owner (Optional)"
-                                name="secondary_owner"
-                                value={formData.secondary_owner}
-                                onChange={handleInputChange}
-                                variant="outlined"
-                                placeholder="Enter secondary owner name"
-                                helperText="You can update the secondary owner"
-                              />
-                            </Grid>
+                          <Grid item xs={12} sm={6}>
+                             <TextField
+                               fullWidth
+                               label="Secondary Owner (Optional)"
+                               name="secondary_owner"
+                               value={formData.secondary_owner}
+                               onChange={handleInputChange}
+                               variant="outlined"
+                               placeholder="Enter secondary owner name"
+                               helperText="You can update the secondary owner"
+                             />
+                           </Grid>
 
-                            <Grid item xs={12} sm={6}>
-                              <TextField
-                                fullWidth
-                                label="Secondary Owner Email (Optional)"
-                                name="secondary_owner_email"
-                                value={formData.secondary_owner_email}
-                                onChange={handleInputChange}
-                                type="email"
-                                variant="outlined"
-                                placeholder="Enter secondary owner email"
-                                helperText="Email for notifications"
-                              />
-                            </Grid>
+                           <Grid item xs={12} sm={6}>
+                             <TextField
+                               fullWidth
+                               label="Secondary Owner Email (Optional)"
+                               name="secondary_owner_email"
+                               value={formData.secondary_owner_email}
+                               onChange={handleInputChange}
+                               type="email"
+                               variant="outlined"
+                               placeholder="Enter secondary owner email"
+                               helperText="Email for notifications"
+                             />
+                           </Grid>
 
-                            <Grid item xs={12}>
-                              <TextField
-                                fullWidth
-                                label="Amendment Summary"
-                                name="amendment_summary"
-                                value={formData.amendment_summary}
-                                onChange={handleInputChange}
-                                multiline
-                                rows={4}
-                                variant="outlined"
-                                placeholder="Describe the key changes in this amendment..."
-                                helperText="Required: Explain what has changed in this version (minimum 10 characters)"
-                                required
-                              />
-                            </Grid>
+                           <Grid item xs={12}>
+                             <TextField
+                               fullWidth
+                               label="Amendment Summary"
+                               name="amendment_summary"
+                               value={formData.amendment_summary}
+                               onChange={handleInputChange}
+                               multiline
+                               rows={4}
+                               variant="outlined"
+                               placeholder="Describe the key changes in this amendment..."
+                               helperText="Required: Explain what has changed in this version (minimum 10 characters)"
+                               required
+                             />
+                           </Grid>
 
-                            <Grid item xs={12}>
-                              <Alert severity="info">
-                                <Typography variant="body2">
-                                  <strong>Note:</strong> You cannot change the procedure name, expiry date, or primary owner.
-                                  Only secondary owner and document file can be updated.
-                                </Typography>
-                              </Alert>
-                            </Grid>
+                           <Grid item xs={12}>
+                             <Alert severity="info">
+                               <Typography variant="body2">
+                                 <strong>Note:</strong> You cannot change the procedure name, expiry date, or primary owner.
+                                 Only secondary owner and document file can be updated.
+                               </Typography>
+                             </Alert>
+                           </Grid>
 
-                            <Grid item xs={12}>
-                              <Button
-                                variant="contained"
-                                onClick={() => setActiveStep(1)}
-                                disabled={!formData.amendment_summary.trim() || formData.amendment_summary.length < 10}
-                                sx={{
-                                  background: HSBCColors.gradients.redPrimary,
-                                  borderRadius: '12px',
-                                  px: 3,
-                                  py: 1.5,
-                                  fontWeight: 700
-                                }}
-                              >
-                                Continue to File Upload
-                              </Button>
-                            </Grid>
-                          </Grid>
-                        )}
+                           <Grid item xs={12}>
+                             <Button
+                               variant="contained"
+                               onClick={() => setActiveStep(1)}
+                               disabled={!formData.amendment_summary.trim() || formData.amendment_summary.length < 10}
+                               sx={{
+                                 background: HSBCColors.gradients.redPrimary,
+                                 borderRadius: '12px',
+                                 px: 3,
+                                 py: 1.5,
+                                 fontWeight: 700
+                               }}
+                             >
+                               Continue to File Upload
+                             </Button>
+                           </Grid>
+                         </Grid>
+                       )}
 
-                        {/* Step 1: File Upload */}
-                        {index === 1 && (
-                          <Box>
-                            <Box sx={{
-                              border: '2px dashed #d0d0d0',
-                              borderRadius: 2,
-                              p: 4,
-                              textAlign: 'center',
-                              bgcolor: selectedFile ? '#f8f9fa' : 'background.paper',
-                              transition: 'all 0.3s ease',
-                              mb: 3
-                            }}>
-                              {!selectedFile ? (
-                                <>
-                                  <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                                  <Typography variant="h6" gutterBottom>
-                                    Select New Document
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                                    Upload the amended procedure document (.pdf, .docx, .doc) - Max 10MB
-                                  </Typography>
-                                  <input
-                                    type="file"
-                                    id="amend-file-input"
-                                    hidden
-                                    accept=".pdf,.docx,.doc"
-                                    onChange={handleFileChange}
-                                  />
-                                  <Button
-                                    variant="contained"
-                                    component="label"
-                                    htmlFor="amend-file-input"
-                                    sx={{ mt: 2 }}
-                                    startIcon={<CloudUpload />}
-                                  >
-                                    Choose New File
-                                  </Button>
-                                </>
-                              ) : (
-                                <Box>
-                                  <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
-                                  <Typography variant="h6" gutterBottom>
-                                    New File Selected: {selectedFile.name}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                                    Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                                  </Typography>
+                       {/* Step 1: File Upload */}
+                       {index === 1 && (
+                         <Box>
+                           <Box sx={{
+                             border: '2px dashed #d0d0d0',
+                             borderRadius: 2,
+                             p: 4,
+                             textAlign: 'center',
+                             bgcolor: selectedFile ? '#f8f9fa' : 'background.paper',
+                             transition: 'all 0.3s ease',
+                             mb: 3
+                           }}>
+                             {!selectedFile ? (
+                               <>
+                                 <CloudUpload sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                                 <Typography variant="h6" gutterBottom>
+                                   Select New Document
+                                 </Typography>
+                                 <Typography variant="body2" color="text.secondary" gutterBottom>
+                                   Upload the amended procedure document (.pdf, .docx, .doc) - Max 10MB
+                                 </Typography>
+                                 <input
+                                   type="file"
+                                   id="amend-file-input"
+                                   hidden
+                                   accept=".pdf,.docx,.doc"
+                                   onChange={handleFileChange}
+                                 />
+                                 <Button
+                                   variant="contained"
+                                   component="label"
+                                   htmlFor="amend-file-input"
+                                   sx={{ mt: 2 }}
+                                   startIcon={<CloudUpload />}
+                                 >
+                                   Choose New File
+                                 </Button>
+                               </>
+                             ) : (
+                               <Box>
+                                 <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
+                                 <Typography variant="h6" gutterBottom>
+                                   New File Selected: {selectedFile.name}
+                                 </Typography>
+                                 <Typography variant="body2" color="text.secondary" gutterBottom>
+                                   Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                 </Typography>
 
-                                  <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
-                                    <Button
-                                      variant="outlined"
-                                      onClick={() => {
-                                        setSelectedFile(null);
-                                        setDocumentAnalysis(null);
-                                        document.getElementById('amend-file-input').value = '';
-                                      }}
-                                      startIcon={<Cancel />}
-                                    >
-                                      Remove File
-                                    </Button>
-                                    <Button
-                                      variant="contained"
-                                      onClick={analyzeDocument}
-                                      disabled={submitStatus === 'analyzing'}
-                                      startIcon={submitStatus === 'analyzing' ? <CircularProgress size={20} /> : <Analytics />}
-                                      sx={{
-                                        background: HSBCColors.gradients.redPrimary,
-                                        borderRadius: '12px'
-                                      }}
-                                    >
-                                      {submitStatus === 'analyzing' ? 'Analyzing...' : 'Analyze with AI'}
-                                    </Button>
-                                  </Stack>
-                                </Box>
-                              )}
-                            </Box>
+                                 <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+                                   <Button
+                                     variant="outlined"
+                                     onClick={() => {
+                                       setSelectedFile(null);
+                                       setDocumentAnalysis(null);
+                                       document.getElementById('amend-file-input').value = '';
+                                     }}
+                                     startIcon={<Cancel />}
+                                   >
+                                     Remove File
+                                   </Button>
+                                   <Button
+                                     variant="contained"
+                                     onClick={analyzeDocument}
+                                     disabled={submitStatus === 'analyzing'}
+                                     startIcon={submitStatus === 'analyzing' ? <CircularProgress size={20} /> : <Analytics />}
+                                     sx={{
+                                       background: HSBCColors.gradients.redPrimary,
+                                       borderRadius: '12px'
+                                     }}
+                                   >
+                                     {submitStatus === 'analyzing' ? 'Analyzing...' : 'Analyze with AI'}
+                                   </Button>
+                                 </Stack>
+                               </Box>
+                             )}
+                           </Box>
 
-                            <Alert severity="warning">
-                              <Typography variant="body2">
-                                <strong>Important:</strong> The new document will undergo AI analysis and must achieve
-                                at least 85% quality score to proceed with the amendment.
-                              </Typography>
-                            </Alert>
-                          </Box>
-                        )}
-{/* Step 2: AI Analysis Results - ✅ EXACT SAME AS ADMIN PANEL */}
+                           <Alert severity="warning">
+                             <Typography variant="body2">
+                               <strong>Important:</strong> The new document will undergo AI analysis and must achieve
+                               at least 85% quality score to proceed with the amendment.
+                             </Typography>
+                           </Alert>
+                         </Box>
+                       )}
+
+                       {/* Step 2: AI Analysis Results - ✅ EXACT SAME AS ADMIN PANEL */}
                        {index === 2 && documentAnalysis && (
                          <Box>
                            <Card 
@@ -1029,7 +1179,7 @@ const ProcedureAmendModal = ({
                          </Box>
                        )}
 
-                       {/* Step 3: Submit Amendment */}
+                       {/* ✅ ENHANCED Step 3: Submit Amendment with Folder Info */}
                        {index === 3 && (
                          <Box>
                            <Alert severity="info" sx={{ mb: 3 }}>
@@ -1045,6 +1195,9 @@ const ProcedureAmendModal = ({
                              <Typography variant="body2" sx={{ mb: 2 }}>
                                <strong>New Quality Score:</strong> {documentAnalysis?.score}%
                                (Previous: {procedure?.score || 0}%)
+                             </Typography>
+                             <Typography variant="body2" sx={{ mb: 2 }}>
+                               <strong>Target SharePoint Location:</strong> {existingDocumentInfo?.fullFolderPath}
                              </Typography>
                              <Typography variant="body2">
                                <strong>Notifications will be sent to:</strong>
