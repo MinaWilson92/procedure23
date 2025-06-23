@@ -1,6 +1,6 @@
 // services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration
 import { sharePointPaths } from './paths';
-import  SharePointService  from './SharePointService';
+import SharePointService  from './SharePointService';
 
 class DocumentAnalyzer {
   constructor() {
@@ -65,9 +65,6 @@ class DocumentAnalyzer {
 async amendProcedureInSharePoint(amendmentData, selectedFile) {
   try {
     console.log('🔄 Processing procedure amendment...');
-
-
-    
     
     // ✅ SANITIZE DATA BEFORE PROCESSING
     const sanitizedAmendmentData = {
@@ -89,8 +86,7 @@ async amendProcedureInSharePoint(amendmentData, selectedFile) {
     };
 
     console.log('✅ Sanitized amendment data:', sanitizedAmendmentData);
-
-        const freshDigest = await this.getFreshRequestDigest();
+    
     const spService = new SharePointService();
     const result = await spService.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
     
@@ -126,106 +122,37 @@ sanitizeEmail(email) {
     .replace(/[^a-zA-Z0-9@._-]/g, '') // Keep only valid email characters
     .trim();
 }
-
-
-  // services/DocumentAnalyzer.js - Fix analyzeDocument for amendments
-
-async analyzeDocument(file, metadata = {}) {
-  try {
-    console.log('🔍 Starting client-side AI analysis...');
-    console.log('📊 Analysis metadata:', metadata);
-    
-    // Extract text from file
-    const text = await this.extractTextFromFile(file);
-    
-    // ✅ CRITICAL: Use EXACT same analysis logic as admin panel
-    if (!window.documentAnalysis) {
-      throw new Error('Document analysis engine not loaded. Please ensure documentAnalysis.js is included.');
-    }
-    
-    // ✅ ENSURE IDENTICAL CONFIGURATION FOR AMENDMENTS
-    const analysisConfig = {
-      name: metadata.name || 'Unknown Procedure',
-      lob: metadata.lob || 'Unknown',
-      subsection: metadata.subsection || 'Unknown',
-      isAmendment: metadata.isAmendment || false,
-      originalScore: metadata.originalScore || 0,
-      // ✅ FORCE SAME ANALYSIS PARAMETERS AS ADMIN PANEL
-      enforceStrictCompliance: true,
-      minimumScore: this.minimumScore,
-      enableDetailedExtraction: true,
-      enableHSBCDeciders: true
-    };
-    
-    console.log('🎯 Using analysis config:', analysisConfig);
-    
-    // ✅ CALL ANALYSIS WITH EXACT SAME PARAMETERS AS ADMIN PANEL
-    const analysis = await window.documentAnalysis.analyzeDocument(text, file.type, analysisConfig);
-    
-    // ✅ CRITICAL: Ensure scoring logic is identical
-    analysis.accepted = analysis.score >= this.minimumScore;
-    
-    // ✅ VALIDATE CRITICAL DECIDERS (same as admin panel)
-    const criticalDeciders = [
-      'Document Owners',
-      'Risk Rating', 
-      'Periodic Review',
-      'Sign-off Dates',
-      'Departments'
-    ];
-    
-    let foundCriticalDeciders = 0;
-    const deciderStatus = {};
-    
-    criticalDeciders.forEach(decider => {
-      const found = analysis.details?.foundElements?.includes(decider) || false;
-      deciderStatus[decider] = found;
-      if (found) foundCriticalDeciders++;
-    });
-    
-    console.log('🎯 Critical deciders status:', deciderStatus);
-    console.log('📊 Found critical deciders:', foundCriticalDeciders, '/', criticalDeciders.length);
-    
-    // ✅ ENFORCE: If any critical decider is missing, reduce score significantly
-    if (foundCriticalDeciders < criticalDeciders.length) {
-      const penaltyPerMissing = 20; // Same as admin panel
-      const missedDeciders = criticalDeciders.length - foundCriticalDeciders;
-      const scorePenalty = missedDeciders * penaltyPerMissing;
+  
+  async analyzeDocument(file, metadata = {}) {
+    try {
+      console.log('🔍 Starting client-side AI analysis...');
       
-      analysis.score = Math.max(0, analysis.score - scorePenalty);
+      // Extract text from file
+      const text = await this.extractTextFromFile(file);
+      
+      // ✅ USE YOUR EXISTING AI ANALYSIS LOGIC
+      if (!window.documentAnalysis) {
+        throw new Error('Document analysis engine not loaded. Please ensure documentAnalysis.js is included.');
+      }
+      
+      const analysis = await window.documentAnalysis.analyzeDocument(text, file.type, metadata);
+      
       analysis.accepted = analysis.score >= this.minimumScore;
       
-      console.log(`⚠️ Applied penalty: -${scorePenalty}% for ${missedDeciders} missing critical deciders`);
-      console.log(`📊 Final score after penalty: ${analysis.score}% (accepted: ${analysis.accepted})`);
-    }
-    
-    // ✅ ENSURE AI RECOMMENDATIONS ARE PROPERLY FORMATTED
-    if (!Array.isArray(analysis.aiRecommendations)) {
-      analysis.aiRecommendations = [];
-    }
-    
-    // Add specific recommendations for missing deciders
-    criticalDeciders.forEach(decider => {
-      if (!deciderStatus[decider]) {
-        analysis.aiRecommendations.push(`Add missing ${decider} information to improve compliance`);
-      }
-    });
-    
-    console.log('✅ AI Analysis completed with admin panel alignment:', {
-      score: analysis.score,
-      accepted: analysis.accepted,
-      foundDeciders: foundCriticalDeciders,
-      totalDeciders: criticalDeciders.length,
-      recommendationsCount: analysis.aiRecommendations?.length || 0
-    });
+      console.log('✅ AI Analysis completed:', {
+        score: analysis.score,
+        accepted: analysis.accepted,
+        templateCompliance: analysis.details?.summary?.templateCompliance
+      });
 
-    return analysis;
-    
-  } catch (error) {
-    console.error('❌ AI analysis failed:', error);
-    throw new Error(`Document analysis failed: ${error.message}`);
+      return analysis;
+      
+    } catch (error) {
+      console.error('❌ AI analysis failed:', error);
+      throw new Error(`Document analysis failed: ${error.message}`);
+    }
   }
-}
+
   async extractTextFromFile(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -252,35 +179,6 @@ async analyzeDocument(file, metadata = {}) {
       reader.readAsArrayBuffer(file);
     });
   }
-
-  async getFreshRequestDigest() {
-  try {
-    console.log('🔑 Getting fresh SharePoint request digest...');
-    
-    const response = await fetch(`${sharePointPaths.baseSite}/_api/contextinfo`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json; odata=verbose',
-        'Content-Type': 'application/json; odata=verbose'
-      },
-      credentials: 'include'
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get fresh digest: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    const digest = data.d.GetContextWebInformation.FormDigestValue;
-    
-    console.log('✅ Fresh request digest obtained');
-    return digest;
-    
-  } catch (error) {
-    console.error('❌ Failed to get fresh request digest:', error);
-    throw new Error(`Failed to get SharePoint digest: ${error.message}`);
-  }
-}
 
   async extractPDFText(arrayBuffer) {
     try {
