@@ -529,41 +529,69 @@ class SharePointService {
   // ===================================================================
   // UTILITY METHODS
   // ===================================================================
+// services/SharePointService.js - Fix ensureFolderExists method
 
-  async ensureFolderExists(targetPath) {
-    try {
-      const checkUrl = `${this.baseUrl}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${targetPath}')`;
+async ensureFolderExists(targetPath) {
+  try {
+    const checkUrl = `${this.baseUrl}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${targetPath}')`;
+    
+    console.log('📁 Checking if folder exists:', targetPath);
+    
+    const checkResponse = await fetch(checkUrl, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include'
+    });
+
+    if (checkResponse.ok) {
+      console.log('✅ Folder already exists:', targetPath);
+      return true; // ✅ Folder exists, no need to create
+    }
+    
+    if (checkResponse.status === 404) {
+      console.log('📁 Folder does not exist, creating:', targetPath);
       
-      const checkResponse = await fetch(checkUrl, {
-        method: 'GET',
-        headers: this.getHeaders(),
-        credentials: 'include'
-      });
-
-      if (checkResponse.ok) {
-        console.log('✅ Folder exists:', targetPath);
-        return;
-      }
-
-      console.log('📁 Creating folder:', targetPath);
-      
-      const pathParts = targetPath.split('/');
+      // ✅ CREATE FOLDER HIERARCHY STEP BY STEP
+      const pathParts = targetPath.split('/').filter(part => part.length > 0);
       let currentPath = '';
       
       for (const part of pathParts) {
-        if (part) {
-          currentPath += `/${part}`;
-          await this.createSingleFolder(currentPath);
-        }
+        currentPath += `/${part}`;
+        await this.createSingleFolderSafe(currentPath);
       }
-
-    } catch (error) {
-      console.error('❌ Error ensuring folder exists:', error);
+      
+      return true;
+    } else {
+      console.warn('⚠️ Unexpected response checking folder:', checkResponse.status);
+      return false;
     }
-  }
 
-  async createSingleFolder(folderPath) {
-    try {
+  } catch (error) {
+    console.error('❌ Error ensuring folder exists:', error);
+    return false;
+  }
+}
+
+async createSingleFolderSafe(folderPath) {
+  try {
+    // ✅ CHECK IF THIS SPECIFIC FOLDER EXISTS FIRST
+    const checkUrl = `${this.baseUrl}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng${folderPath}')`;
+    
+    const checkResponse = await fetch(checkUrl, {
+      method: 'GET',
+      headers: this.getHeaders(),
+      credentials: 'include'
+    });
+    
+    if (checkResponse.ok) {
+      console.log('✅ Folder already exists, skipping creation:', folderPath);
+      return true;
+    }
+    
+    // ✅ ONLY CREATE IF IT DOESN'T EXIST
+    if (checkResponse.status === 404) {
+      console.log('📁 Creating folder:', folderPath);
+      
       const createUrl = `${this.baseUrl}/_api/web/folders/add('/sites/EmployeeEng${folderPath}')`;
       
       const response = await fetch(createUrl, {
@@ -573,12 +601,23 @@ class SharePointService {
       });
 
       if (response.ok) {
-        console.log('✅ Folder created:', folderPath);
+        console.log('✅ Folder created successfully:', folderPath);
+        return true;
+      } else if (response.status === 409) {
+        console.log('✅ Folder already exists (409 conflict):', folderPath);
+        return true; // ✅ Folder exists, that's fine
+      } else {
+        console.warn('⚠️ Folder creation failed but continuing:', response.status);
+        return false;
       }
-    } catch (error) {
-      console.log('⚠️ Folder creation skipped:', folderPath);
     }
+    
+    return true;
+  } catch (error) {
+    console.warn('⚠️ Folder creation error (non-critical):', error.message);
+    return false; // ✅ Don't fail the whole process for folder issues
   }
+}
 
   async fileToArrayBuffer(file) {
     return new Promise((resolve, reject) => {
