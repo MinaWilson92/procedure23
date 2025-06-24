@@ -1,4 +1,4 @@
-// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration + Amendment Support
+// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration + SiteAssets Support
 import { sharePointPaths } from './paths';
 import SharePointService  from './SharePointService';
 
@@ -9,23 +9,23 @@ class DocumentAnalyzer {
     // LOB subsection configuration for UI
     this.lobSubsections = {
       'IWPB': [
-        { value: 'risk_management', label: 'Risk Management' },
-        { value: 'compliance', label: 'Compliance & Regulatory' },
-        { value: 'operational', label: 'Operational Procedures' },
-        { value: 'financial', label: 'Financial Controls' },
-        { value: 'technology', label: 'Technology & Security' }
+        { value: 'Risk_Management', label: 'Risk Management' },
+        { value: 'Compliance', label: 'Compliance & Regulatory' },
+        { value: 'Operational', label: 'Operational Procedures' },
+        { value: 'Financial', label: 'Financial Controls' },
+        { value: 'Technology', label: 'Technology & Security' }
       ],
       'CIB': [
-        { value: 'trading', label: 'Trading Operations' },
-        { value: 'sales', label: 'Sales Procedures' },
-        { value: 'research', label: 'Research & Analysis' },
-        { value: 'credit', label: 'Credit Management' }
+        { value: 'Trading_Operations', label: 'Trading Operations' },
+        { value: 'Sales_Procedures', label: 'Sales Procedures' },
+        { value: 'Research_Analysis', label: 'Research & Analysis' },
+        { value: 'Credit_Management', label: 'Credit Management' }
       ],
       'GCOO': [
-        { value: 'operations', label: 'Operations' },
-        { value: 'technology', label: 'Technology' },
-        { value: 'change_management', label: 'Change Management' },
-        { value: 'project_management', label: 'Project Management' }
+        { value: 'Operations', label: 'Operations' },
+        { value: 'Technology', label: 'Technology' },
+        { value: 'Change_Management', label: 'Change Management' },
+        { value: 'Project_Management', label: 'Project Management' }
       ]
     };
   }
@@ -57,14 +57,14 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // ✅ FIXED: AMENDMENT SUPPORT METHODS WITH SITEASSETS
+  // ✅ AMENDMENT SUPPORT METHODS WITH SITEASSETS
   // ============================================================================
 
   // ✅ SMART FOLDER DETECTION - Parse existing document URL with SiteAssets
   parseExistingDocumentPath(documentLink) {
     try {
       if (!documentLink) {
-        console.warn('⚠️ No document link provided, using default folder structure');
+        console.warn('⚠️ No document link provided, using default SiteAssets structure');
         return {
           baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/employeeeng',
           lobFolder: 'IWPB',
@@ -80,7 +80,7 @@ class DocumentAnalyzer {
       const url = new URL(documentLink);
       const pathname = url.pathname;
 
-      // ✅ CORRECT PATTERN: /sites/employeeeng/SiteAssets/IWPB/Risk Management/document.docx
+      // ✅ CORRECT PATTERN: /sites/employeeeng/SiteAssets/IWPB/Risk_Management/document.docx
       const pathParts = pathname.split('/').filter(part => part.length > 0);
       
       console.log('📂 URL path parts:', pathParts);
@@ -101,7 +101,7 @@ class DocumentAnalyzer {
       const lobFolderIndex = siteAssetsIndex + 1;
       const lobFolder = pathParts[lobFolderIndex] || 'IWPB';
       
-      // ✅ CORRECT: The folder after LOB should be the subfolder
+      // ✅ CORRECT: The folder after LOB should be the actual subfolder (not "General")
       const subFolderIndex = lobFolderIndex + 1;
       const subFolder = pathParts[subFolderIndex] || 'General';
       
@@ -109,25 +109,25 @@ class DocumentAnalyzer {
       const folderPathParts = pathParts.slice(siteIndex, subFolderIndex + 1);
       const fullFolderPath = `/${folderPathParts.join('/')}`;
       
-      // ✅ CORRECT: SharePoint API path (without /sites/employeeeng)
+      // ✅ CORRECT: SharePoint API path (SiteAssets/LOB/actual_subfolder)
       const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
 
       const result = {
         baseUrl,
         lobFolder,
-        subFolder,
+        subFolder, // ✅ This will be "Risk_Management", not "General"
         fullFolderPath,
         sharePointPath,
         originalUrl: documentLink
       };
 
-      console.log('✅ Parsed folder structure with SiteAssets:', result);
+      console.log('✅ Parsed SiteAssets folder structure:', result);
       return result;
 
     } catch (error) {
       console.error('❌ Error parsing document URL:', error);
       
-      // ✅ CORRECT FALLBACK: Default structure with SiteAssets
+      // ✅ CORRECT FALLBACK: Default SiteAssets structure
       const fallback = {
         baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/employeeeng',
         lobFolder: 'IWPB',
@@ -137,7 +137,7 @@ class DocumentAnalyzer {
         error: error.message
       };
       
-      console.log('🔄 Using fallback folder structure with SiteAssets:', fallback);
+      console.log('🔄 Using fallback SiteAssets structure:', fallback);
       return fallback;
     }
   }
@@ -160,6 +160,8 @@ class DocumentAnalyzer {
         procedureId: amendmentData.procedureId,
         originalName: this.sanitizeString(amendmentData.originalName || ''),
         originalLOB: amendmentData.originalLOB,
+        originalPrimaryOwner: amendmentData.originalPrimaryOwner || 'Unknown',
+        originalPrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail || '',
         amendment_summary: this.sanitizeString(amendmentData.amendment_summary || ''),
         amendment_date: amendmentData.amendment_date || new Date().toISOString(),
         amended_by: amendmentData.amended_by || 'User',
@@ -167,10 +169,10 @@ class DocumentAnalyzer {
         secondary_owner: this.sanitizeString(amendmentData.secondary_owner || ''),
         secondary_owner_email: this.sanitizeEmail(amendmentData.secondary_owner_email || ''),
         
-        // ✅ CORRECT: Use SiteAssets folder structure
-        sharePointPath: existingDocumentPath.sharePointPath,
+        // ✅ CORRECT: Use actual SiteAssets folder structure from existing document
+        sharePointPath: existingDocumentPath.sharePointPath, // e.g., "SiteAssets/IWPB/Risk_Management"
         lobFolder: existingDocumentPath.lobFolder,
-        subFolder: existingDocumentPath.subFolder,
+        subFolder: existingDocumentPath.subFolder, // ✅ Real subfolder name
         
         // Only add analysis data if file was re-analyzed
         ...(amendmentData.new_analysis_details && {
@@ -180,7 +182,7 @@ class DocumentAnalyzer {
         })
       };
 
-      console.log('✅ Sanitized amendment data with SiteAssets:', sanitizedAmendmentData);
+      console.log('✅ Sanitized amendment data with correct SiteAssets path:', sanitizedAmendmentData);
       
       // ✅ UPLOAD AMENDMENT WITH EXISTING SITEASSETS FOLDER STRUCTURE
       const result = await this.uploadAmendmentWithAnalysis(sanitizedAmendmentData, selectedFile);
@@ -222,7 +224,7 @@ class DocumentAnalyzer {
       const requestDigest = await this.getRequestDigest();
       
       // 3. ✅ CORRECT: USE EXISTING SITEASSETS FOLDER PATH
-      const sharePointPath = amendmentData.sharePointPath; // Already includes SiteAssets/LOB/subfolder
+      const sharePointPath = amendmentData.sharePointPath; // Already includes SiteAssets/LOB/actual_subfolder
       console.log('📂 Using existing SiteAssets SharePoint path:', sharePointPath);
       
       // 4. Upload amendment file to existing SiteAssets folder
@@ -232,19 +234,19 @@ class DocumentAnalyzer {
       const amendedProcedureData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         Title: amendmentData.originalName,
-        ExpiryDate: new Date().toISOString(), // Could update expiry as needed
-        PrimaryOwner: amendmentData.originalPrimaryOwner || 'Unknown',
-        PrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail || '',
+        ExpiryDate: new Date().toISOString(),
+        PrimaryOwner: amendmentData.originalPrimaryOwner,
+        PrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail,
         SecondaryOwner: amendmentData.secondary_owner || '',
         SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
         LOB: amendmentData.originalLOB || 'Unknown',
-        ProcedureSubsection: amendmentData.subFolder || '',
+        ProcedureSubsection: amendmentData.subFolder || '', // ✅ Real subfolder name
         SharePointPath: sharePointPath || '',
         DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
         OriginalFilename: (file && file.name) || 'unknown.doc',
         FileSize: (file && file.size) || 0,
         
-        // ✅ NEW AI ANALYSIS RESULTS
+        // ✅ AI ANALYSIS RESULTS
         QualityScore: (analysisResult && analysisResult.score) || 0,
         TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
         AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
@@ -295,6 +297,7 @@ class DocumentAnalyzer {
           newProcedureId: procedureResult.Id,
           procedureName: amendmentData.originalName,
           lob: amendmentData.originalLOB,
+          subfolder: amendmentData.subFolder, // ✅ Real subfolder
           amendmentSummary: amendmentData.amendment_summary,
           qualityScore: analysisResult.score,
           templateCompliance: analysisResult.details?.summary?.templateCompliance,
@@ -314,7 +317,8 @@ class DocumentAnalyzer {
         originalProcedureId: amendmentData.procedureId,
         qualityScore: analysisResult.score,
         sharePointUrl,
-        sharePointPath
+        sharePointPath,
+        actualSubfolder: amendmentData.subFolder
       });
 
       return {
@@ -325,7 +329,7 @@ class DocumentAnalyzer {
         sharePointPath: sharePointPath,
         sharePointUrl: sharePointUrl,
         analysisResult: analysisResult,
-        message: 'Amendment uploaded successfully to SiteAssets'
+        message: `Amendment uploaded successfully to SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`
       };
      
     } catch (error) {
@@ -373,7 +377,6 @@ class DocumentAnalyzer {
 
     } catch (error) {
       console.error('❌ Failed to update original procedure record:', error);
-      // Don't fail the entire amendment process for this
       console.warn('⚠️ Continuing amendment process despite update failure');
       return false;
     }
@@ -383,7 +386,6 @@ class DocumentAnalyzer {
   sanitizeString(str) {
     if (!str || typeof str !== 'string') return '';
     
-    // Remove potentially problematic characters and decode any URL encoding
     return str
       .replace(/%[0-9A-Fa-f]{2}/g, '') // Remove URL encoded characters
       .replace(/[<>]/g, '') // Remove HTML brackets
@@ -393,7 +395,6 @@ class DocumentAnalyzer {
   sanitizeEmail(email) {
     if (!email || typeof email !== 'string') return '';
     
-    // Basic email sanitization
     return email
       .toLowerCase()
       .replace(/[^a-zA-Z0-9@._-]/g, '') // Keep only valid email characters
@@ -463,7 +464,6 @@ class DocumentAnalyzer {
 
   async extractPDFText(arrayBuffer) {
     try {
-      // ✅ Use PDF.js CDN (add script tag to your SharePoint page)
       const pdfjsLib = window['pdfjs-dist/build/pdf'];
       
       if (!pdfjsLib) {
@@ -491,7 +491,6 @@ class DocumentAnalyzer {
 
   async extractWordText(arrayBuffer) {
     try {
-      // ✅ Use mammoth.js CDN (add script tag to your SharePoint page)
       const mammoth = window.mammoth;
       
       if (!mammoth) {
@@ -510,7 +509,7 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // ✅ FIXED: SHAREPOINT INTEGRATION WITH SITEASSETS
+  // ✅ SHAREPOINT INTEGRATION WITH CORRECT SITEASSETS PATHS
   // ============================================================================
 
   async uploadProcedureWithAnalysis(formData, file) {
@@ -536,8 +535,10 @@ class DocumentAnalyzer {
       // 2. Get SharePoint context
       const requestDigest = await this.getRequestDigest();
       
-      // 3. ✅ CORRECT: Generate SiteAssets path
+      // 3. ✅ CORRECT: Generate SiteAssets path using SELECTED subsection
       const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
+      console.log('📂 Generated SiteAssets path for new upload:', sharePointPath);
+      
       const fileUploadResult = await this.uploadFileToSharePoint(file, sharePointPath, requestDigest);
       
       // 4. Create procedure list item with comprehensive AI data
@@ -550,7 +551,7 @@ class DocumentAnalyzer {
         SecondaryOwner: formData.secondary_owner || '',
         SecondaryOwnerEmail: formData.secondary_owner_email || '',
         LOB: formData.lob || 'Unknown',
-        ProcedureSubsection: formData.procedure_subsection || '',
+        ProcedureSubsection: formData.procedure_subsection || '', // ✅ Selected subsection
         SharePointPath: sharePointPath || '',
         DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
         OriginalFilename: (file && file.name) || 'unknown.doc',
@@ -598,7 +599,7 @@ class DocumentAnalyzer {
           procedureId: procedureResult.Id,
           procedureName: formData.name,
           lob: formData.lob,
-          subsection: formData.procedure_subsection,
+          subsection: formData.procedure_subsection, // ✅ Selected subsection
           qualityScore: analysisResult.score,
           templateCompliance: analysisResult.details?.summary?.templateCompliance,
           riskRating: analysisResult.details?.riskRating,
@@ -621,7 +622,8 @@ class DocumentAnalyzer {
         procedureId: procedureResult.Id,
         qualityScore: analysisResult.score,
         sharePointUrl,
-        sharePointPath
+        sharePointPath,
+        selectedSubsection: formData.procedure_subsection
       });
 
       return {
@@ -640,16 +642,22 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ NEW: Generate SiteAssets path for uploads
+  // ✅ CORRECT: Generate SiteAssets path with selected subsection
   generateSiteAssetsPath(lob, subsection) {
-    // Clean subsection name for folder path
-    const cleanSubsection = (subsection || 'General')
-      .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+    // ✅ Use the SELECTED subsection, not "General" unless no selection
+    let cleanSubsection = subsection || 'General';
+    
+    // Clean subsection name for folder path (keep underscores, replace spaces)
+    cleanSubsection = cleanSubsection
+      .replace(/[^a-zA-Z0-9\s_]/g, '') // Remove special characters except underscores
       .replace(/\s+/g, '_') // Replace spaces with underscores
       .trim();
     
     // ✅ CORRECT: Always include SiteAssets as base
-    return `SiteAssets/${lob}/${cleanSubsection}`;
+    const path = `SiteAssets/${lob}/${cleanSubsection}`;
+    
+    console.log(`📂 Generated SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
+    return path;
   }
 
   async getRequestDigest() {
@@ -671,22 +679,22 @@ class DocumentAnalyzer {
      
     } catch (error) {
       throw new Error(`Failed to get SharePoint request digest: ${error.message}`);
-    }
-  }
+   }
+ }
 
-  async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
-    try {
-      // ✅ CORRECT: Upload URL with SiteAssets path
-      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
-     
-      console.log('📤 Uploading to SiteAssets path:', uploadUrl);
+ async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
+   try {
+     // ✅ CORRECT: Upload URL with SiteAssets path
+     const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
+    
+     console.log('📤 Uploading to SiteAssets path:', uploadUrl);
 
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'X-RequestDigest': requestDigest
-          'Content-Type': 'application/octet-stream'
+     const response = await fetch(uploadUrl, {
+       method: 'POST',
+       headers: {
+         'Accept': 'application/json; odata=verbose',
+         'X-RequestDigest': requestDigest,
+         'Content-Type': 'application/octet-stream'
        },
        body: file
      });
