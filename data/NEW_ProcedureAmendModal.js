@@ -1,4 +1,4 @@
-// components/ProcedureAmendModal.js - Enhanced Procedure Amendment Modal with Smart Folder Detection
+// components/ProcedureAmendModal.js - Enhanced with SiteAssets Folder Support
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography,
@@ -18,7 +18,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
 import DocumentAnalyzer from '../services/DocumentAnalyzer';
-import EmailNotificationService from '../services/EmailNotificationService';
 
 class AmendmentErrorBoundary extends React.Component {
   constructor(props) {
@@ -73,7 +72,6 @@ class AmendmentErrorBoundary extends React.Component {
             <Button 
               variant="contained" 
               onClick={() => {
-                // ✅ SharePoint-safe page refresh
                 if (window.location.reload) {
                   window.location.reload();
                 } else {
@@ -183,9 +181,8 @@ const ProcedureAmendModal = ({
   const [submitStatus, setSubmitStatus] = useState('ready');
   const [activeStep, setActiveStep] = useState(0);
 
-  // Services - ✅ SAME AS ADMIN PANEL
+  // Services
   const [documentAnalyzer] = useState(() => new DocumentAnalyzer());
-  const [emailService] = useState(() => new EmailNotificationService());
 
   // Steps for the amendment process
   const steps = [
@@ -206,26 +203,27 @@ const ProcedureAmendModal = ({
     }
   }, [procedure]);
 
-  // ✅ NEW: Smart folder detection from existing document URL
+  // ✅ CORRECTED: Smart folder detection with SiteAssets support
   const parseExistingDocumentPath = (documentLink) => {
     try {
       if (!documentLink) {
-        console.warn('⚠️ No document link provided, using default folder structure');
+        console.warn('⚠️ No document link provided, using default SiteAssets structure');
         return {
           baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
           lobFolder: procedure?.lob || 'IWPB',
           subFolder: 'General',
-          fullFolderPath: `/sites/employeeeng/${procedure?.lob || 'IWPB'}/General`
+          fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
+          sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`
         };
       }
 
-      console.log('🔍 Analyzing existing document URL:', documentLink);
+      console.log('🔍 Analyzing existing document URL for SiteAssets:', documentLink);
 
       // Parse the URL to extract folder structure
       const url = new URL(documentLink);
       const pathname = url.pathname;
 
-      // Expected pattern: /sites/employeeeng/IWPB/Risk Management/document.docx
+      // ✅ CORRECT PATTERN: /sites/employeeeng/SiteAssets/IWPB/Risk_Management/document.docx
       const pathParts = pathname.split('/').filter(part => part.length > 0);
       
       console.log('📂 URL path parts:', pathParts);
@@ -233,57 +231,61 @@ const ProcedureAmendModal = ({
       // Find the base site structure
       const siteIndex = pathParts.findIndex(part => part === 'sites');
       const employeeEngIndex = pathParts.findIndex(part => part.toLowerCase() === 'employeeeng');
+      const siteAssetsIndex = pathParts.findIndex(part => part.toLowerCase() === 'siteassets');
       
-      if (siteIndex === -1 || employeeEngIndex === -1) {
-        throw new Error('Invalid SharePoint URL structure');
+      if (siteIndex === -1 || employeeEngIndex === -1 || siteAssetsIndex === -1) {
+        throw new Error('Invalid SharePoint URL structure - missing SiteAssets');
       }
 
       // Extract folder structure
       const baseUrl = `${url.protocol}//${url.host}`;
-      const sitePath = `/${pathParts.slice(siteIndex, employeeEngIndex + 1).join('/')}`;
       
-      // The folder after /sites/employeeeng/ should be the LOB folder
-      const lobFolderIndex = employeeEngIndex + 1;
+      // ✅ CORRECT: The folder after /sites/employeeeng/SiteAssets/ should be the LOB folder
+      const lobFolderIndex = siteAssetsIndex + 1;
       const lobFolder = pathParts[lobFolderIndex] || procedure?.lob || 'IWPB';
       
-      // The folder after LOB should be the subfolder
+      // ✅ CORRECT: The folder after LOB should be the actual subfolder (e.g., "Risk_Management")
       const subFolderIndex = lobFolderIndex + 1;
       const subFolder = pathParts[subFolderIndex] || 'General';
       
-      // Reconstruct the full folder path (without the document name)
+      // ✅ CORRECT: Reconstruct paths with SiteAssets
       const folderPathParts = pathParts.slice(siteIndex, subFolderIndex + 1);
       const fullFolderPath = `/${folderPathParts.join('/')}`;
+      
+      // ✅ CORRECT: SharePoint API path (SiteAssets/LOB/actual_subfolder)
+      const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
 
       const result = {
         baseUrl,
-        sitePath,
         lobFolder,
-        subFolder,
+        subFolder, // ✅ This will be "Risk_Management", not "General"
         fullFolderPath,
+        sharePointPath,
         originalUrl: documentLink
       };
 
-      console.log('✅ Parsed folder structure:', result);
+      console.log('✅ Parsed SiteAssets folder structure with actual subfolder:', result);
       return result;
 
     } catch (error) {
       console.error('❌ Error parsing document URL:', error);
       
-      // Fallback to default structure
+      // ✅ CORRECT FALLBACK: Default SiteAssets structure
       const fallback = {
         baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
         lobFolder: procedure?.lob || 'IWPB',
         subFolder: 'General',
-        fullFolderPath: `/sites/employeeeng/${procedure?.lob || 'IWPB'}/General`,
+        fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
+        sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`,
         error: error.message
       };
       
-      console.log('🔄 Using fallback folder structure:', fallback);
+      console.log('🔄 Using fallback SiteAssets structure:', fallback);
       return fallback;
     }
   };
 
-  // 🎯 **Helper Functions - SAME AS ADMIN PANEL**
+  // ✅ Helper Functions
   const getScoreColor = (score) => {
     if (score >= 80) return '#4caf50';
     if (score >= 60) return '#ff9800';
@@ -307,7 +309,7 @@ const ProcedureAmendModal = ({
     });
   };
 
-  // 🎯 **Event Handlers**
+  // Event Handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -415,7 +417,7 @@ const ProcedureAmendModal = ({
     return true;
   };
 
-  // ✅ ENHANCED: Amendment submission with smart folder detection
+  // ✅ ENHANCED: Amendment submission with SiteAssets folder detection
   const handleSubmitAmendment = async () => {
     if (!validateAmendmentForm()) {
       return;
@@ -428,7 +430,7 @@ const ProcedureAmendModal = ({
       
       console.log('🚀 Starting procedure amendment process...');
 
-      // ✅ SMART FOLDER DETECTION - Parse existing document URL
+      // ✅ SMART FOLDER DETECTION - Parse existing document URL for SiteAssets
       const existingDocumentPath = parseExistingDocumentPath(
         procedure?.file_link || 
         procedure?.document_link || 
@@ -437,7 +439,7 @@ const ProcedureAmendModal = ({
         procedure?.SharePointURL
       );
       
-      console.log('📂 Using existing folder structure:', existingDocumentPath);
+      console.log('📂 Using existing SiteAssets folder structure:', existingDocumentPath);
 
       // ✅ COMPLETELY SANITIZE ALL AMENDMENT DATA
       const sanitizedAmendmentData = {
@@ -453,10 +455,11 @@ const ProcedureAmendModal = ({
         secondary_owner_email: String(formData.secondary_owner_email || '').replace(/[%&+#]/g, ''),
         amendment_summary: String(formData.amendment_summary || '').replace(/[%&+#]/g, ''),
         
-        // ✅ SMART FOLDER STRUCTURE - Use existing folder path
+        // ✅ SMART SITEASSETS FOLDER STRUCTURE - Use existing folder path with actual subfolder
         targetFolderPath: existingDocumentPath.fullFolderPath,
+        sharePointPath: existingDocumentPath.sharePointPath, // e.g., "SiteAssets/IWPB/Risk_Management"
         lobFolder: existingDocumentPath.lobFolder,
-        subFolder: existingDocumentPath.subFolder,
+        subFolder: existingDocumentPath.subFolder, // ✅ Real subfolder like "Risk_Management"
         baseUrl: existingDocumentPath.baseUrl,
         
         // Amendment metadata
@@ -480,34 +483,14 @@ const ProcedureAmendModal = ({
         original_document_link: existingDocumentPath.originalUrl
       };
 
-      console.log('🔍 Sanitized amendment data with smart folders:', sanitizedAmendmentData);
+      console.log('🔍 Sanitized amendment data with correct SiteAssets folders:', sanitizedAmendmentData);
 
-      // ✅ PROCESS AMENDMENT WITH SMART FOLDER DETECTION
+      // ✅ PROCESS AMENDMENT WITH SMART SITEASSETS FOLDER DETECTION
       const result = await documentAnalyzer.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
 
       if (result.success) {
-        console.log('✅ Procedure amended successfully with smart folder detection');
-        
-        // ✅ Send notifications with sanitized data
-        try {
-          await emailService.triggerProcedureAmendmentNotification({
-            procedureName: sanitizedAmendmentData.originalName,
-            procedureId: sanitizedAmendmentData.procedureId,
-            amendedBy: sanitizedAmendmentData.amended_by_name,
-            amendmentSummary: sanitizedAmendmentData.amendment_summary,
-            amendmentDate: new Date().toLocaleDateString(),
-            primaryOwner: sanitizedAmendmentData.originalPrimaryOwner,
-            primaryOwnerEmail: sanitizedAmendmentData.originalPrimaryOwnerEmail,
-            secondaryOwnerEmail: sanitizedAmendmentData.secondary_owner_email,
-            lineOfBusiness: sanitizedAmendmentData.originalLOB,
-            originalQualityScore: procedure?.score || 0,
-            newQualityScore: sanitizedAmendmentData.new_score,
-            folderPath: sanitizedAmendmentData.targetFolderPath
-          });
-          console.log('✅ Amendment notification sent successfully');
-        } catch (emailError) {
-          console.warn('⚠️ Amendment successful but email notification failed:', emailError);
-        }
+        console.log('✅ Procedure amended successfully with SiteAssets folder detection');
+        console.log(`📂 Amendment uploaded to: ${result.sharePointPath}`);
         
         setSubmitStatus('success');
         setTimeout(() => {
@@ -544,7 +527,7 @@ const ProcedureAmendModal = ({
     if (fileInput) fileInput.value = '';
   };
 
-  // ✅ ADD DEBUG INFO IN THE UI
+  // ✅ DEBUG INFO IN THE UI WITH CORRECT SITEASSETS
   const existingDocumentInfo = procedure ? parseExistingDocumentPath(
     procedure?.file_link || 
     procedure?.document_link || 
@@ -563,7 +546,7 @@ const ProcedureAmendModal = ({
         maxWidth="xl"
         fullWidth
       >
-        {/* 🌟 **ENHANCED HEADER** */}
+        {/* Enhanced Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -614,7 +597,7 @@ const ProcedureAmendModal = ({
         </motion.div>
 
         <DialogContent sx={{ p: 4 }}>
-          {/* 📋 **CURRENT PROCEDURE INFO WITH FOLDER DEBUG** */}
+          {/* Current Procedure Info with SiteAssets Folder Debug */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -650,93 +633,103 @@ const ProcedureAmendModal = ({
                         <Typography variant="body1" fontWeight={600}>{formatDate(procedure?.expiry)}</Typography>
                       </Box>
 
-                      {/* ✅ NEW: Folder Structure Info */}
+                      {/* ✅ ENHANCED: SiteAssets Folder Structure Info with Actual Subfolder */}
                       {existingDocumentInfo && (
                         <Box>
-                          <Typography variant="body2" color="text.secondary">Current SharePoint Location</Typography>
+                          <Typography variant="body2" color="text.secondary">Current SharePoint SiteAssets Location</Typography>
                           <Paper sx={{ p: 2, mt: 1, bgcolor: '#f8f9fa', border: '1px solid #e0e0e0' }}>
                             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
                               <Folder sx={{ color: '#1976d2', fontSize: 20 }} />
-                              <Typography variant="body2" fontWeight={600}>Folder Structure Analysis</Typography>
+                              <Typography variant="body2" fontWeight={600}>SiteAssets Folder Structure Analysis</Typography>
                             </Stack>
-                            
                             <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
-                              <strong>Base URL:</strong> {existingDocumentInfo.baseUrl}
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
-                              <strong>LOB Folder:</strong> {existingDocumentInfo.lobFolder}
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
-                              <strong>Sub Folder:</strong> {existingDocumentInfo.subFolder}
-                            </Typography>
-                            <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 1 }}>
-                              <strong>Full Path:</strong> {existingDocumentInfo.fullFolderPath}
-                            </Typography>
-                            
-                            {existingDocumentInfo.error ? (
-                              <Alert severity="warning" sx={{ mt: 1 }}>
-                                <Typography variant="caption">
-                                  ⚠️ Could not parse existing URL: {existingDocumentInfo.error}
-                                </Typography>
-                              </Alert>
-                            ) : (
-                              <Alert severity="success" sx={{ mt: 1 }}>
-                                <Typography variant="caption">
-                                  ✅ Amendment will use existing folder structure
-                                </Typography>
-                              </Alert>
-                            )}
-                          </Paper>
-                        </Box>
-                      )}
-                    </Stack>
-                  </Grid>
+                             <strong>Base URL:</strong> {existingDocumentInfo.baseUrl}
+                           </Typography>
+                           <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
+                             <strong>LOB Folder:</strong> {existingDocumentInfo.lobFolder}
+                           </Typography>
+                           <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
+                             <strong>Actual Sub Folder:</strong> {existingDocumentInfo.subFolder}
+                             {existingDocumentInfo.subFolder !== 'General' && (
+                               <Chip 
+                                 label="REAL SUBFOLDER" 
+                                 size="small" 
+                                 color="success" 
+                                 sx={{ ml: 1, fontSize: '0.6rem', height: 16 }}
+                               />
+                             )}
+                           </Typography>
+                           <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 0.5 }}>
+                             <strong>SharePoint Path:</strong> {existingDocumentInfo.sharePointPath}
+                           </Typography>
+                           <Typography variant="caption" sx={{ fontFamily: 'monospace', display: 'block', mb: 1 }}>
+                             <strong>Full Path:</strong> {existingDocumentInfo.fullFolderPath}
+                           </Typography>
+                           
+                           {existingDocumentInfo.error ? (
+                             <Alert severity="warning" sx={{ mt: 1 }}>
+                               <Typography variant="caption">
+                                 ⚠️ Could not parse existing URL: {existingDocumentInfo.error}
+                               </Typography>
+                             </Alert>
+                           ) : (
+                             <Alert severity="success" sx={{ mt: 1 }}>
+                               <Typography variant="caption">
+                                 ✅ Amendment will use existing SiteAssets/{existingDocumentInfo.lobFolder}/{existingDocumentInfo.subFolder} folder structure
+                               </Typography>
+                             </Alert>
+                           )}
+                         </Paper>
+                       </Box>
+                     )}
+                   </Stack>
+                 </Grid>
 
-                  <Grid item xs={12} md={4}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>Current Quality Score</Typography>
-                      <Typography variant="h2" fontWeight={900} color={getScoreColor(procedure?.score || 0)}>
-                        {procedure?.score || 0}%
-                      </Typography>
-                      <Chip
-                        label={getQualityInfo(procedure?.score || 0).level}
-                        sx={{
-                          backgroundColor: alpha(getScoreColor(procedure?.score || 0), 0.1),
-                          color: getScoreColor(procedure?.score || 0),
-                          fontWeight: 700,
-                          mt: 1
-                        }}
-                      />
-                    </Box>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </GlassmorphismCard>
-          </motion.div>
+                 <Grid item xs={12} md={4}>
+                   <Box sx={{ textAlign: 'center' }}>
+                     <Typography variant="body2" color="text.secondary" gutterBottom>Current Quality Score</Typography>
+                     <Typography variant="h2" fontWeight={900} color={getScoreColor(procedure?.score || 0)}>
+                       {procedure?.score || 0}%
+                     </Typography>
+                     <Chip
+                       label={getQualityInfo(procedure?.score || 0).level}
+                       sx={{
+                         backgroundColor: alpha(getScoreColor(procedure?.score || 0), 0.1),
+                         color: getScoreColor(procedure?.score || 0),
+                         fontWeight: 700,
+                         mt: 1
+                       }}
+                     />
+                   </Box>
+                 </Grid>
+               </Grid>
+             </CardContent>
+           </GlassmorphismCard>
+         </motion.div>
 
-          {/* 🔄 **AMENDMENT STEPPER** */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <GlassmorphismCard sx={{ mb: 4 }}>
-              <CardContent sx={{ p: 3 }}>
-                <Stepper activeStep={activeStep} orientation="vertical">
-                  {steps.map((step, index) => (
-                    <Step key={step.label}>
-                      <StepLabel>
-                        <Typography variant="h6" fontWeight={700}>{step.label}</Typography>
-                      </StepLabel>
-                      <StepContent>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          {step.description}
-                        </Typography>
+         {/* Amendment Stepper */}
+         <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ duration: 0.6, delay: 0.2 }}
+         >
+           <GlassmorphismCard sx={{ mb: 4 }}>
+             <CardContent sx={{ p: 3 }}>
+               <Stepper activeStep={activeStep} orientation="vertical">
+                 {steps.map((step, index) => (
+                   <Step key={step.label}>
+                     <StepLabel>
+                       <Typography variant="h6" fontWeight={700}>{step.label}</Typography>
+                     </StepLabel>
+                     <StepContent>
+                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                         {step.description}
+                       </Typography>
 
-                        {/* Step 0: Amendment Details */}
-                        {index === 0 && (
-                          <Grid container spacing={3}>
-                          <Grid item xs={12} sm={6}>
+                       {/* Step 0: Amendment Details */}
+                       {index === 0 && (
+                         <Grid container spacing={3}>
+                           <Grid item xs={12} sm={6}>
                              <TextField
                                fullWidth
                                label="Secondary Owner (Optional)"
@@ -893,7 +886,7 @@ const ProcedureAmendModal = ({
                          </Box>
                        )}
 
-                       {/* Step 2: AI Analysis Results - ✅ EXACT SAME AS ADMIN PANEL */}
+                       {/* Step 2: AI Analysis Results - EXACT SAME AS ADMIN PANEL */}
                        {index === 2 && documentAnalysis && (
                          <Box>
                            <Card 
@@ -935,7 +928,7 @@ const ProcedureAmendModal = ({
                                  />
                                </Box>
 
-                               {/* ✅ TEMPLATE COMPLIANCE BADGE - SAME AS ADMIN PANEL */}
+                               {/* Template Compliance Badge */}
                                {documentAnalysis.details?.summary?.templateCompliance && (
                                  <Box sx={{ mb: 2 }}>
                                    <Chip 
@@ -947,7 +940,7 @@ const ProcedureAmendModal = ({
                                  </Box>
                                )}
 
-                               {/* ✅ FOUND ELEMENTS ACCORDION - SAME AS ADMIN PANEL */}
+                               {/* Found Elements Accordion */}
                                <Accordion sx={{ mb: 2 }}>
                                  <AccordionSummary expandIcon={<ExpandMore />}>
                                    <Typography variant="h6">
@@ -968,7 +961,7 @@ const ProcedureAmendModal = ({
                                  </AccordionDetails>
                                </Accordion>
 
-                               {/* ✅ MISSING ELEMENTS ACCORDION - SAME AS ADMIN PANEL */}
+                               {/* Missing Elements Accordion */}
                                {documentAnalysis.details?.missingElements?.length > 0 && (
                                  <Accordion sx={{ mb: 2 }}>
                                    <AccordionSummary expandIcon={<ExpandMore />}>
@@ -991,7 +984,7 @@ const ProcedureAmendModal = ({
                                  </Accordion>
                                )}
 
-                               {/* ✅ HSBC EXTRACTED DATA TABLE - SAME AS ADMIN PANEL */}
+                               {/* HSBC Extracted Data Table */}
                                {(documentAnalysis.details?.riskRating || documentAnalysis.details?.periodicReview || documentAnalysis.details?.owners?.length > 0) && (
                                  <Accordion sx={{ mb: 2 }}>
                                    <AccordionSummary expandIcon={<ExpandMore />}>
@@ -1082,7 +1075,7 @@ const ProcedureAmendModal = ({
                                  </Accordion>
                                )}
 
-                               {/* ✅ AI RECOMMENDATIONS TABLE - SAME AS ADMIN PANEL */}
+                               {/* AI Recommendations Table */}
                                {documentAnalysis.aiRecommendations?.length > 0 && (
                                  <Accordion>
                                    <AccordionSummary expandIcon={<ExpandMore />}>
@@ -1125,7 +1118,7 @@ const ProcedureAmendModal = ({
                              </CardContent>
                            </Card>
 
-                           {/* ✅ STATUS ALERT - SAME AS ADMIN PANEL */}
+                           {/* Status Alert */}
                            {documentAnalysis.accepted ? (
                              <Alert severity="success" sx={{ mt: 2 }}>
                                <Typography variant="body2">
@@ -1140,7 +1133,7 @@ const ProcedureAmendModal = ({
                              </Alert>
                            )}
 
-                           {/* ✅ UPLOAD BUTTON - SAME AS ADMIN PANEL */}
+                           {/* Action Buttons */}
                            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
                              <Button
                                variant="outlined"
@@ -1179,7 +1172,7 @@ const ProcedureAmendModal = ({
                          </Box>
                        )}
 
-                       {/* ✅ ENHANCED Step 3: Submit Amendment with Folder Info */}
+                       {/* Step 3: Submit Amendment with Correct SiteAssets Info */}
                        {index === 3 && (
                          <Box>
                            <Alert severity="info" sx={{ mb: 3 }}>
@@ -1197,8 +1190,16 @@ const ProcedureAmendModal = ({
                                (Previous: {procedure?.score || 0}%)
                              </Typography>
                              <Typography variant="body2" sx={{ mb: 2 }}>
-                               <strong>Target SharePoint Location:</strong> {existingDocumentInfo?.fullFolderPath}
+                               <strong>Target SiteAssets Location:</strong> {existingDocumentInfo?.sharePointPath}
                              </Typography>
+                             <Typography variant="body2" sx={{ mb: 2 }}>
+                               <strong>Full SharePoint Path:</strong> {existingDocumentInfo?.fullFolderPath}
+                             </Typography>
+                             {existingDocumentInfo?.subFolder !== 'General' && (
+                               <Typography variant="body2" sx={{ mb: 2, color: 'success.main', fontWeight: 'bold' }}>
+                                 ✅ <strong>Using Actual Subfolder:</strong> {existingDocumentInfo.subFolder} (not Generic)
+                               </Typography>
+                             )}
                              <Typography variant="body2">
                                <strong>Notifications will be sent to:</strong>
                                <br />• Primary Owner: {procedure?.primary_owner} ({procedure?.primary_owner_email})
@@ -1247,7 +1248,7 @@ const ProcedureAmendModal = ({
            </GlassmorphismCard>
          </motion.div>
 
-         {/* 📊 **STATUS MESSAGES** */}
+         {/* Status Messages */}
          {submitStatus === 'success' && (
            <motion.div
              initial={{ opacity: 0, scale: 0.9 }}
@@ -1284,7 +1285,7 @@ const ProcedureAmendModal = ({
          )}
        </DialogContent>
 
-       {/* 🚀 **ENHANCED ACTION BUTTONS** */}
+       {/* Enhanced Action Buttons */}
        <DialogActions sx={{ p: 3, background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)' }}>
          <Stack direction="row" spacing={2} sx={{ width: '100%' }}>
            <Button
@@ -1373,7 +1374,7 @@ const ProcedureAmendModal = ({
          </Stack>
        </DialogActions>
 
-       {/* 🌟 **LOADING BACKDROP** */}
+       {/* Loading Backdrop */}
        <Backdrop
          sx={{
            color: '#fff',
@@ -1388,7 +1389,7 @@ const ProcedureAmendModal = ({
              Processing Amendment...
            </Typography>
            <Typography variant="body2">
-             Updating SharePoint and sending notifications
+             Updating SharePoint SiteAssets and sending notifications
            </Typography>
          </Box>
        </Backdrop>
