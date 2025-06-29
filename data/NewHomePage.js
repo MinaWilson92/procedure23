@@ -385,7 +385,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
                 HBEG Procedures Hub
               </Typography>
               <Typography variant="h6" color="text.secondary" fontWeight={500}>
-                Next-Generation Procedure Management with AI-Powered Analytics
+                Next-Generation Procedure Management with robust Document Analysis
               </Typography>
             </Box>
           </Stack>
@@ -442,7 +442,7 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
               <Stack direction="row" spacing={1}>
                 <Chip 
                   icon={sharePointAvailable ? <CheckCircle /> : <Warning />}
-                  label={sharePointAvailable ? 'SharePoint Connected' : 'Demo Mode'}
+                  label={sharePointAvailable ? 'Database Connected' : 'Demo Mode'}
                   color={sharePointAvailable ? 'success' : 'warning'}
                   variant="outlined"
                 />
