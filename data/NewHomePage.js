@@ -300,14 +300,14 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
 
 const stats = dashboardData?.stats || {
   total: procedures?.length || 0,
-  expiringSoon: procedures?.filter(p => {
+  nearExpiry: procedures?.filter(p => {
     const expiry = new Date(p.expiry);
     const now = new Date();
     const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
-    return daysLeft > 0 && daysLeft <= 30;
+    return daysLeft > 0 && daysLeft <= 60;
   }).length || 0,
   expired: procedures?.filter(p => new Date(p.expiry) < new Date()).length || 0,
-  highQuality: procedures?.filter(p => (p.score || 0) >= 80).length || 0
+  documentControl: procedures?.filter(p => (p.score || 0) === 100).length || 0
 };
 
   // 🎯 **Role-based Quick Links**
@@ -501,19 +501,19 @@ const stats = dashboardData?.stats || {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
-          <NextGenStatCard
-            icon={stats.expiringSoon > 0 ? <Schedule sx={{ fontSize: 28 }} /> : <CheckCircle sx={{ fontSize: 28 }} />}
-            title={stats.expiringSoon > 0 ? "Need Attention" : "All Current"}
-            value={stats.expiringSoon}
-            subtitle={stats.expiringSoon > 0 ? "Click to view expiring" : "No urgent actions needed"}
-            color={stats.expiringSoon > 0 ? '#ff9800' : '#4caf50'}
-            isClickable={stats.expiringSoon > 0}
-            onClick={() => stats.expiringSoon > 0 && navigate('procedures', { filter: 'expiring' })}
-            trend={stats.expiringSoon > 0 ? "down" : "up"}
-            trendValue={stats.expiringSoon > 0 ? "-3%" : "+8%"}
-          />
-        </Grid>
+   <Grid item xs={12} sm={6} md={3}>
+  <NextGenStatCard
+    icon={<Schedule sx={{ fontSize: 28 }} />}
+    title="Near Expiry"
+    value={stats.nearExpiry}
+    subtitle="Number of procedures expiring in 60 days"
+    color="#ff9800"
+    isClickable={stats.nearExpiry > 0}
+    onClick={() => stats.nearExpiry > 0 && navigate('procedures', { filter: 'nearExpiry' })}
+    trend="down"
+    trendValue="-2%"
+  />
+</Grid>
         
         <Grid item xs={12} sm={6} md={3}>
           <NextGenStatCard
@@ -527,18 +527,17 @@ const stats = dashboardData?.stats || {
           />
         </Grid>
         
-        <Grid item xs={12} sm={6} md={3}>
-          <NextGenStatCard
-            icon={<Assessment sx={{ fontSize: 28 }} />}
-            title="High Quality"
-            value={stats.highQuality}
-            subtitle={`${stats.total > 0 ? Math.round((stats.highQuality / stats.total) * 100) : 0}% of total procedures`}
-            color="#7b1fa2"
-            trend="up"
-            trendValue="+5%"
-          />
-        </Grid>
-      </Grid>
+<Grid item xs={12} sm={6} md={3}>
+  <NextGenStatCard
+    icon={<Assessment sx={{ fontSize: 28 }} />}
+    title="High Quality"
+    value={stats.documentControl}
+    subtitle="Number of procedures achieved 100% document control"
+    color="#7b1fa2"
+    trend="up"
+    trendValue="+5%"
+  />
+</Grid>
 
       {/* 📈 **ADVANCED ANALYTICS CHARTS** */}
       {sharePointAvailable && procedures && procedures.length > 0 && (
