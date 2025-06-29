@@ -298,17 +298,17 @@ const HomePage = ({ user, dashboardData, procedures, isAdmin, isUploader, shareP
   const riskData = calculateRiskData();
   const hasRealData = Object.keys(realLOBData).length > 0;
 
-  const stats = dashboardData?.stats || {
-    total: procedures?.length || 0,
-    expiringSoon: procedures?.filter(p => {
-      const expiry = new Date(p.expiry);
-      const now = new Date();
-      const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
-      return daysLeft > 0 && daysLeft <= 30;
-    }).length || 0,
-    expired: procedures?.filter(p => new Date(p.expiry) < new Date()).length || 0,
-    highQuality: procedures?.filter(p => (p.score || 0) >= 80).length || 0
-  };
+const stats = dashboardData?.stats || {
+  total: procedures?.length || 0,
+  expiringSoon: procedures?.filter(p => {
+    const expiry = new Date(p.expiry);
+    const now = new Date();
+    const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+    return daysLeft > 0 && daysLeft <= 30;
+  }).length || 0,
+  expired: procedures?.filter(p => new Date(p.expiry) < new Date()).length || 0,
+  highQuality: procedures?.filter(p => (p.score || 0) >= 80).length || 0
+};
 
   // 🎯 **Role-based Quick Links**
   const quickLinks = [
