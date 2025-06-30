@@ -13,7 +13,7 @@ import {
   CheckCircle, Warning, Star, ViewList, ViewModule, Sort,
   TrendingUp, Security, Assessment, Timeline, LocalFireDepartment,
   Psychology, AutoAwesome, Insights, Speed, BarChart,
-  TableView, GridView, FilterAlt, Clear, GetApp, Share
+  TableView, GridView, FilterAlt, Clear, GetApp, Share, CloudUpload
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../contexts/NavigationContext';
@@ -558,9 +558,9 @@ const getStatusInfo = (expiry, score = 0) => {
         <ProfessionalCard sx={{ mb: 4 }}>
           <CardHeader
             avatar={
-              <HSBCHexagon size={50}>
+              <ProfessionalLogo size={50}>
                 <Search sx={{ color: 'white', fontSize: 20 }} />
-              </HSBCHexagon>
+              </ProfessionalLogo>
             }
             title={
               <Typography variant="h5" fontWeight={800}>
@@ -612,7 +612,7 @@ const getStatusInfo = (expiry, score = 0) => {
           <CardContent sx={{ pt: 0 }}>
             <Grid container spacing={3} alignItems="center">
               <Grid item xs={12} md={4}>
-                <EnhancedSearchField
+                <ProfessionalSearchField
                   fullWidth
                   placeholder="Search procedures, owners, or content..."
                   value={searchTerm}
@@ -1394,9 +1394,9 @@ const getStatusInfo = (expiry, score = 0) => {
               animate={{ rotate: 360 }}
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             >
-              <HSBCHexagon size={100}>
+              <ProfessionalLogo size={100}>
                 <Refresh sx={{ color: 'white', fontSize: 40 }} />
-              </HSBCHexagon>
+              </ProfessionalLogo>
             </motion.div>
           </motion.div>
         )}
