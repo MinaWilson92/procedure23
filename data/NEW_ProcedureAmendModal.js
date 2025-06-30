@@ -493,100 +493,110 @@ const parseExistingDocumentPath = (documentLink) => {
   };
 
   // ✅ ENHANCED: Amendment submission with SiteAssets folder detection
-  const handleSubmitAmendment = async () => {
-    if (!validateAmendmentForm()) {
-      return;
+const handleSubmitAmendment = async () => {
+  if (!validateAmendmentForm()) {
+    return;
+  }
+
+  try {
+    setLoading(true);
+    setSubmitStatus('uploading');
+    setActiveStep(3);
+    
+    console.log('🚀 Starting procedure amendment process...');
+
+    // ✅ SMART FOLDER DETECTION - Parse existing document URL for SiteAssets
+    const existingDocumentPath = parseExistingDocumentPath(
+      procedure?.file_link || 
+      procedure?.document_link || 
+      procedure?.sharepoint_url ||
+      procedure?.DocumentLink ||
+      procedure?.SharePointURL
+    );
+    
+    console.log('📂 Using existing SiteAssets folder structure:', existingDocumentPath);
+
+    // ✅ VALIDATE PARSED PATHS BEFORE PROCEEDING
+    if (!existingDocumentPath.fullFolderPath || existingDocumentPath.fullFolderPath === 'undefined') {
+      throw new Error('Could not determine target folder path from existing document');
     }
 
-    try {
-      setLoading(true);
-      setSubmitStatus('uploading');
-      setActiveStep(3);
+    // ✅ COMPLETELY SANITIZE ALL AMENDMENT DATA
+    const sanitizedAmendmentData = {
+      procedureId: Number(procedure?.id) || 0,
+      originalName: String(procedure?.name || '').replace(/[%&+#]/g, ''),
+      originalLOB: String(procedure?.lob || '').replace(/[%&+#]/g, ''),
+      originalPrimaryOwner: String(procedure?.primary_owner || '').replace(/[%&+#]/g, ''),
+      originalPrimaryOwnerEmail: String(procedure?.primary_owner_email || '').replace(/[%&+#]/g, ''),
+      originalExpiry: procedure?.expiry || new Date().toISOString(),
       
-      console.log('🚀 Starting procedure amendment process...');
-
-      // ✅ SMART FOLDER DETECTION - Parse existing document URL for SiteAssets
-      const existingDocumentPath = parseExistingDocumentPath(
-        procedure?.file_link || 
-        procedure?.document_link || 
-        procedure?.sharepoint_url ||
-        procedure?.DocumentLink ||
-        procedure?.SharePointURL
-      );
+      // Sanitized updated fields
+      secondary_owner: String(formData.secondary_owner || '').replace(/[%&+#]/g, ''),
+      secondary_owner_email: String(formData.secondary_owner_email || '').replace(/[%&+#]/g, ''),
+      amendment_summary: String(formData.amendment_summary || '').replace(/[%&+#]/g, ''),
       
-      console.log('📂 Using existing SiteAssets folder structure:', existingDocumentPath);
+      // ✅ CRITICAL: Ensure folder paths are properly set
+      targetFolderPath: existingDocumentPath.fullFolderPath,
+      sharePointPath: existingDocumentPath.sharePointPath,
+      fullFolderPath: existingDocumentPath.fullFolderPath, // ✅ Duplicate to ensure it's set
+      lobFolder: existingDocumentPath.lobFolder,
+      subFolder: existingDocumentPath.subFolder,
+      baseUrl: existingDocumentPath.baseUrl,
+      
+      // Amendment metadata
+      amended_by: String(user?.staffId || 'Unknown').replace(/[%&+#]/g, ''),
+      amended_by_name: String(user?.displayName || 'Unknown').replace(/[%&+#]/g, ''),
+      amended_by_role: String(user?.role || 'User').replace(/[%&+#]/g, ''),
+      amendment_date: new Date().toISOString(),
+      last_modified_on: new Date().toISOString(),
+      last_modified_by: String(user?.displayName || 'Unknown').replace(/[%&+#]/g, ''),
+      
+      // Sanitized quality data
+      new_score: Number(documentAnalysis?.score) || 0,
+      new_analysis_details: documentAnalysis?.details || {},
+      new_ai_recommendations: documentAnalysis?.aiRecommendations || [],
+      
+      // File information
+      original_filename: selectedFile?.name || 'unknown.pdf',
+      file_size: selectedFile?.size || 0,
+      
+      // ✅ PRESERVE ORIGINAL DOCUMENT INFO
+      original_document_link: existingDocumentPath.originalUrl
+    };
 
-      // ✅ COMPLETELY SANITIZE ALL AMENDMENT DATA
-      const sanitizedAmendmentData = {
-        procedureId: Number(procedure?.id) || 0,
-        originalName: String(procedure?.name || '').replace(/[%&+#]/g, ''),
-        originalLOB: String(procedure?.lob || '').replace(/[%&+#]/g, ''),
-        originalPrimaryOwner: String(procedure?.primary_owner || '').replace(/[%&+#]/g, ''),
-        originalPrimaryOwnerEmail: String(procedure?.primary_owner_email || '').replace(/[%&+#]/g, ''),
-        originalExpiry: procedure?.expiry || new Date().toISOString(),
-        
-        // Sanitized updated fields
-        secondary_owner: String(formData.secondary_owner || '').replace(/[%&+#]/g, ''),
-        secondary_owner_email: String(formData.secondary_owner_email || '').replace(/[%&+#]/g, ''),
-        amendment_summary: String(formData.amendment_summary || '').replace(/[%&+#]/g, ''),
-        
-        // ✅ SMART SITEASSETS FOLDER STRUCTURE - Use existing folder path with actual subfolder
-        targetFolderPath: existingDocumentPath.fullFolderPath,
-        sharePointPath: existingDocumentPath.sharePointPath, // e.g., "SiteAssets/IWPB/Risk_Management"
-        lobFolder: existingDocumentPath.lobFolder,
-        subFolder: existingDocumentPath.subFolder, // ✅ Real subfolder like "Risk_Management"
-        baseUrl: existingDocumentPath.baseUrl,
-        
-        // Amendment metadata
-        amended_by: String(user?.staffId || 'Unknown').replace(/[%&+#]/g, ''),
-        amended_by_name: String(user?.displayName || 'Unknown').replace(/[%&+#]/g, ''),
-        amended_by_role: String(user?.role || 'User').replace(/[%&+#]/g, ''),
-        amendment_date: new Date().toISOString(),
-        last_modified_on: new Date().toISOString(),
-        last_modified_by: String(user?.displayName || 'Unknown').replace(/[%&+#]/g, ''),
-        
-        // Sanitized quality data
-        new_score: Number(documentAnalysis?.score) || 0,
-        new_analysis_details: documentAnalysis?.details || {},
-        new_ai_recommendations: documentAnalysis?.aiRecommendations || [],
-        
-        // File information
-        original_filename: selectedFile?.name || 'unknown.pdf',
-        file_size: selectedFile?.size || 0,
-        
-        // ✅ PRESERVE ORIGINAL DOCUMENT INFO
-        original_document_link: existingDocumentPath.originalUrl
-      };
+    // ✅ DEBUG: Log the data being sent
+    console.log('📤 Sending amendment data to DocumentAnalyzer:', sanitizedAmendmentData);
+    console.log('🔍 Critical paths check:');
+    console.log(`   fullFolderPath: ${sanitizedAmendmentData.fullFolderPath}`);
+    console.log(`   sharePointPath: ${sanitizedAmendmentData.sharePointPath}`);
+    console.log(`   subFolder: ${sanitizedAmendmentData.subFolder}`);
 
-      console.log('🔍 Sanitized amendment data with correct SiteAssets folders:', sanitizedAmendmentData);
+    // ✅ PROCESS AMENDMENT WITH VALIDATED DATA
+    const result = await documentAnalyzer.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
 
-      // ✅ PROCESS AMENDMENT WITH SMART SITEASSETS FOLDER DETECTION
-      const result = await documentAnalyzer.amendProcedureInSharePoint(sanitizedAmendmentData, selectedFile);
-
-      if (result.success) {
-        console.log('✅ Procedure amended successfully with SiteAssets folder detection');
-        console.log(`📂 Amendment uploaded to: ${result.sharePointPath}`);
-        
-        setSubmitStatus('success');
-        setTimeout(() => {
-          onSuccess();
-          navigate('user-dashboard');
-        }, 2000);
-        
-      } else {
-        throw new Error(result.message || 'Amendment failed');
-      }
-
-    } catch (err) {
-      console.error('❌ Amendment failed:', err);
-      const safeError = String(err.message || 'Unknown error').replace(/[%&+#]/g, '');
-      alert(`Amendment failed: ${safeError}`);
-      setSubmitStatus('error');
-    } finally {
-      setLoading(false);
+    if (result.success) {
+      console.log('✅ Procedure amended successfully with SiteAssets folder detection');
+      console.log(`📂 Amendment uploaded to: ${result.sharePointPath}`);
+      
+      setSubmitStatus('success');
+      setTimeout(() => {
+        onSuccess();
+        navigate('user-dashboard');
+      }, 2000);
+      
+    } else {
+      throw new Error(result.message || 'Amendment failed');
     }
-  };
 
+  } catch (err) {
+    console.error('❌ Amendment failed:', err);
+    const safeError = String(err.message || 'Unknown error').replace(/[%&+#]/g, '');
+    alert(`Amendment failed: ${safeError}`);
+    setSubmitStatus('error');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleReset = () => {
     setFormData({
       secondary_owner: procedure?.secondary_owner || '',
