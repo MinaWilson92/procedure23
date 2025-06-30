@@ -204,86 +204,165 @@ const ProcedureAmendModal = ({
   }, [procedure]);
 
   // ✅ CORRECTED: Smart folder detection with SiteAssets support
-  const parseExistingDocumentPath = (documentLink) => {
-    try {
-      if (!documentLink) {
-        console.warn('⚠️ No document link provided, using default SiteAssets structure');
-        return {
-          baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
-          lobFolder: procedure?.lob || 'IWPB',
-          subFolder: 'General',
-          fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
-          sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`
-        };
-      }
-
-      console.log('🔍 Analyzing existing document URL for SiteAssets:', documentLink);
-
-      // Parse the URL to extract folder structure
-      const url = new URL(documentLink);
-      const pathname = url.pathname;
-
-      // ✅ CORRECT PATTERN: /sites/employeeeng/SiteAssets/IWPB/Risk_Management/document.docx
-      const pathParts = pathname.split('/').filter(part => part.length > 0);
-      
-      console.log('📂 URL path parts:', pathParts);
-
-      // Find the base site structure
-      const siteIndex = pathParts.findIndex(part => part === 'sites');
-      const employeeEngIndex = pathParts.findIndex(part => part.toLowerCase() === 'employeeeng');
-      const siteAssetsIndex = pathParts.findIndex(part => part.toLowerCase() === 'siteassets');
-      
-      if (siteIndex === -1 || employeeEngIndex === -1 || siteAssetsIndex === -1) {
-        throw new Error('Invalid SharePoint URL structure - missing SiteAssets');
-      }
-
-      // Extract folder structure
-      const baseUrl = `${url.protocol}//${url.host}`;
-      
-      // ✅ CORRECT: The folder after /sites/employeeeng/SiteAssets/ should be the LOB folder
-      const lobFolderIndex = siteAssetsIndex + 1;
-      const lobFolder = pathParts[lobFolderIndex] || procedure?.lob || 'IWPB';
-      
-      // ✅ CORRECT: The folder after LOB should be the actual subfolder (e.g., "Risk_Management")
-      const subFolderIndex = lobFolderIndex + 1;
-      const subFolder = pathParts[subFolderIndex] || 'General';
-      
-      // ✅ CORRECT: Reconstruct paths with SiteAssets
-      const folderPathParts = pathParts.slice(siteIndex, subFolderIndex + 1);
-      const fullFolderPath = `/${folderPathParts.join('/')}`;
-      
-      // ✅ CORRECT: SharePoint API path (SiteAssets/LOB/actual_subfolder)
-      const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
-
-      const result = {
-        baseUrl,
-        lobFolder,
-        subFolder, // ✅ This will be "Risk_Management", not "General"
-        fullFolderPath,
-        sharePointPath,
-        originalUrl: documentLink
-      };
-
-      console.log('✅ Parsed SiteAssets folder structure with actual subfolder:', result);
-      return result;
-
-    } catch (error) {
-      console.error('❌ Error parsing document URL:', error);
-      
-      // ✅ CORRECT FALLBACK: Default SiteAssets structure
-      const fallback = {
+// ✅ CORRECTED: Smart folder detection with better SiteAssets URL parsing
+const parseExistingDocumentPath = (documentLink) => {
+  try {
+    if (!documentLink || typeof documentLink !== 'string') {
+      console.warn('⚠️ No valid document link provided, using default SiteAssets structure');
+      return {
         baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
         lobFolder: procedure?.lob || 'IWPB',
         subFolder: 'General',
         fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
-        sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`,
-        error: error.message
+        sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`
       };
-      
-      console.log('🔄 Using fallback SiteAssets structure:', fallback);
-      return fallback;
     }
-  };
+
+    console.log('🔍 Analyzing existing document URL for SiteAssets:', documentLink);
+
+    // ✅ SAFE URL PARSING: Handle both full URLs and relative paths
+    let parsedUrl;
+    let pathname;
+    
+    if (documentLink.startsWith('http')) {
+      // Full URL
+      try {
+        parsedUrl = new URL(documentLink);
+        pathname = parsedUrl.pathname;
+      } catch (urlError) {
+        console.warn('⚠️ Invalid full URL, treating as relative path');
+        pathname = documentLink;
+        parsedUrl = { 
+          protocol: 'https:', 
+          host: 'teams.global.hsbc',
+          pathname: documentLink
+        };
+      }
+    } else {
+      // Relative path - construct base info
+      pathname = documentLink.startsWith('/') ? documentLink : `/${documentLink}`;
+      parsedUrl = { 
+        protocol: 'https:', 
+        host: 'teams.global.hsbc',
+        pathname: pathname
+      };
+    }
+
+    // ✅ ROBUST PATH PARSING: Split and clean path parts
+    const pathParts = pathname.split('/').filter(part => part.length > 0);
+    
+    console.log('📂 URL path parts:', pathParts);
+
+    // ✅ SMART DETECTION: Find key SharePoint structure markers
+    let siteIndex = -1;
+    let employeeEngIndex = -1;
+    let siteAssetsIndex = -1;
+    
+    // Find indices with case-insensitive matching
+    for (let i = 0; i < pathParts.length; i++) {
+      const part = pathParts[i].toLowerCase();
+      if (part === 'sites' && siteIndex === -1) {
+        siteIndex = i;
+      }
+      if (part === 'employeeeng' && employeeEngIndex === -1) {
+        employeeEngIndex = i;
+      }
+      if (part === 'siteassets' && siteAssetsIndex === -1) {
+        siteAssetsIndex = i;
+      }
+    }
+    
+    console.log('🔍 Structure indices found:', { siteIndex, employeeEngIndex, siteAssetsIndex });
+
+    // ✅ VALIDATE STRUCTURE: Must have proper SharePoint SiteAssets structure
+    if (siteAssetsIndex === -1) {
+      console.warn('⚠️ No SiteAssets found in path, likely stored elsewhere');
+      
+      // ✅ SMART FALLBACK: Try to detect LOB from path anyway
+      let detectedLOB = procedure?.lob || 'IWPB';
+      
+      // Look for LOB patterns in any part of the path
+      const lobPatterns = ['IWPB', 'CIB', 'GCOO', 'GRM', 'GF', 'GTRB'];
+      for (const part of pathParts) {
+        const upperPart = part.toUpperCase();
+        if (lobPatterns.includes(upperPart)) {
+          detectedLOB = upperPart;
+          break;
+        }
+      }
+      
+      return {
+        baseUrl: `${parsedUrl.protocol}//${parsedUrl.host}`,
+        lobFolder: detectedLOB,
+        subFolder: 'General',
+        fullFolderPath: `/sites/employeeeng/SiteAssets/${detectedLOB}/General`,
+        sharePointPath: `SiteAssets/${detectedLOB}/General`,
+        originalUrl: documentLink,
+        warning: 'Document not in SiteAssets structure'
+      };
+    }
+
+    // ✅ CORRECT PARSING: Extract LOB and actual subfolder
+    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
+    
+    // The folder immediately after SiteAssets should be the LOB
+    const lobFolderIndex = siteAssetsIndex + 1;
+    const lobFolder = pathParts[lobFolderIndex] || procedure?.lob || 'IWPB';
+    
+    // The folder after LOB is the actual subfolder (not "General")
+    const subFolderIndex = lobFolderIndex + 1;
+    let subFolder = 'General'; // Default fallback
+    
+    if (subFolderIndex < pathParts.length) {
+      // ✅ DECODE URL-ENCODED FOLDER NAMES: Handle %20, %2C, etc.
+      try {
+        subFolder = decodeURIComponent(pathParts[subFolderIndex]);
+        console.log('✅ Decoded actual subfolder:', subFolder);
+      } catch (decodeError) {
+        subFolder = pathParts[subFolderIndex]; // Use as-is if decode fails
+        console.warn('⚠️ Could not decode subfolder, using raw value:', subFolder);
+      }
+    }
+    
+    // ✅ CONSTRUCT PATHS: Build proper SharePoint paths
+    const folderPathParts = [];
+    if (siteIndex >= 0) folderPathParts.push('sites');
+    if (employeeEngIndex >= 0) folderPathParts.push('employeeeng');
+    folderPathParts.push('SiteAssets', lobFolder, subFolder);
+    
+    const fullFolderPath = `/${folderPathParts.join('/')}`;
+    const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
+
+    const result = {
+      baseUrl,
+      lobFolder,
+      subFolder,
+      fullFolderPath,
+      sharePointPath,
+      originalUrl: documentLink
+    };
+
+    console.log('✅ Successfully parsed SiteAssets structure with actual subfolder:', result);
+    return result;
+
+  } catch (error) {
+    console.error('❌ Error parsing document URL:', error);
+    
+    // ✅ ROBUST FALLBACK: Always return valid structure
+    const fallback = {
+      baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
+      lobFolder: procedure?.lob || 'IWPB',
+      subFolder: 'General',
+      fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
+      sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`,
+      error: error.message,
+      originalUrl: documentLink
+    };
+    
+    console.log('🔄 Using robust fallback SiteAssets structure:', fallback);
+    return fallback;
+  }
+};
 
   // ✅ Helper Functions
   const getScoreColor = (score) => {
