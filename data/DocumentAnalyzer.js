@@ -251,15 +251,11 @@ async amendProcedureInSharePoint(amendmentData, file) {
       LastModifiedBy: amendmentData.last_modified_by,
       
       // Updated document info pointing to CORRECT HSBC SiteAssets path
-      DocumentLink: uploadResult.d.ServerRelativeUrl,
-      SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+      DocumentLink: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
       OriginalFilename: amendmentData.original_filename,
       FileSize: amendmentData.file_size,
       SharePointUploaded: true,
-      
-      // ✅ IMPORTANT: Store the CORRECT HSBC SiteAssets folder structure
-      SiteAssetsPath: sharePointPath,
-      ActualSubFolder: amendmentData.subFolder
+
     };
 
     console.log('📝 Updating HSBC procedure list item with amendment data...');
