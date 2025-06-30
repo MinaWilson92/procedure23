@@ -141,29 +141,41 @@ class DocumentAnalyzer {
       return fallback;
     }
   }
-
-  // ✅ AMENDMENT UPLOAD METHOD - Uses existing SiteAssets folder structure
-// ✅ FIXED: DocumentAnalyzer.js - amendProcedureInSharePoint method with CORRECT HSBC URLs
+// ✅ FIXED: Amendment method with proper HSBC URL usage and path validation
 async amendProcedureInSharePoint(amendmentData, file) {
-
-      const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+  // ✅ FIX: Define SharePoint URL at method level
+  const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+  
   try {
-    console.log('🔄 Starting SharePoint amendment process with CORRECT HSBC URLs...');
+    console.log('🔄 Starting SharePoint amendment process with HSBC URLs...');
     console.log('📂 Amendment data received:', amendmentData);
 
-    // ✅ CORRECT HSBC BASE URL: Always use the proper HSBC SharePoint URL
+    // ✅ CRITICAL: Validate folder paths before proceeding
+    const targetFolderPath = amendmentData.fullFolderPath;
+    const sharePointPath = amendmentData.sharePointPath;
+    
+    console.log('🔍 Path validation check:');
+    console.log(`   targetFolderPath: ${targetFolderPath}`);
+    console.log(`   sharePointPath: ${sharePointPath}`);
+    console.log(`   subFolder: ${amendmentData.subFolder}`);
+    
+    if (!targetFolderPath || targetFolderPath === 'undefined' || targetFolderPath === 'null') {
+      console.error('❌ targetFolderPath is invalid:', targetFolderPath);
+      console.error('❌ Full amendmentData:', amendmentData);
+      throw new Error(`Invalid target folder path: ${targetFolderPath}. Cannot proceed with upload.`);
+    }
+    
+    if (!sharePointPath || sharePointPath === 'undefined' || sharePointPath === 'null') {
+      console.error('❌ sharePointPath is invalid:', sharePointPath);
+      throw new Error(`Invalid SharePoint path: ${sharePointPath}. Cannot proceed with upload.`);
+    }
 
-    
-    // ✅ CORRECT: Use the actual parsed subfolder path, NOT defaulting to "General"
-    const targetFolderPath = amendmentData.fullFolderPath; // e.g., "/sites/EmployeeEng/SiteAssets/IWPB/Risk_Management"
-    const sharePointPath = amendmentData.sharePointPath; // e.g., "SiteAssets/IWPB/Risk_Management"
-    
     console.log('✅ Using CORRECT HSBC URLs:');
     console.log(`🌐 SharePoint Base URL: ${sharePointUrl}`);
     console.log(`📁 Target Folder Path: ${targetFolderPath}`);
     console.log(`📁 SharePoint Path: ${sharePointPath}`);
     console.log(`📁 LOB Folder: ${amendmentData.lobFolder}`);
-    console.log(`📁 Actual Sub Folder: ${amendmentData.subFolder}`); // Should be "Risk_Management", not "General"
+    console.log(`📁 Actual Sub Folder: ${amendmentData.subFolder}`);
 
     // ✅ STEP 1: Get request digest from CORRECT HSBC URL
     const digestUrl = `${sharePointUrl}/_api/contextinfo`;
@@ -188,7 +200,7 @@ async amendProcedureInSharePoint(amendmentData, file) {
     // ✅ STEP 2: Upload file to the CORRECT HSBC SiteAssets folder path
     console.log(`📤 Uploading file to CORRECT HSBC path: ${targetFolderPath}`);
     
-    // ✅ CORRECTED API CALL: Use HSBC base URL + parsed folder path
+    // ✅ CORRECTED API CALL: Use HSBC base URL + validated folder path
     const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(file.name)}', overwrite=true)`;
     
     console.log(`🌐 Full Upload URL: ${uploadUrl}`);
@@ -247,8 +259,8 @@ async amendProcedureInSharePoint(amendmentData, file) {
       SharePointUploaded: true,
       
       // ✅ IMPORTANT: Store the CORRECT HSBC SiteAssets folder structure
-      SiteAssetsPath: sharePointPath, // "SiteAssets/IWPB/Risk_Management"
-      ActualSubFolder: amendmentData.subFolder // "Risk_Management"
+      SiteAssetsPath: sharePointPath,
+      ActualSubFolder: amendmentData.subFolder
     };
 
     console.log('📝 Updating HSBC procedure list item with amendment data...');
@@ -289,7 +301,6 @@ async amendProcedureInSharePoint(amendmentData, file) {
         amendmentSummary: amendmentData.amendment_summary,
         oldScore: amendmentData.originalScore || 0,
         newScore: amendmentData.new_score,
-        // ✅ LOG THE CORRECT HSBC FOLDER STRUCTURE
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
         uploadPath: targetFolderPath,
@@ -326,7 +337,13 @@ async amendProcedureInSharePoint(amendmentData, file) {
       success: false,
       message: error.message || 'Amendment failed',
       error: error,
-      attempted_url: sharePointUrl
+      attempted_url: sharePointUrl,
+      debug_info: {
+        received_amendmentData: amendmentData,
+        targetFolderPath: amendmentData?.fullFolderPath,
+        sharePointPath: amendmentData?.sharePointPath,
+        subFolder: amendmentData?.subFolder
+      }
     };
   }
 }
