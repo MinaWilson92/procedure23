@@ -246,7 +246,6 @@ async amendProcedureInSharePoint(amendmentData, file) {
       AmendmentSummary: amendmentData.amendment_summary,
       AmendedBy: amendmentData.amended_by,
       AmendedByName: amendmentData.amended_by_name,
-      AmendedByRole: amendmentData.amended_by_role,
       AmendmentDate: amendmentData.amendment_date,
       LastModifiedOn: amendmentData.last_modified_on,
       LastModifiedBy: amendmentData.last_modified_by,
