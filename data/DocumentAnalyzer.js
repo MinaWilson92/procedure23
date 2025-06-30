@@ -143,26 +143,31 @@ class DocumentAnalyzer {
   }
 
   // ✅ AMENDMENT UPLOAD METHOD - Uses existing SiteAssets folder structure
-  async amendProcedureInSharePoint(amendmentData, file) {
+// ✅ FIXED: DocumentAnalyzer.js - amendProcedureInSharePoint method with CORRECT HSBC URLs
+async amendProcedureInSharePoint(amendmentData, file) {
   try {
-    console.log('🔄 Starting SharePoint amendment process with corrected folder path...');
+    console.log('🔄 Starting SharePoint amendment process with CORRECT HSBC URLs...');
     console.log('📂 Amendment data received:', amendmentData);
 
-    // ✅ CRITICAL FIX: Use the CORRECTLY PARSED folder paths from amendmentData
-    const sharePointUrl = amendmentData.baseUrl || 'https://teams.global.hsbc/sites/employeeeng';
+    // ✅ CORRECT HSBC BASE URL: Always use the proper HSBC SharePoint URL
+    const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
     
     // ✅ CORRECT: Use the actual parsed subfolder path, NOT defaulting to "General"
-    const targetFolderPath = amendmentData.fullFolderPath; // e.g., "/sites/employeeeng/SiteAssets/IWPB/Risk_Management"
+    const targetFolderPath = amendmentData.fullFolderPath; // e.g., "/sites/EmployeeEng/SiteAssets/IWPB/Risk_Management"
     const sharePointPath = amendmentData.sharePointPath; // e.g., "SiteAssets/IWPB/Risk_Management"
     
-    console.log('✅ Using CORRECTED folder paths:');
+    console.log('✅ Using CORRECT HSBC URLs:');
+    console.log(`🌐 SharePoint Base URL: ${sharePointUrl}`);
     console.log(`📁 Target Folder Path: ${targetFolderPath}`);
     console.log(`📁 SharePoint Path: ${sharePointPath}`);
     console.log(`📁 LOB Folder: ${amendmentData.lobFolder}`);
-    console.log(`📁 Actual Sub Folder: ${amendmentData.subFolder}`); // This should be "Risk_Management", not "General"
+    console.log(`📁 Actual Sub Folder: ${amendmentData.subFolder}`); // Should be "Risk_Management", not "General"
 
-    // ✅ STEP 1: Get request digest
-    const digestResponse = await fetch(`${sharePointUrl}/_api/contextinfo`, {
+    // ✅ STEP 1: Get request digest from CORRECT HSBC URL
+    const digestUrl = `${sharePointUrl}/_api/contextinfo`;
+    console.log(`🔐 Getting digest from: ${digestUrl}`);
+    
+    const digestResponse = await fetch(digestUrl, {
       method: 'POST',
       headers: {
         'Accept': 'application/json; odata=verbose',
@@ -171,19 +176,20 @@ class DocumentAnalyzer {
     });
 
     if (!digestResponse.ok) {
-      throw new Error(`Failed to get request digest: ${digestResponse.status}`);
+      throw new Error(`Failed to get request digest from ${digestUrl}: ${digestResponse.status}`);
     }
 
     const digestData = await digestResponse.json();
     const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+    console.log('✅ Request digest obtained successfully');
 
-    // ✅ STEP 2: Upload file to the CORRECT SiteAssets folder path
-    console.log(`📤 Uploading file to CORRECT path: ${targetFolderPath}`);
+    // ✅ STEP 2: Upload file to the CORRECT HSBC SiteAssets folder path
+    console.log(`📤 Uploading file to CORRECT HSBC path: ${targetFolderPath}`);
     
-    // ✅ CORRECTED API CALL: Use the actual parsed folder path
+    // ✅ CORRECTED API CALL: Use HSBC base URL + parsed folder path
     const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(file.name)}', overwrite=true)`;
     
-    console.log(`🌐 Upload URL: ${uploadUrl}`);
+    console.log(`🌐 Full Upload URL: ${uploadUrl}`);
 
     const formData = await file.arrayBuffer();
     
@@ -199,15 +205,16 @@ class DocumentAnalyzer {
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('❌ Upload failed:', errorText);
-      throw new Error(`File upload failed: ${uploadResponse.status} - ${errorText}`);
+      console.error('❌ Upload failed to HSBC SharePoint:', errorText);
+      throw new Error(`File upload failed to ${uploadUrl}: ${uploadResponse.status} - ${errorText}`);
     }
 
     const uploadResult = await uploadResponse.json();
-    console.log('✅ File uploaded successfully to CORRECT SiteAssets path:', uploadResult);
+    console.log('✅ File uploaded successfully to CORRECT HSBC SiteAssets path:', uploadResult);
 
-    // ✅ STEP 3: Update procedure in SharePoint List with amendment info
+    // ✅ STEP 3: Update procedure in HSBC SharePoint List with amendment info
     const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
+    console.log(`📝 Updating procedure list at: ${listUpdateUrl}`);
     
     const updateData = {
       __metadata: { type: 'SP.Data.ProceduresListItem' },
@@ -230,19 +237,19 @@ class DocumentAnalyzer {
       LastModifiedOn: amendmentData.last_modified_on,
       LastModifiedBy: amendmentData.last_modified_by,
       
-      // Updated document info pointing to CORRECT SiteAssets path
+      // Updated document info pointing to CORRECT HSBC SiteAssets path
       DocumentLink: uploadResult.d.ServerRelativeUrl,
       SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
       OriginalFilename: amendmentData.original_filename,
       FileSize: amendmentData.file_size,
       SharePointUploaded: true,
       
-      // ✅ IMPORTANT: Store the CORRECT SiteAssets folder structure
+      // ✅ IMPORTANT: Store the CORRECT HSBC SiteAssets folder structure
       SiteAssetsPath: sharePointPath, // "SiteAssets/IWPB/Risk_Management"
       ActualSubFolder: amendmentData.subFolder // "Risk_Management"
     };
 
-    console.log('📝 Updating procedure list item with amendment data...');
+    console.log('📝 Updating HSBC procedure list item with amendment data...');
 
     const updateResponse = await fetch(listUpdateUrl, {
       method: 'POST',
@@ -258,12 +265,15 @@ class DocumentAnalyzer {
 
     if (!updateResponse.ok) {
       const errorText = await updateResponse.text();
-      console.error('❌ List update failed:', errorText);
-      throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
+      console.error('❌ HSBC list update failed:', errorText);
+      throw new Error(`List update failed at ${listUpdateUrl}: ${updateResponse.status} - ${errorText}`);
     }
 
-    // ✅ STEP 4: Log amendment in audit trail
+    console.log('✅ HSBC procedure list updated successfully');
+
+    // ✅ STEP 4: Log amendment in HSBC audit trail
     const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
+    console.log(`📋 Adding audit log entry at: ${auditUrl}`);
     
     const auditData = {
       __metadata: { type: 'SP.Data.AuditLogListItem' },
@@ -277,10 +287,11 @@ class DocumentAnalyzer {
         amendmentSummary: amendmentData.amendment_summary,
         oldScore: amendmentData.originalScore || 0,
         newScore: amendmentData.new_score,
-        // ✅ LOG THE CORRECT FOLDER STRUCTURE
+        // ✅ LOG THE CORRECT HSBC FOLDER STRUCTURE
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        uploadPath: targetFolderPath
+        uploadPath: targetFolderPath,
+        hsbc_sharepoint_url: sharePointUrl
       })
     };
 
@@ -294,7 +305,8 @@ class DocumentAnalyzer {
       body: JSON.stringify(auditData)
     });
 
-    console.log('✅ Amendment completed successfully with CORRECT SiteAssets folder structure');
+    console.log('✅ HSBC audit log entry created successfully');
+    console.log('✅ Amendment completed successfully with CORRECT HSBC SiteAssets folder structure');
 
     return {
       success: true,
@@ -302,15 +314,17 @@ class DocumentAnalyzer {
       uploadedTo: targetFolderPath,
       sharePointPath: sharePointPath,
       actualSubFolder: amendmentData.subFolder,
-      documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`
+      documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+      hsbc_base_url: sharePointUrl
     };
 
   } catch (error) {
-    console.error('❌ Amendment failed:', error);
+    console.error('❌ HSBC SharePoint amendment failed:', error);
     return {
       success: false,
       message: error.message || 'Amendment failed',
-      error: error
+      error: error,
+      attempted_url: sharePointUrl
     };
   }
 }
