@@ -4,7 +4,7 @@ import {
   Box, Container, AppBar, Toolbar, IconButton, Typography,
   Avatar, Chip, Badge, useTheme, Skeleton, Grid, Alert,
   Menu, MenuItem, ListItemIcon, ListItemText, Divider,
-  Stack, Paper, alpha, styled, keyframes, Tooltip
+  Stack, Paper, alpha, styled, keyframes, Tooltip, Card  
 } from '@mui/material';
 import {
   Menu as MenuIcon, Notifications, ArrowBack, AccountCircle,
@@ -460,7 +460,7 @@ const HSBCProceduresHub = () => {
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#f5f6fa' }}>
-        <GlassmorphismAppBar position="fixed">
+        <ProfessionalAppBar  position="fixed">
           <Toolbar>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
          <ProfessionalLogo size={40}>
@@ -479,7 +479,7 @@ const HSBCProceduresHub = () => {
               </Stack>
             </Box>
           </Toolbar>
-        </GlassmorphismAppBar>
+        </ProfessionalAppBar >
 
         <Container maxWidth="lg" sx={{ pt: 12 }}>
           <Skeleton variant="text" width="60%" height={60} sx={{ mb: 2 }} />
@@ -511,11 +511,11 @@ const HSBCProceduresHub = () => {
           </IconButton>
           
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-            <HSBCHexagonLogo size={40}>
-              <Typography variant="caption" fontWeight={900} color="white" sx={{ fontSize: '11px' }}>
-                HBEG
-              </Typography>
-            </HSBCHexagonLogo>
+<ProfessionalLogo size={40}>
+  <Typography variant="h6" fontWeight={700} color="white" sx={{ fontSize: '14px' }}>
+    HBEG
+  </Typography>
+</ProfessionalLogo>
             
             <Box>
               <Typography variant="h6" component="div" color="white" fontWeight={800}>
