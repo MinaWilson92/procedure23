@@ -143,62 +143,177 @@ class DocumentAnalyzer {
   }
 
   // ✅ AMENDMENT UPLOAD METHOD - Uses existing SiteAssets folder structure
-  async amendProcedureInSharePoint(amendmentData, selectedFile) {
-    try {
-      console.log('🔄 Processing procedure amendment...');
-      
-      // ✅ PARSE EXISTING DOCUMENT URL TO GET SITEASSETS PATH
-      const existingDocumentPath = this.parseExistingDocumentPath(
-        amendmentData.original_document_link || 
-        amendmentData.targetFolderPath
-      );
-      
-      console.log('📂 Using existing SiteAssets folder structure:', existingDocumentPath);
-      
-      // ✅ SANITIZE DATA BEFORE PROCESSING
-      const sanitizedAmendmentData = {
-        procedureId: amendmentData.procedureId,
-        originalName: this.sanitizeString(amendmentData.originalName || ''),
-        originalLOB: amendmentData.originalLOB,
-        originalPrimaryOwner: amendmentData.originalPrimaryOwner || 'Unknown',
-        originalPrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail || '',
-        amendment_summary: this.sanitizeString(amendmentData.amendment_summary || ''),
-        amendment_date: amendmentData.amendment_date || new Date().toISOString(),
-        amended_by: amendmentData.amended_by || 'User',
-        amended_by_name: this.sanitizeString(amendmentData.amended_by_name || 'User'),
-        secondary_owner: this.sanitizeString(amendmentData.secondary_owner || ''),
-        secondary_owner_email: this.sanitizeEmail(amendmentData.secondary_owner_email || ''),
-        
-        // ✅ CORRECT: Use actual SiteAssets folder structure from existing document
-        sharePointPath: existingDocumentPath.sharePointPath, // e.g., "SiteAssets/IWPB/Risk_Management"
-        lobFolder: existingDocumentPath.lobFolder,
-        subFolder: existingDocumentPath.subFolder, // ✅ Real subfolder name
-        
-        // Only add analysis data if file was re-analyzed
-        ...(amendmentData.new_analysis_details && {
-          new_score: amendmentData.new_score,
-          new_analysis_details: amendmentData.new_analysis_details,
-          new_ai_recommendations: amendmentData.new_ai_recommendations
-        })
-      };
+  async amendProcedureInSharePoint(amendmentData, file) {
+  try {
+    console.log('🔄 Starting SharePoint amendment process with corrected folder path...');
+    console.log('📂 Amendment data received:', amendmentData);
 
-      console.log('✅ Sanitized amendment data with correct SiteAssets path:', sanitizedAmendmentData);
-      
-      // ✅ UPLOAD AMENDMENT WITH EXISTING SITEASSETS FOLDER STRUCTURE
-      const result = await this.uploadAmendmentWithAnalysis(sanitizedAmendmentData, selectedFile);
-      
-      console.log('✅ Amendment processed:', result);
-      return result;
-      
-    } catch (error) {
-      console.error('❌ Amendment failed:', error);
-      return {
-        success: false,
-        message: `Amendment failed: ${error.message}`
-      };
+    // ✅ CRITICAL FIX: Use the CORRECTLY PARSED folder paths from amendmentData
+    const sharePointUrl = amendmentData.baseUrl || 'https://teams.global.hsbc/sites/employeeeng';
+    
+    // ✅ CORRECT: Use the actual parsed subfolder path, NOT defaulting to "General"
+    const targetFolderPath = amendmentData.fullFolderPath; // e.g., "/sites/employeeeng/SiteAssets/IWPB/Risk_Management"
+    const sharePointPath = amendmentData.sharePointPath; // e.g., "SiteAssets/IWPB/Risk_Management"
+    
+    console.log('✅ Using CORRECTED folder paths:');
+    console.log(`📁 Target Folder Path: ${targetFolderPath}`);
+    console.log(`📁 SharePoint Path: ${sharePointPath}`);
+    console.log(`📁 LOB Folder: ${amendmentData.lobFolder}`);
+    console.log(`📁 Actual Sub Folder: ${amendmentData.subFolder}`); // This should be "Risk_Management", not "General"
+
+    // ✅ STEP 1: Get request digest
+    const digestResponse = await fetch(`${sharePointUrl}/_api/contextinfo`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json; odata=verbose',
+        'Content-Type': 'application/json; odata=verbose'
+      }
+    });
+
+    if (!digestResponse.ok) {
+      throw new Error(`Failed to get request digest: ${digestResponse.status}`);
     }
-  }
 
+    const digestData = await digestResponse.json();
+    const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
+
+    // ✅ STEP 2: Upload file to the CORRECT SiteAssets folder path
+    console.log(`📤 Uploading file to CORRECT path: ${targetFolderPath}`);
+    
+    // ✅ CORRECTED API CALL: Use the actual parsed folder path
+    const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(file.name)}', overwrite=true)`;
+    
+    console.log(`🌐 Upload URL: ${uploadUrl}`);
+
+    const formData = await file.arrayBuffer();
+    
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json; odata=verbose',
+        'X-RequestDigest': requestDigest,
+        'Content-Length': formData.byteLength
+      },
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('❌ Upload failed:', errorText);
+      throw new Error(`File upload failed: ${uploadResponse.status} - ${errorText}`);
+    }
+
+    const uploadResult = await uploadResponse.json();
+    console.log('✅ File uploaded successfully to CORRECT SiteAssets path:', uploadResult);
+
+    // ✅ STEP 3: Update procedure in SharePoint List with amendment info
+    const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
+    
+    const updateData = {
+      __metadata: { type: 'SP.Data.ProceduresListItem' },
+      
+      // Update secondary owner if provided
+      SecondaryOwner: amendmentData.secondary_owner || '',
+      SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
+      
+      // Update quality scores with new analysis
+      QualityScore: amendmentData.new_score,
+      AnalysisDetails: JSON.stringify(amendmentData.new_analysis_details),
+      AIRecommendations: JSON.stringify(amendmentData.new_ai_recommendations),
+      
+      // Amendment tracking
+      AmendmentSummary: amendmentData.amendment_summary,
+      AmendedBy: amendmentData.amended_by,
+      AmendedByName: amendmentData.amended_by_name,
+      AmendedByRole: amendmentData.amended_by_role,
+      AmendmentDate: amendmentData.amendment_date,
+      LastModifiedOn: amendmentData.last_modified_on,
+      LastModifiedBy: amendmentData.last_modified_by,
+      
+      // Updated document info pointing to CORRECT SiteAssets path
+      DocumentLink: uploadResult.d.ServerRelativeUrl,
+      SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+      OriginalFilename: amendmentData.original_filename,
+      FileSize: amendmentData.file_size,
+      SharePointUploaded: true,
+      
+      // ✅ IMPORTANT: Store the CORRECT SiteAssets folder structure
+      SiteAssetsPath: sharePointPath, // "SiteAssets/IWPB/Risk_Management"
+      ActualSubFolder: amendmentData.subFolder // "Risk_Management"
+    };
+
+    console.log('📝 Updating procedure list item with amendment data...');
+
+    const updateResponse = await fetch(listUpdateUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json; odata=verbose',
+        'Content-Type': 'application/json; odata=verbose',
+        'X-RequestDigest': requestDigest,
+        'X-HTTP-Method': 'MERGE',
+        'If-Match': '*'
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!updateResponse.ok) {
+      const errorText = await updateResponse.text();
+      console.error('❌ List update failed:', errorText);
+      throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
+    }
+
+    // ✅ STEP 4: Log amendment in audit trail
+    const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
+    
+    const auditData = {
+      __metadata: { type: 'SP.Data.AuditLogListItem' },
+      Title: 'Procedure Amendment',
+      UserId: amendmentData.amended_by,
+      ActionType: 'AMEND',
+      LogTimestamp: new Date().toISOString(),
+      Details: JSON.stringify({
+        procedureId: amendmentData.procedureId,
+        procedureName: amendmentData.originalName,
+        amendmentSummary: amendmentData.amendment_summary,
+        oldScore: amendmentData.originalScore || 0,
+        newScore: amendmentData.new_score,
+        // ✅ LOG THE CORRECT FOLDER STRUCTURE
+        targetFolder: sharePointPath,
+        actualSubFolder: amendmentData.subFolder,
+        uploadPath: targetFolderPath
+      })
+    };
+
+    await fetch(auditUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json; odata=verbose',
+        'Content-Type': 'application/json; odata=verbose',
+        'X-RequestDigest': requestDigest
+      },
+      body: JSON.stringify(auditData)
+    });
+
+    console.log('✅ Amendment completed successfully with CORRECT SiteAssets folder structure');
+
+    return {
+      success: true,
+      message: 'Procedure amended successfully',
+      uploadedTo: targetFolderPath,
+      sharePointPath: sharePointPath,
+      actualSubFolder: amendmentData.subFolder,
+      documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`
+    };
+
+  } catch (error) {
+    console.error('❌ Amendment failed:', error);
+    return {
+      success: false,
+      message: error.message || 'Amendment failed',
+      error: error
+    };
+  }
+}
   // ✅ UPLOAD AMENDMENT WITH ANALYSIS - Uses existing SiteAssets folder path
   async uploadAmendmentWithAnalysis(amendmentData, file) {
     try {
