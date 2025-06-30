@@ -205,20 +205,21 @@ const ProcedureAmendModal = ({
 
   // ✅ CORRECTED: Smart folder detection with SiteAssets support
 // ✅ CORRECTED: Smart folder detection with better SiteAssets URL parsing
+// ✅ CORRECTED: parseExistingDocumentPath with CORRECT HSBC Base URL
 const parseExistingDocumentPath = (documentLink) => {
   try {
     if (!documentLink || typeof documentLink !== 'string') {
-      console.warn('⚠️ No valid document link provided, using default SiteAssets structure');
+      console.warn('⚠️ No valid document link provided, using default HSBC SiteAssets structure');
       return {
-        baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
+        baseUrl: 'https://teams.global.hsbc/sites/EmployeeEng',
         lobFolder: procedure?.lob || 'IWPB',
         subFolder: 'General',
-        fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
+        fullFolderPath: `/sites/EmployeeEng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
         sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`
       };
     }
 
-    console.log('🔍 Analyzing existing document URL for SiteAssets:', documentLink);
+    console.log('🔍 Analyzing existing document URL for HSBC SiteAssets:', documentLink);
 
     // ✅ SAFE URL PARSING: Handle both full URLs and relative paths
     let parsedUrl;
@@ -239,7 +240,7 @@ const parseExistingDocumentPath = (documentLink) => {
         };
       }
     } else {
-      // Relative path - construct base info
+      // Relative path - construct base info with CORRECT HSBC URL
       pathname = documentLink.startsWith('/') ? documentLink : `/${documentLink}`;
       parsedUrl = { 
         protocol: 'https:', 
@@ -253,12 +254,12 @@ const parseExistingDocumentPath = (documentLink) => {
     
     console.log('📂 URL path parts:', pathParts);
 
-    // ✅ SMART DETECTION: Find key SharePoint structure markers
+    // ✅ SMART DETECTION: Find key HSBC SharePoint structure markers
     let siteIndex = -1;
     let employeeEngIndex = -1;
     let siteAssetsIndex = -1;
     
-    // Find indices with case-insensitive matching
+    // Find indices with case-insensitive matching for HSBC structure
     for (let i = 0; i < pathParts.length; i++) {
       const part = pathParts[i].toLowerCase();
       if (part === 'sites' && siteIndex === -1) {
@@ -272,9 +273,9 @@ const parseExistingDocumentPath = (documentLink) => {
       }
     }
     
-    console.log('🔍 Structure indices found:', { siteIndex, employeeEngIndex, siteAssetsIndex });
+    console.log('🔍 HSBC structure indices found:', { siteIndex, employeeEngIndex, siteAssetsIndex });
 
-    // ✅ VALIDATE STRUCTURE: Must have proper SharePoint SiteAssets structure
+    // ✅ VALIDATE STRUCTURE: Must have proper HSBC SharePoint SiteAssets structure
     if (siteAssetsIndex === -1) {
       console.warn('⚠️ No SiteAssets found in path, likely stored elsewhere');
       
@@ -292,18 +293,18 @@ const parseExistingDocumentPath = (documentLink) => {
       }
       
       return {
-        baseUrl: `${parsedUrl.protocol}//${parsedUrl.host}`,
+        baseUrl: 'https://teams.global.hsbc/sites/EmployeeEng',
         lobFolder: detectedLOB,
         subFolder: 'General',
-        fullFolderPath: `/sites/employeeeng/SiteAssets/${detectedLOB}/General`,
+        fullFolderPath: `/sites/EmployeeEng/SiteAssets/${detectedLOB}/General`,
         sharePointPath: `SiteAssets/${detectedLOB}/General`,
         originalUrl: documentLink,
         warning: 'Document not in SiteAssets structure'
       };
     }
 
-    // ✅ CORRECT PARSING: Extract LOB and actual subfolder
-    const baseUrl = `${parsedUrl.protocol}//${parsedUrl.host}`;
+    // ✅ CORRECT PARSING: Extract LOB and actual subfolder for HSBC
+    const baseUrl = 'https://teams.global.hsbc/sites/EmployeeEng'; // ✅ HARDCODED CORRECT HSBC URL
     
     // The folder immediately after SiteAssets should be the LOB
     const lobFolderIndex = siteAssetsIndex + 1;
@@ -317,20 +318,15 @@ const parseExistingDocumentPath = (documentLink) => {
       // ✅ DECODE URL-ENCODED FOLDER NAMES: Handle %20, %2C, etc.
       try {
         subFolder = decodeURIComponent(pathParts[subFolderIndex]);
-        console.log('✅ Decoded actual subfolder:', subFolder);
+        console.log('✅ Decoded actual HSBC subfolder:', subFolder);
       } catch (decodeError) {
         subFolder = pathParts[subFolderIndex]; // Use as-is if decode fails
         console.warn('⚠️ Could not decode subfolder, using raw value:', subFolder);
       }
     }
     
-    // ✅ CONSTRUCT PATHS: Build proper SharePoint paths
-    const folderPathParts = [];
-    if (siteIndex >= 0) folderPathParts.push('sites');
-    if (employeeEngIndex >= 0) folderPathParts.push('employeeeng');
-    folderPathParts.push('SiteAssets', lobFolder, subFolder);
-    
-    const fullFolderPath = `/${folderPathParts.join('/')}`;
+    // ✅ CONSTRUCT PATHS: Build proper HSBC SharePoint paths
+    const fullFolderPath = `/sites/EmployeeEng/SiteAssets/${lobFolder}/${subFolder}`;
     const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
 
     const result = {
@@ -342,24 +338,24 @@ const parseExistingDocumentPath = (documentLink) => {
       originalUrl: documentLink
     };
 
-    console.log('✅ Successfully parsed SiteAssets structure with actual subfolder:', result);
+    console.log('✅ Successfully parsed HSBC SiteAssets structure with actual subfolder:', result);
     return result;
 
   } catch (error) {
-    console.error('❌ Error parsing document URL:', error);
+    console.error('❌ Error parsing HSBC document URL:', error);
     
-    // ✅ ROBUST FALLBACK: Always return valid structure
+    // ✅ ROBUST FALLBACK: Always return valid HSBC structure
     const fallback = {
-      baseUrl: 'https://teams.global.hsbc/sites/employeeeng',
+      baseUrl: 'https://teams.global.hsbc/sites/EmployeeEng',
       lobFolder: procedure?.lob || 'IWPB',
       subFolder: 'General',
-      fullFolderPath: `/sites/employeeeng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
+      fullFolderPath: `/sites/EmployeeEng/SiteAssets/${procedure?.lob || 'IWPB'}/General`,
       sharePointPath: `SiteAssets/${procedure?.lob || 'IWPB'}/General`,
       error: error.message,
       originalUrl: documentLink
     };
     
-    console.log('🔄 Using robust fallback SiteAssets structure:', fallback);
+    console.log('🔄 Using robust HSBC fallback SiteAssets structure:', fallback);
     return fallback;
   }
 };
