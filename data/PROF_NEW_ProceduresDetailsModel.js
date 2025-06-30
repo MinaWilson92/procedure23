@@ -5,24 +5,32 @@ import {
   Grid, Card, CardContent, Chip, Divider, List, ListItem, ListItemIcon, 
   ListItemText, Avatar, LinearProgress, Alert, IconButton, Skeleton, Link,
   Stack, Paper, Tooltip, Badge, useTheme, styled, keyframes, alpha,
-  CardHeader, Accordion, AccordionSummary, AccordionDetails, Timeline,
-  TimelineItem, TimelineSeparator, TimelineDot, TimelineContent, Fab
-} from '@mui/material';
-
-// With this corrected import:
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, 
-  Grid, Card, CardContent, Chip, Divider, List, ListItem, ListItemIcon, 
-  ListItemText, Avatar, LinearProgress, Alert, IconButton, Skeleton, Link,
-  Stack, Paper, Tooltip, Badge, useTheme, styled, keyframes, alpha,
   CardHeader, Accordion, AccordionSummary, AccordionDetails, Fab
 } from '@mui/material';
 
-// ADD this separate import for Timeline:
+// 🎯 **ADD ALL MISSING ICON IMPORTS:**
+import {
+  Close, Visibility, Description, CalendarToday, Schedule, CheckCircle,
+  CloudDownload, Email, Person, Security, Business, Warning, ErrorIcon,
+  LocalFireDepartment, AutoAwesome, Psychology, Insights, TrendingUp,
+  ExpandMore, Grade, AdminPanelSettings, Share, Assignment, LinkIcon,
+  Timeline as TimelineIcon, Error as ErrorIcon
+} from '@mui/icons-material';
+
+// Motion imports
 import { motion, AnimatePresence } from 'framer-motion';
 
-// 🎨 **HSBC Brand Colors (Official)**
-// 🎨 **Professional Corporate Colors**
+const ProfessionalPaper = styled(Paper)(({ theme, variant = 'default' }) => ({
+  padding: 16,
+  borderRadius: '8px',
+  background: '#FFFFFF',
+  border: `1px solid ${HSBCColors.professional.border}`,
+  boxShadow: '0 2px 8px rgba(44,62,80,0.05)',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    boxShadow: '0 4px 12px rgba(44,62,80,0.1)'
+  }
+}));
 const HSBCColors = {
   primary: '#DB0011',      // Keep HSBC Red but use sparingly
   secondary: '#9FA1A4',    // HSBC Grey
@@ -162,15 +170,15 @@ const getScoreColor = (score) => {
 
 const getQualityInfo = (score) => {
   if (score >= 90) {
-    return { level: 'Excellent', color: '#4caf50', icon: <AutoAwesome />, gradient: HSBCColors.gradients.successGlass };
+    return { level: 'Excellent', color: HSBCColors.professional.success, icon: <AutoAwesome /> };
   } else if (score >= 80) {
-    return { level: 'Good', color: '#8bc34a', icon: <CheckCircle />, gradient: HSBCColors.gradients.successGlass };
+    return { level: 'Good', color: HSBCColors.professional.success, icon: <CheckCircle /> };
   } else if (score >= 70) {
-    return { level: 'Fair', color: '#ff9800', icon: <Warning />, gradient: HSBCColors.gradients.warningGlass };
+    return { level: 'Fair', color: HSBCColors.professional.warning, icon: <Warning /> };
   } else if (score >= 60) {
-    return { level: 'Poor', color: '#f44336', icon: <ErrorIcon />, gradient: HSBCColors.gradients.errorGlass };
+    return { level: 'Poor', color: HSBCColors.professional.error, icon: <Error /> };
   } else {
-    return { level: 'Critical', color: '#d32f2f', icon: <LocalFireDepartment />, gradient: HSBCColors.gradients.errorGlass };
+    return { level: 'Critical', color: HSBCColors.professional.error, icon: <LocalFireDepartment /> };
   }
 };
 
@@ -687,7 +695,7 @@ const ProcedureDetailsModal = ({
                       <CardContent>
                         <Grid container spacing={3}>
                           <Grid item xs={12} sm={6}>
-                            <Paper sx={{ 
+                            <ProfessionalPaper sx={{ 
   p: 2, 
   borderRadius: '8px',
   background: '#FFFFFF',
@@ -709,16 +717,21 @@ const ProcedureDetailsModal = ({
                                   </Typography>
                                 </Box>
                               </Stack>
-                            </Paper>
+                            </ProfessionalPaper>
                           </Grid>
                           
                           <Grid item xs={12} sm={6}>
-                            <Paper sx={{ 
-                              p: 2, 
-                              borderRadius: '16px',
-                              background: HSBCColors.gradients.infoGlass,
-                              border: '1px solid rgba(33,150,243,0.2)'
-                            }}>
+                           <ProfessionalPaper sx={{ 
+  p: 2, 
+  borderRadius: '8px',
+  background: '#FFFFFF',
+  border: `1px solid ${HSBCColors.professional.border}`,
+  boxShadow: '0 2px 8px rgba(44,62,80,0.05)',
+  transition: 'all 0.2s ease',
+  '&:hover': {
+    boxShadow: '0 4px 12px rgba(44,62,80,0.1)'
+  }
+}}>
                               <Stack direction="row" alignItems="center" spacing={2}>
                                 <Schedule sx={{ color: '#2196f3' }} />
                                 <Box>
@@ -730,17 +743,17 @@ const ProcedureDetailsModal = ({
                                   </Typography>
                                 </Box>
                               </Stack>
-                            </Paper>
+                            </ProfessionalPaper>
                           </Grid>
                           
                           <Grid item xs={12} sm={6}>
-                            <Paper sx={{ 
+                            <ProfessionalPaper sx={{ 
                               p: 2, 
                               borderRadius: '16px',
-                              background: expiryStatus?.status === 'EXPIRED' ? HSBCColors.gradients.errorGlass :
-                                          expiryStatus?.status === 'CRITICAL' ? HSBCColors.gradients.errorGlass :
-                                          expiryStatus?.status === 'EXPIRING' ? HSBCColors.gradients.warningGlass :
-                                          HSBCColors.gradients.successGlass,
+                              background: expiryStatus?.status === 'EXPIRED' ? rgba(231,76,60,0.05) :
+                                          expiryStatus?.status === 'CRITICAL' ? rgba(231,76,60,0.05) :
+                                          expiryStatus?.status === 'EXPIRING' ? rgba(243,156,18,0.05) :
+                                          rgba(39,174,96,0.05),
                               border: `1px solid ${alpha(expiryStatus?.color || '#4caf50', 0.2)}`
                             }}>
                               <Stack direction="row" alignItems="center" spacing={2}>
@@ -761,15 +774,15 @@ const ProcedureDetailsModal = ({
                                   )}
                                 </Box>
                               </Stack>
-                            </Paper>
+                            </ProfessionalPaper>
                           </Grid>
                           
                           {procedureDetails.signOffDate && (
                             <Grid item xs={12} sm={6}>
-                              <Paper sx={{ 
+                              <ProfessionalPaper sx={{ 
                                 p: 2, 
                                 borderRadius: '16px',
-                                background: HSBCColors.gradients.successGlass,
+                                background: rgba(39,174,96,0.05),
                                 border: '1px solid rgba(76,175,80,0.2)'
                               }}>
                                 <Stack direction="row" alignItems="center" spacing={2}>
@@ -783,15 +796,15 @@ const ProcedureDetailsModal = ({
                                     </Typography>
                                   </Box>
                                 </Stack>
-                              </Paper>
+                              </ProfessionalPaper>
                             </Grid>
                           )}
                           
                           <Grid item xs={12} sm={6}>
-  <Paper sx={{ 
+  <ProfessionalPaper sx={{ 
     p: 2, 
     borderRadius: '16px',
-    background: HSBCColors.gradients.modernGlass,
+    background: rgba(219,0,17,0.05),
     border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`,
     minHeight: 80, // Ensure consistent height
     display: 'flex',
@@ -822,14 +835,14 @@ const ProcedureDetailsModal = ({
         </Tooltip>
       </Box>
     </Stack>
-  </Paper>
+  </ProfessionalPaper>
 </Grid>
                           
   <Grid item xs={12} sm={6}>
-    <Paper sx={{ 
+    <ProfessionalPaper sx={{ 
       p: 2, 
       borderRadius: '16px',
-      background: HSBCColors.gradients.modernGlass,
+      background: rgba(219,0,17,0.05),
       border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`,
       minHeight: { xs: 'auto', sm: 80 },
       display: 'flex',
@@ -846,7 +859,7 @@ const ProcedureDetailsModal = ({
           </Typography>
         </Box>
       </Stack>
-    </Paper>
+    </ProfessionalPaper>
   </Grid>
 </Grid>
                         
@@ -926,7 +939,7 @@ const ProcedureDetailsModal = ({
                               <AccordionSummary 
                                 expandIcon={<ExpandMore />}
                                 sx={{ 
-                                  background: HSBCColors.gradients.successGlass,
+                                  background: rgba(39,174,96,0.05),
                                   borderRadius: '16px'
                                 }}
                               >
@@ -946,10 +959,10 @@ const ProcedureDetailsModal = ({
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{ duration: 0.3, delay: index * 0.1 }}
                                       >
-                                        <Paper sx={{ 
+                                        <ProfessionalPaper sx={{ 
                                           p: 2, 
                                           borderRadius: '12px',
-                                          background: HSBCColors.gradients.successGlass,
+                                          background: rgba(39,174,96,0.05),
                                           border: '1px solid rgba(76,175,80,0.2)',
                                           transition: 'all 0.3s ease',
                                           '&:hover': {
@@ -963,7 +976,7 @@ const ProcedureDetailsModal = ({
                                               {element}
                                             </Typography>
                                           </Stack>
-                                        </Paper>
+                                        </ProfessionalPaper>
                                       </motion.div>
                                     </Grid>
                                   ))}
@@ -977,7 +990,7 @@ const ProcedureDetailsModal = ({
                               <AccordionSummary 
                                 expandIcon={<ExpandMore />}
                                 sx={{ 
-                                  background: HSBCColors.gradients.infoGlass,
+                                  background: rgba(52,152,219,0.05),
                                   borderRadius: '16px'
                                 }}
                               >
@@ -997,10 +1010,10 @@ const ProcedureDetailsModal = ({
                                       animate={{ opacity: 1, x: 0 }}
                                       transition={{ duration: 0.3, delay: index * 0.1 }}
                                     >
-                                      <Paper sx={{ 
+                                      <ProfessionalPaper sx={{ 
                                         p: 3, 
                                         borderRadius: '12px',
-                                        background: HSBCColors.gradients.infoGlass,
+                                        background: rgba(52,152,219,0.05),
                                         border: '1px solid rgba(33,150,243,0.2)',
                                         transition: 'all 0.3s ease',
                                         '&:hover': {
@@ -1019,7 +1032,7 @@ const ProcedureDetailsModal = ({
                                             </Typography>
                                           </Box>
                                         </Stack>
-                                      </Paper>
+                                      </ProfessionalPaper>
                                     </motion.div>
                                   ))}
                                 </Stack>
@@ -1069,26 +1082,26 @@ const ProcedureDetailsModal = ({
                               whileHover={{ scale: 1.02 }}
                               transition={{ type: "spring", stiffness: 300 }}
                             >
-                              <ProfessionalCard variant="primary">
-                                <CardContent sx={{ p: 3 }}>
-                                  <Stack direction="row" alignItems="center" spacing={2}>
-                                    <Avatar sx={{ 
-                                      width: 60, 
-                                      height: 60,
-                                      background: 'linear-gradient(135deg, #fff 0%, #f0f0f0 100%)',
-                                      color: HSBCColors.primary,
-                                      fontSize: '1.5rem',
-                                      fontWeight: 900
-                                    }}>
-                                      {procedureDetails.primaryOwner[0]}
-                                    </Avatar>
-                                    <Box sx={{ flex: 1 }}>
-                                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)', mb: 0.5 }}>
-                                        Primary Owner
-                                      </Typography>
-                                      <Typography variant="h6" fontWeight={800} color="white" gutterBottom>
-                                        {procedureDetails.primaryOwner}
-                                      </Typography>
+                        <ProfessionalCard variant="primary" accent={true}>
+  <CardContent sx={{ p: 3, background: HSBCColors.gradients.accent, borderRadius: '8px' }}>
+    <Stack direction="row" alignItems="center" spacing={2}>
+      <Avatar sx={{ 
+        width: 60, 
+        height: 60,
+        background: 'rgba(255,255,255,0.9)',
+        color: HSBCColors.primary,
+        fontSize: '1.5rem',
+        fontWeight: 900
+      }}>
+        {procedureDetails.primaryOwner[0]}
+      </Avatar>
+      <Box sx={{ flex: 1 }}>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.9)', mb: 0.5 }}>
+          Primary Owner
+        </Typography>
+        <Typography variant="h6" fontWeight={800} color="white" gutterBottom>
+          {procedureDetails.primaryOwner}
+        </Typography>
                                       {procedureDetails.primaryOwnerEmail && (
                                         <Stack direction="row" alignItems="center" spacing={1}>
                                           <Email sx={{ fontSize: 16, color: 'rgba(255,255,255,0.8)' }} />
@@ -1158,10 +1171,10 @@ const ProcedureDetailsModal = ({
 
                           {/* Uploaded By */}
                           {procedureDetails.uploadedBy && (
-                            <Paper sx={{ 
+                            <ProfessionalPaper sx={{ 
                               p: 2, 
                               borderRadius: '16px',
-                              background: HSBCColors.gradients.modernGlass,
+                              background: rgba(219,0,17,0.05),
                               border: `1px solid ${alpha(HSBCColors.primary, 0.2)}`
                             }}>
                               <Stack direction="row" alignItems="center" spacing={2}>
@@ -1181,7 +1194,7 @@ const ProcedureDetailsModal = ({
                                   </Typography>
                                 </Box>
                               </Stack>
-                            </Paper>
+                            </ProfessionalPaper>
                           )}
                         </Stack>
                       </CardContent>
@@ -1221,10 +1234,10 @@ const ProcedureDetailsModal = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Paper sx={{ 
+          <ProfessionalPaper sx={{ 
             p: 3, 
             borderRadius: '16px',
-            background: HSBCColors.gradients.successGlass,
+            background: rgba(39,174,96,0.05),
             border: '1px solid rgba(76,175,80,0.2)',
             position: 'relative',
             transition: 'all 0.3s ease',
@@ -1272,7 +1285,7 @@ const ProcedureDetailsModal = ({
                 />
               </Box>
             </Stack>
-          </Paper>
+          </ProfessionalPaper>
         </motion.div>
 
         {/* Sign-off (if available) */}
@@ -1282,10 +1295,10 @@ const ProcedureDetailsModal = ({
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <Paper sx={{ 
+            <ProfessionalPaper sx={{ 
               p: 3, 
               borderRadius: '16px',
-              background: HSBCColors.gradients.infoGlass,
+              background: rgba(52,152,219,0.05),
               border: '1px solid rgba(33,150,243,0.2)',
               position: 'relative',
               transition: 'all 0.3s ease',
@@ -1333,7 +1346,7 @@ const ProcedureDetailsModal = ({
                   />
                 </Box>
               </Stack>
-            </Paper>
+            </ProfessionalPaper>
           </motion.div>
         )}
 
@@ -1343,10 +1356,10 @@ const ProcedureDetailsModal = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
         >
-          <Paper sx={{ 
+          <ProfessionalPaper sx={{ 
             p: 3, 
             borderRadius: '16px',
-            background: HSBCColors.gradients.warningGlass,
+            background: rgba(243,156,18,0.05),
             border: '1px solid rgba(255,152,0,0.2)',
             position: 'relative',
             transition: 'all 0.3s ease',
@@ -1394,7 +1407,7 @@ const ProcedureDetailsModal = ({
                 />
               </Box>
             </Stack>
-          </Paper>
+          </ProfessionalPaper>
         </motion.div>
 
         {/* Expiry Date */}
@@ -1403,13 +1416,13 @@ const ProcedureDetailsModal = ({
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.3, delay: 0.4 }}
         >
-          <Paper sx={{ 
+          <ProfessionalPaper sx={{ 
             p: 3, 
             borderRadius: '16px',
-            background: expiryStatus?.status === 'EXPIRED' ? HSBCColors.gradients.errorGlass :
-                        expiryStatus?.status === 'CRITICAL' ? HSBCColors.gradients.errorGlass :
-                        expiryStatus?.status === 'EXPIRING' ? HSBCColors.gradients.warningGlass :
-                        HSBCColors.gradients.successGlass,
+            background: expiryStatus?.status === 'EXPIRED' ? rgba(231,76,60,0.05) :
+                        expiryStatus?.status === 'CRITICAL' ? rgba(231,76,60,0.05) :
+                        expiryStatus?.status === 'EXPIRING' ? rgba(243,156,18,0.05) :
+                        rgba(39,174,96,0.05),
             border: `1px solid ${alpha(expiryStatus?.color || '#4caf50', 0.2)}`,
             position: 'relative',
             transition: 'all 0.3s ease',
@@ -1461,7 +1474,7 @@ const ProcedureDetailsModal = ({
                 )}
               </Box>
             </Stack>
-          </Paper>
+          </ProfessionalPaper>
         </motion.div>
       </Stack>
     </CardContent>
@@ -1512,10 +1525,10 @@ const ProcedureDetailsModal = ({
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.3, delay: index * 0.1 }}
                               >
-                                <Paper sx={{ 
+                                <ProfessionalPaper sx={{ 
                                   p: 2, 
                                   borderRadius: '12px',
-                                  background: HSBCColors.gradients.successGlass,
+                                  background: rgba(39,174,96,0.05),
                                   border: '1px solid rgba(76,175,80,0.2)',
                                   transition: 'all 0.3s ease',
                                   '&:hover': {
@@ -1529,7 +1542,7 @@ const ProcedureDetailsModal = ({
                                       {owner}
                                     </Typography>
                                   </Stack>
-                                </Paper>
+                                </ProfessionalPaper>
                               </motion.div>
                             ))}
                           </Stack>
@@ -1655,7 +1668,7 @@ const ProcedureDetailsModal = ({
                 }}
                 sx={{
                   background: 'linear-gradient(135deg, #2196f3 0%, #1976d2 100%)',
-                  color: 'white',​​​​​​​​​​​​​​​​                  boxShadow: '0 8px 32px rgba(33,150,243,0.4)',
+                  color: 'white', boxShadow: '0 8px 32px rgba(33,150,243,0.4)',
                   '&:hover': {
                     transform: 'scale(1.1)',
                     boxShadow: '0 12px 40px rgba(33,150,243,0.5)'
