@@ -145,12 +145,14 @@ class DocumentAnalyzer {
   // ✅ AMENDMENT UPLOAD METHOD - Uses existing SiteAssets folder structure
 // ✅ FIXED: DocumentAnalyzer.js - amendProcedureInSharePoint method with CORRECT HSBC URLs
 async amendProcedureInSharePoint(amendmentData, file) {
+
+      const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
   try {
     console.log('🔄 Starting SharePoint amendment process with CORRECT HSBC URLs...');
     console.log('📂 Amendment data received:', amendmentData);
 
     // ✅ CORRECT HSBC BASE URL: Always use the proper HSBC SharePoint URL
-    const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
+
     
     // ✅ CORRECT: Use the actual parsed subfolder path, NOT defaulting to "General"
     const targetFolderPath = amendmentData.fullFolderPath; // e.g., "/sites/EmployeeEng/SiteAssets/IWPB/Risk_Management"
