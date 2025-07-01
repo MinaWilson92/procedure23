@@ -1,6 +1,6 @@
-// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration + SiteAssets Support + Smart File Naming
+// services/DocumentAnalyzer.js - Complete Fixed Version with Enhanced URL Handling
 import { sharePointPaths } from './paths';
-import SharePointService  from './SharePointService';
+import SharePointService from './SharePointService';
 
 class DocumentAnalyzer {
   constructor() {
@@ -30,20 +30,67 @@ class DocumentAnalyzer {
     };
   }
 
-  // ✅ NEW: Smart file naming to prevent overwrites
+  // ✅ ENHANCED: Comprehensive URL cleaning and validation
+  cleanAndValidateUrl(url) {
+    if (!url) return '';
+    
+    console.log('🔧 Starting URL cleaning for:', url);
+    
+    // Step 1: Remove multiple duplicate segments
+    let cleanUrl = url
+      .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/\/+/g, '/') // Remove multiple consecutive slashes
+      .replace(/([^:]\/)\/+/g, '$1'); // Remove duplicate slashes except after protocol
+    
+    // Step 2: Fix case sensitivity issues
+    cleanUrl = cleanUrl.replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
+    
+    // Step 3: Validate and fix common issues
+    if (cleanUrl.includes('undefined') || cleanUrl.includes('null')) {
+      console.warn('⚠️ Invalid URL detected:', cleanUrl);
+      return '';
+    }
+    
+    // Step 4: Ensure proper structure
+    if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/sites/EmployeeEng/')) {
+      if (cleanUrl.startsWith('/')) {
+        cleanUrl = `/sites/EmployeeEng${cleanUrl}`;
+      } else {
+        cleanUrl = `/sites/EmployeeEng/${cleanUrl}`;
+      }
+    }
+    
+    // Step 5: Convert to full URL if needed
+    if (cleanUrl.startsWith('/sites/EmployeeEng/')) {
+      cleanUrl = `https://teams.global.hsbc${cleanUrl}`;
+    }
+    
+    console.log('✅ URL cleaned successfully:', cleanUrl);
+    return cleanUrl;
+  }
+
+  // ✅ ENHANCED: Smart file naming with comprehensive duplicate prevention
   async generateUniqueFileName(baseFileName, targetFolderPath, sharePointUrl, requestDigest) {
     try {
+      // Clean the target folder path first
+      const cleanedTargetPath = this.cleanAndValidateFolderPath(targetFolderPath);
+      
       // Extract name and extension
       const lastDotIndex = baseFileName.lastIndexOf('.');
       const nameWithoutExt = lastDotIndex > 0 ? baseFileName.substring(0, lastDotIndex) : baseFileName;
       const extension = lastDotIndex > 0 ? baseFileName.substring(lastDotIndex) : '';
       
-      console.log('🔍 Generating unique filename for:', baseFileName);
-      console.log('   Name part:', nameWithoutExt);
-      console.log('   Extension:', extension);
+      console.log('🔍 Generating unique filename:', {
+        baseFileName,
+        nameWithoutExt,
+        extension,
+        targetPath: cleanedTargetPath
+      });
       
       // Check if original file exists
-      const checkUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files('${encodeURIComponent(baseFileName)}')`;
+      const checkUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${cleanedTargetPath}')/Files('${encodeURIComponent(baseFileName)}')`;
       
       const checkResponse = await fetch(checkUrl, {
         method: 'GET',
@@ -51,9 +98,11 @@ class DocumentAnalyzer {
       });
       
       if (checkResponse.status === 404) {
-        // File doesn't exist, use original name
         console.log('✅ Original filename available:', baseFileName);
-        return baseFileName;
+        return {
+          fileName: baseFileName,
+          isRenamed: false
+        };
       }
       
       // File exists, generate unique name
@@ -68,7 +117,7 @@ class DocumentAnalyzer {
         const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
         uniqueName = `${nameWithoutExt}_v${counter}_${timestamp}${extension}`;
         
-        const uniqueCheckUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files('${encodeURIComponent(uniqueName)}')`;
+        const uniqueCheckUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${cleanedTargetPath}')/Files('${encodeURIComponent(uniqueName)}')`;
         
         const uniqueResponse = await fetch(uniqueCheckUrl, {
           method: 'GET',
@@ -78,7 +127,10 @@ class DocumentAnalyzer {
         if (uniqueResponse.status === 404) {
           exists = false;
           console.log('✅ Generated unique filename:', uniqueName);
-          return uniqueName;
+          return {
+            fileName: uniqueName,
+            isRenamed: true
+          };
         }
         
         counter++;
@@ -88,19 +140,59 @@ class DocumentAnalyzer {
       const fallbackTimestamp = Date.now();
       const fallbackName = `${nameWithoutExt}_${fallbackTimestamp}${extension}`;
       console.log('🔄 Using fallback filename:', fallbackName);
-      return fallbackName;
+      return {
+        fileName: fallbackName,
+        isRenamed: true
+      };
       
     } catch (error) {
       console.error('❌ Error generating unique filename:', error);
-      // Fallback: add timestamp to original name
+      // Ultimate fallback: add timestamp to original name
       const timestamp = Date.now();
       const lastDotIndex = baseFileName.lastIndexOf('.');
       const nameWithoutExt = lastDotIndex > 0 ? baseFileName.substring(0, lastDotIndex) : baseFileName;
       const extension = lastDotIndex > 0 ? baseFileName.substring(lastDotIndex) : '';
       const fallbackName = `${nameWithoutExt}_${timestamp}${extension}`;
       console.log('🔄 Error fallback filename:', fallbackName);
-      return fallbackName;
+      return {
+        fileName: fallbackName,
+        isRenamed: true
+      };
     }
+  }
+
+  // ✅ ENHANCED: Clean and validate folder paths
+  cleanAndValidateFolderPath(folderPath) {
+    if (!folderPath) return '/sites/EmployeeEng/SiteAssets/IWPB/General';
+    
+    console.log('🔧 Cleaning folder path:', folderPath);
+    
+    // Remove duplicate path segments
+    let cleanPath = folderPath
+          .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/\/+/g, '/'); // Remove multiple consecutive slashes
+    
+    // Fix case sensitivity
+    cleanPath = cleanPath.replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
+    
+    // Ensure proper structure
+    if (!cleanPath.startsWith('/sites/EmployeeEng/')) {
+      if (cleanPath.startsWith('/')) {
+        cleanPath = `/sites/EmployeeEng${cleanPath}`;
+      } else {
+        cleanPath = `/sites/EmployeeEng/${cleanPath}`;
+      }
+    }
+    
+    // Validate path structure
+    if (cleanPath.includes('undefined') || cleanPath.includes('null')) {
+      console.warn('⚠️ Invalid folder path detected, using fallback');
+      cleanPath = '/sites/EmployeeEng/SiteAssets/IWPB/General';
+    }
+    
+    console.log('✅ Folder path cleaned:', cleanPath);
+    return cleanPath;
   }
 
   // ============================================================================
@@ -130,10 +222,10 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // ✅ AMENDMENT SUPPORT METHODS WITH SITEASSETS
+  // ✅ ENHANCED AMENDMENT SUPPORT WITH COMPREHENSIVE URL FIXING
   // ============================================================================
 
-  // ✅ SMART FOLDER DETECTION - Parse existing document URL with SiteAssets
+  // ✅ ENHANCED: Parse existing document URL with comprehensive cleaning
   parseExistingDocumentPath(documentLink) {
     try {
       if (!documentLink) {
@@ -147,15 +239,16 @@ class DocumentAnalyzer {
         };
       }
 
-      console.log('🔍 Analyzing existing document URL:', documentLink);
+      // Clean the URL first
+      const cleanedUrl = this.cleanAndValidateUrl(documentLink);
+      console.log('🔍 Analyzing cleaned document URL:', cleanedUrl);
 
-      // Parse the URL to extract folder structure
-      const url = new URL(documentLink);
+      // Parse the cleaned URL
+      const url = new URL(cleanedUrl);
       const pathname = url.pathname;
 
-      // ✅ CORRECT PATTERN: /sites/EmployeeEng/SiteAssets/IWPB/Risk_Management/document.docx
+      // Extract path components
       const pathParts = pathname.split('/').filter(part => part.length > 0);
-      
       console.log('📂 URL path parts:', pathParts);
 
       // Find the base site structure
@@ -170,28 +263,27 @@ class DocumentAnalyzer {
       // Extract folder structure
       const baseUrl = `${url.protocol}//${url.host}`;
       
-      // ✅ CORRECT: The folder after /sites/EmployeeEng/SiteAssets/ should be the LOB folder
+      // Get LOB folder (after SiteAssets)
       const lobFolderIndex = siteAssetsIndex + 1;
       const lobFolder = pathParts[lobFolderIndex] || 'IWPB';
       
-      // ✅ CORRECT: The folder after LOB should be the actual subfolder (not "General")
+      // Get actual subfolder
       const subFolderIndex = lobFolderIndex + 1;
       const subFolder = pathParts[subFolderIndex] || 'General';
       
-      // ✅ CORRECT: Reconstruct paths with SiteAssets - ensure proper case
+      // Reconstruct clean paths
       const folderPathParts = ['sites', 'EmployeeEng', 'SiteAssets', lobFolder, subFolder];
       const fullFolderPath = `/${folderPathParts.join('/')}`;
-      
-      // ✅ CORRECT: SharePoint API path (SiteAssets/LOB/actual_subfolder)
       const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
 
       const result = {
         baseUrl,
         lobFolder,
-        subFolder, // ✅ This will be "Risk_Management", not "General"
+        subFolder,
         fullFolderPath,
         sharePointPath,
-        originalUrl: documentLink
+        originalUrl: documentLink,
+        cleanedUrl: cleanedUrl
       };
 
       console.log('✅ Parsed SiteAssets folder structure:', result);
@@ -200,7 +292,7 @@ class DocumentAnalyzer {
     } catch (error) {
       console.error('❌ Error parsing document URL:', error);
       
-      // ✅ CORRECT FALLBACK: Default SiteAssets structure
+      // Clean fallback structure
       const fallback = {
         baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/EmployeeEng',
         lobFolder: 'IWPB',
@@ -215,58 +307,43 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ ENHANCED: Complete amendment tracking with history and smart file naming
+  // ✅ COMPLETELY FIXED: Amendment with comprehensive URL handling and tracking
   async amendProcedureInSharePoint(amendmentData, file) {
     const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
     
     try {
-      console.log('🔄 Starting enhanced SharePoint amendment with full tracking...');
+      console.log('🔄 Starting ENHANCED SharePoint amendment with comprehensive URL fixing...');
       console.log('📂 Amendment data received:', amendmentData);
 
-      // ✅ CRITICAL: Validate and clean folder paths
-      let targetFolderPath = amendmentData.fullFolderPath;
+      // ✅ STEP 1: Clean and validate all paths
+      let targetFolderPath = this.cleanAndValidateFolderPath(amendmentData.fullFolderPath);
       const sharePointPath = amendmentData.sharePointPath;
       
-      // ✅ CRITICAL: Fix path duplication issue
-      if (targetFolderPath) {
-        // Remove any duplicate path segments
-        targetFolderPath = targetFolderPath.replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/');
-        targetFolderPath = targetFolderPath.replace(/\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/');
-        
-        // Ensure correct case
-        if (!targetFolderPath.startsWith('/sites/EmployeeEng/')) {
-          targetFolderPath = `/sites/EmployeeEng${targetFolderPath.startsWith('/') ? '' : '/'}${targetFolderPath}`;
-        }
-      }
-      
-      console.log('🔍 Path validation and cleaning:');
+      console.log('🔍 ENHANCED path validation and cleaning:');
       console.log('   Original path:', amendmentData.fullFolderPath);
       console.log('   Cleaned path:', targetFolderPath);
       console.log('   SharePoint path:', sharePointPath);
       
+      // Final validation
       if (!targetFolderPath || targetFolderPath === 'undefined') {
         throw new Error(`Invalid target folder path: ${targetFolderPath}`);
       }
 
-      // Check for any duplication patterns
+      // Double-check for any remaining duplication
       if (targetFolderPath.includes('/sites/EmployeeEng/sites/EmployeeEng/')) {
-        console.error('❌ FOUND PATH DUPLICATION:', targetFolderPath);
-        throw new Error('Path duplication detected. Please check folder path construction.');
+        console.error('❌ CRITICAL: Path duplication still detected:', targetFolderPath);
+        throw new Error('Path duplication detected after cleaning. Please check folder path construction.');
       }
 
-      console.log('✅ Using HSBC URLs with amendment tracking:');
-      console.log(`📁 Target Path: ${targetFolderPath}`);
-      console.log(`📊 Previous Score: ${amendmentData.previous_score || 'N/A'}`);
-      console.log(`📊 New Score: ${amendmentData.new_score}`);
+      console.log('✅ Using CLEANED HSBC URLs with amendment tracking:');
+      console.log(`📁 Final Target Path: ${targetFolderPath}`);
 
-      // ✅ STEP 1: Get current procedure data to build amendment history
+      // ✅ STEP 2: Get current procedure data
       const currentDataUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})?$select=QualityScore,AmendmentHistory,AmendmentCount,PreviousScore,AmendmentTimeline`;
       
       const currentDataResponse = await fetch(currentDataUrl, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json; odata=verbose'
-        }
+        headers: { 'Accept': 'application/json; odata=verbose' }
       });
 
       let currentProcedure = null;
@@ -276,7 +353,7 @@ class DocumentAnalyzer {
         console.log('✅ Retrieved current procedure data:', currentProcedure);
       }
 
-      // ✅ STEP 2: Get request digest
+      // ✅ STEP 3: Get request digest
       const digestUrl = `${sharePointUrl}/_api/contextinfo`;
       const digestResponse = await fetch(digestUrl, {
         method: 'POST',
@@ -293,12 +370,19 @@ class DocumentAnalyzer {
       const digestData = await digestResponse.json();
       const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
 
-      // ✅ STEP 3: Generate unique filename and upload file
-      console.log(`📤 Preparing upload to CORRECT HSBC path: ${targetFolderPath}`);
+      // ✅ STEP 4: Generate unique filename and upload file
+      console.log(`📤 Preparing upload to CLEANED HSBC path: ${targetFolderPath}`);
       
-      // ✅ Generate unique filename to prevent overwrites
-      const uniqueFileName = await this.generateUniqueFileName(file.name, targetFolderPath, sharePointUrl, requestDigest);
-      console.log(`📁 Using filename: ${uniqueFileName} (original: ${file.name})`);
+      // Generate unique filename with enhanced logic
+      const uniqueFileResult = await this.generateUniqueFileName(file.name, targetFolderPath, sharePointUrl, requestDigest);
+      const uniqueFileName = uniqueFileResult.fileName;
+      const isFileRenamed = uniqueFileResult.isRenamed;
+      
+      console.log(`📁 File naming result:`, {
+        originalName: file.name,
+        finalName: uniqueFileName,
+        wasRenamed: isFileRenamed
+      });
 
       const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(uniqueFileName)}', overwrite=false)`;
       console.log(`📤 Uploading to: ${uploadUrl}`);
@@ -321,9 +405,9 @@ class DocumentAnalyzer {
       }
 
       const uploadResult = await uploadResponse.json();
-      console.log('✅ File uploaded successfully');
+      console.log('✅ File uploaded successfully to:', uploadResult.d.ServerRelativeUrl);
 
-      // ✅ STEP 4: Build comprehensive amendment history
+      // ✅ STEP 5: Build comprehensive amendment history with cleaned URLs
       const currentScore = currentProcedure?.QualityScore || amendmentData.original_score || 0;
       const newScore = amendmentData.new_score;
       const currentAmendmentCount = currentProcedure?.AmendmentCount || 0;
@@ -340,7 +424,9 @@ class DocumentAnalyzer {
         amendmentHistory = [];
       }
 
-      // Create new amendment record
+      // Create new amendment record with cleaned URLs
+      const cleanDocumentUrl = this.cleanAndValidateUrl(`${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`);
+      
       const newAmendment = {
         amendmentNumber: newAmendmentCount,
         date: new Date().toISOString(),
@@ -351,21 +437,22 @@ class DocumentAnalyzer {
         previousScore: currentScore,
         newScore: newScore,
         scoreChange: newScore - currentScore,
-        fileName: file.name, // ✅ Original filename
-        actualFileName: uniqueFileName, // ✅ Actual saved filename
+        fileName: file.name, // Original filename
+        actualFileName: uniqueFileName, // Actual saved filename
         fileSize: file.size,
-        fileRenamed: file.name !== uniqueFileName, // ✅ Flag if renamed
+        fileRenamed: isFileRenamed, // Enhanced flag
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+        documentUrl: cleanDocumentUrl, // ✅ CLEANED URL
         analysisDetails: amendmentData.new_analysis_details,
-        aiRecommendations: amendmentData.new_ai_recommendations
+        aiRecommendations: amendmentData.new_ai_recommendations,
+        uploadTimestamp: new Date().toISOString()
       };
 
       // Add to history
       amendmentHistory.push(newAmendment);
 
-      // Build human-readable timeline
+      // Build timeline
       let amendmentTimeline = [];
       try {
         if (currentProcedure?.AmendmentTimeline) {
@@ -378,30 +465,31 @@ class DocumentAnalyzer {
       const timelineEntry = `Amendment #${newAmendmentCount} - ${new Date().toLocaleDateString()} by ${amendmentData.amended_by_name}: ${amendmentData.amendment_summary} (Score: ${currentScore}% → ${newScore}%)`;
       amendmentTimeline.push(timelineEntry);
 
-      console.log('📋 Built amendment tracking data:');
+      console.log('📋 Built ENHANCED amendment tracking data:');
       console.log(`   Amendment #: ${newAmendmentCount}`);
       console.log(`   Previous Score: ${currentScore}%`);
       console.log(`   New Score: ${newScore}%`);
       console.log(`   Score Change: ${newScore - currentScore > 0 ? '+' : ''}${newScore - currentScore}%`);
       console.log(`   Original filename: ${file.name}`);
       console.log(`   Saved filename: ${uniqueFileName}`);
-      console.log(`   File renamed: ${file.name !== uniqueFileName}`);
+      console.log(`   File renamed: ${isFileRenamed}`);
+      console.log(`   Document URL (cleaned): ${cleanDocumentUrl}`);
 
-      // ✅ STEP 5: Update procedure with comprehensive amendment tracking
+      // ✅ STEP 6: Update procedure with comprehensive data and cleaned URLs
       const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
       
       const updateData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         
-        // ✅ CORE AMENDMENT TRACKING
-        QualityScore: newScore, // Current score
-        PreviousScore: currentScore, // Score before this amendment
-        AmendmentCount: newAmendmentCount, // Total amendments
-        LatestAmendmentSummary: amendmentData.amendment_summary, // Latest summary
-        AmendmentHistory: JSON.stringify(amendmentHistory), // Complete history
-        AmendmentTimeline: JSON.stringify(amendmentTimeline), // Human-readable timeline
+        // Core amendment tracking
+        QualityScore: newScore,
+        PreviousScore: currentScore,
+        AmendmentCount: newAmendmentCount,
+        LatestAmendmentSummary: amendmentData.amendment_summary,
+        AmendmentHistory: JSON.stringify(amendmentHistory),
+        AmendmentTimeline: JSON.stringify(amendmentTimeline),
         
-        // ✅ LATEST AMENDMENT INFO
+        // Latest amendment info
         LastAmendedBy: amendmentData.amended_by_name,
         LastAmendmentDate: new Date().toISOString(),
         LastAmendedByStaffId: amendmentData.amended_by,
@@ -411,26 +499,27 @@ class DocumentAnalyzer {
         SecondaryOwner: amendmentData.secondary_owner || '',
         SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
         
-        // Update analysis data with new analysis
+        // Analysis data
         AnalysisDetails: JSON.stringify(amendmentData.new_analysis_details),
         AIRecommendations: JSON.stringify(amendmentData.new_ai_recommendations),
         
-        // Updated document info
-        DocumentLink: uploadResult.d.ServerRelativeUrl,
-        SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
-        OriginalFilename: file.name, // ✅ Keep original filename for reference
-        ActualFilename: uniqueFileName, // ✅ Store the actual saved filename
+        // ✅ CLEANED document info
+        DocumentLink: uploadResult.d.ServerRelativeUrl, // SharePoint relative URL
+        SharePointURL: cleanDocumentUrl, // Full cleaned URL
+        OriginalFilename: file.name,
+        ActualFilename: uniqueFileName,
         FileSize: file.size,
         SharePointUploaded: true,
         SiteAssetsPath: sharePointPath,
         ActualSubFolder: amendmentData.subFolder,
+        FileRenamed: isFileRenamed,
         
-        // ✅ AMENDMENT METADATA
+        // Amendment metadata
         LastModifiedOn: new Date().toISOString(),
         LastModifiedBy: amendmentData.amended_by_name
       };
 
-      console.log('📝 Updating procedure with comprehensive amendment tracking...');
+      console.log('📝 Updating procedure with ENHANCED amendment tracking...');
 
       const updateResponse = await fetch(listUpdateUrl, {
         method: 'POST',
@@ -449,9 +538,9 @@ class DocumentAnalyzer {
         throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
       }
 
-      console.log('✅ Procedure updated with comprehensive amendment tracking');
+      console.log('✅ Procedure updated with ENHANCED amendment tracking');
 
-      // ✅ STEP 6: Enhanced audit log
+      // ✅ STEP 7: Enhanced audit log
       const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
       
       const auditData = {
@@ -473,9 +562,11 @@ class DocumentAnalyzer {
           uploadPath: targetFolderPath,
           originalFileName: file.name,
           savedFileName: uniqueFileName,
-          fileRenamed: file.name !== uniqueFileName,
+          fileRenamed: isFileRenamed,
+          documentUrl: cleanDocumentUrl,
           amendedBy: amendmentData.amended_by_name,
-          totalAmendments: newAmendmentCount
+          totalAmendments: newAmendmentCount,
+          urlCleaned: true
         })
       };
 
@@ -489,12 +580,12 @@ class DocumentAnalyzer {
         body: JSON.stringify(auditData)
       });
 
-      console.log('✅ Enhanced audit log entry created');
-      console.log('✅ Amendment completed with comprehensive tracking');
+      console.log('✅ ENHANCED audit log entry created');
+      console.log('✅ Amendment completed with COMPREHENSIVE tracking and URL cleaning');
 
       return {
         success: true,
-        message: 'Procedure amended successfully with full tracking',
+        message: 'Procedure amended successfully with comprehensive tracking and URL cleaning',
         amendmentNumber: newAmendmentCount,
         previousScore: currentScore,
         newScore: newScore,
@@ -502,16 +593,17 @@ class DocumentAnalyzer {
         uploadedTo: targetFolderPath,
         sharePointPath: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+        documentUrl: cleanDocumentUrl, // ✅ Returns cleaned URL
         amendmentHistory: amendmentHistory,
         timelineEntry: timelineEntry,
         originalFileName: file.name,
         savedFileName: uniqueFileName,
-        fileRenamed: file.name !== uniqueFileName
+        fileRenamed: isFileRenamed,
+        urlCleaned: true
       };
 
     } catch (error) {
-      console.error('❌ Enhanced amendment failed:', error);
+      console.error('❌ ENHANCED amendment failed:', error);
       return {
         success: false,
         message: error.message || 'Amendment failed',
@@ -521,10 +613,10 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ UPLOAD AMENDMENT WITH ANALYSIS - Uses existing SiteAssets folder path
+  // ✅ ENHANCED: Upload with comprehensive URL cleaning
   async uploadAmendmentWithAnalysis(amendmentData, file) {
     try {
-      console.log('🚀 Starting amendment upload with AI analysis...');
+      console.log('🚀 Starting amendment upload with ENHANCED AI analysis and URL cleaning...');
       
       // 1. Analyze the new document
       const analysisResult = await this.analyzeDocument(file, {
@@ -545,44 +637,46 @@ class DocumentAnalyzer {
       // 2. Get SharePoint context
       const requestDigest = await this.getRequestDigest();
       
-      // 3. ✅ CORRECT: USE EXISTING SITEASSETS FOLDER PATH
-      const sharePointPath = amendmentData.sharePointPath; // Already includes SiteAssets/LOB/actual_subfolder
-      console.log('📂 Using existing SiteAssets SharePoint path:', sharePointPath);
+      // 3. ✅ CLEAN: Use existing SiteAssets folder path with cleaning
+      const cleanedSharePointPath = amendmentData.sharePointPath || 'SiteAssets/IWPB/General';
+      console.log('📂 Using cleaned SiteAssets SharePoint path:', cleanedSharePointPath);
       
-      // 4. Upload amendment file to existing SiteAssets folder with smart naming
-      const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
+      // 4. Upload with enhanced file naming and URL cleaning
+      const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, cleanedSharePointPath, requestDigest);
       
-      // 5. Create amended procedure list item
+      // 5. Create amended procedure list item with cleaned URLs
       const amendedProcedureData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         Title: amendmentData.originalName,
-        ExpiryDate: new Date().toISOString(),
+        ExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
         PrimaryOwner: amendmentData.originalPrimaryOwner,
         PrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail,
         SecondaryOwner: amendmentData.secondary_owner || '',
         SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
         LOB: amendmentData.originalLOB || 'Unknown',
-        ProcedureSubsection: amendmentData.subFolder || '', // ✅ Real subfolder name
-        SharePointPath: sharePointPath || '',
-        DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
-        OriginalFilename: (file && file.name) || 'unknown.doc',
+        ProcedureSubsection: amendmentData.subFolder || '',
+        SharePointPath: cleanedSharePointPath || '',
+        DocumentLink: fileUploadResult?.serverRelativeUrl || '',
+        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be cleaned
+        OriginalFilename: file?.name || 'unknown.doc',
         ActualFilename: fileUploadResult?.actualFileName || file.name,
-        FileSize: (file && file.size) || 0,
+        FileSize: file?.size || 0,
+        FileRenamed: fileUploadResult?.fileRenamed || false,
         
-        // ✅ AI ANALYSIS RESULTS
-        QualityScore: (analysisResult && analysisResult.score) || 0,
-        TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
-        AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
-        AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations) || []),
+        // AI analysis results
+        QualityScore: analysisResult?.score || 0,
+        TemplateCompliance: analysisResult?.details?.summary?.templateCompliance || 'Unknown',
+        AnalysisDetails: JSON.stringify(analysisResult?.details || {}),
+        AIRecommendations: JSON.stringify(analysisResult?.aiRecommendations || []),
         
-        // ✅ HSBC-SPECIFIC DATA
-        RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
-        PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
-        DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || []),
-        SignOffDates: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.signOffDates) || []),
-        Departments: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.departments) || []),
+        // HSBC-specific data
+        RiskRating: analysisResult?.details?.riskRating || 'Not Specified',
+        PeriodicReview: analysisResult?.details?.periodicReview || 'Not Specified',
+        DocumentOwners: JSON.stringify(analysisResult?.details?.owners || []),
+        SignOffDates: JSON.stringify(analysisResult?.details?.signOffDates || []),
+        Departments: JSON.stringify(analysisResult?.details?.departments || []),
         
-        // ✅ AMENDMENT METADATA
+        // Amendment metadata
         IsAmendment: true,
         AmendmentOfProcedureId: amendmentData.procedureId,
         AmendmentSummary: amendmentData.amendment_summary,
@@ -599,7 +693,7 @@ class DocumentAnalyzer {
      
       const procedureResult = await this.createProcedureListItem(amendedProcedureData, requestDigest);
       
-      // 6. ✅ UPDATE ORIGINAL PROCEDURE RECORD
+      // 6. Update original procedure record
       await this.updateOriginalProcedureRecord(amendmentData.procedureId, {
         status: 'Amended',
         amended_date: amendmentData.amendment_date,
@@ -608,7 +702,7 @@ class DocumentAnalyzer {
         amendment_summary: amendmentData.amendment_summary
       }, requestDigest);
      
-      // 7. Create audit log entry for amendment
+      // 7. Create audit log entry
       await this.createAuditLogEntry({
         __metadata: { type: 'SP.Data.AuditLogListItem' },
         Title: `Procedure Amended: ${amendmentData.originalName}`,
@@ -620,30 +714,34 @@ class DocumentAnalyzer {
           newProcedureId: procedureResult.Id,
           procedureName: amendmentData.originalName,
           lob: amendmentData.originalLOB,
-          subfolder: amendmentData.subFolder, // ✅ Real subfolder
+          subfolder: amendmentData.subFolder,
           amendmentSummary: amendmentData.amendment_summary,
           qualityScore: analysisResult.score,
           templateCompliance: analysisResult.details?.summary?.templateCompliance,
-          sharePointPath: sharePointPath,
+          cleanedSharePointPath: cleanedSharePointPath,
           fileSize: file.size,
           originalFileName: file.name,
-          actualFileName: fileUploadResult?.actualFileName
+          actualFileName: fileUploadResult?.actualFileName,
+          fileRenamed: fileUploadResult?.fileRenamed,
+          urlCleaned: true
         }),
         ProcedureId: procedureResult.Id,
         LOB: amendmentData.originalLOB
       }, requestDigest);
 
-      // ✅ CORRECT: SharePoint URL with SiteAssets
-      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
+      // ✅ CLEAN: SharePoint URL with cleaned paths
+      const sharePointUrl = fileUploadResult?.webUrl || `${sharePointPaths.baseSite}/${cleanedSharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
+      const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
      
-      console.log('🎉 Amendment upload completed successfully:', {
+      console.log('🎉 Amendment upload completed successfully with URL cleaning:', {
         newProcedureId: procedureResult.Id,
         originalProcedureId: amendmentData.procedureId,
         qualityScore: analysisResult.score,
-        sharePointUrl,
-        sharePointPath,
+        sharePointUrl: finalCleanUrl,
+        sharePointPath: cleanedSharePointPath,
         actualSubfolder: amendmentData.subFolder,
-        fileRenamed: fileUploadResult?.fileRenamed
+        fileRenamed: fileUploadResult?.fileRenamed,
+        urlCleaned: true
       });
 
       return {
@@ -651,12 +749,13 @@ class DocumentAnalyzer {
         procedureId: procedureResult.Id,
         qualityScore: analysisResult.score,
         templateCompliance: analysisResult.details?.summary?.templateCompliance,
-        sharePointPath: sharePointPath,
-        sharePointUrl: sharePointUrl,
+        sharePointPath: cleanedSharePointPath,
+        sharePointUrl: finalCleanUrl, // ✅ Cleaned URL
         analysisResult: analysisResult,
-        message: `Amendment uploaded successfully to SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
+        message: `Amendment uploaded successfully to cleaned path: SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
         fileRenamed: fileUploadResult?.fileRenamed,
-        actualFileName: fileUploadResult?.actualFileName
+        actualFileName: fileUploadResult?.actualFileName,
+        urlCleaned: true
       };
      
     } catch (error) {
@@ -664,7 +763,9 @@ class DocumentAnalyzer {
       throw new Error(`Amendment upload failed: ${error.message}`);
     }
   }
-    // ✅ UPDATE ORIGINAL PROCEDURE RECORD - Mark as amended
+
+  // ✅ Continue existing methods with URL cleaning enhancements...
+
   async updateOriginalProcedureRecord(originalProcedureId, updateData, requestDigest) {
     try {
       console.log('🔄 Updating original procedure record:', originalProcedureId);
@@ -708,23 +809,15 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ SANITIZATION HELPER METHODS
+  // ✅ Sanitization helpers
   sanitizeString(str) {
     if (!str || typeof str !== 'string') return '';
-    
-    return str
-      .replace(/%[0-9A-Fa-f]{2}/g, '') // Remove URL encoded characters
-      .replace(/[<>]/g, '') // Remove HTML brackets
-      .trim();
+    return str.replace(/%[0-9A-Fa-f]{2}/g, '').replace(/[<>]/g, '').trim();
   }
 
   sanitizeEmail(email) {
     if (!email || typeof email !== 'string') return '';
-    
-    return email
-      .toLowerCase()
-      .replace(/[^a-zA-Z0-9@._-]/g, '') // Keep only valid email characters
-      .trim();
+    return email.toLowerCase().replace(/[^a-zA-Z0-9@._-]/g, '').trim();
   }
 
   // ============================================================================
@@ -735,16 +828,13 @@ class DocumentAnalyzer {
     try {
       console.log('🔍 Starting client-side AI analysis...');
       
-      // Extract text from file
       const text = await this.extractTextFromFile(file);
       
-      // ✅ USE YOUR EXISTING AI ANALYSIS LOGIC
       if (!window.documentAnalysis) {
         throw new Error('Document analysis engine not loaded. Please ensure documentAnalysis.js is included.');
       }
       
       const analysis = await window.documentAnalysis.analyzeDocument(text, file.type, metadata);
-      
       analysis.accepted = analysis.score >= this.minimumScore;
       
       console.log('✅ AI Analysis completed:', {
@@ -801,7 +891,7 @@ class DocumentAnalyzer {
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
+                const textContent = await page.getTextContent();
         const pageText = textContent.items.map(item => item.str).join(' ');
         fullText += pageText + '\n';
       }
@@ -835,12 +925,12 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // ✅ SHAREPOINT INTEGRATION WITH CORRECT SITEASSETS PATHS
+  // ✅ ENHANCED SHAREPOINT INTEGRATION WITH URL CLEANING
   // ============================================================================
 
   async uploadProcedureWithAnalysis(formData, file) {
     try {
-      console.log('🚀 Starting procedure upload with AI analysis...');
+      console.log('🚀 Starting procedure upload with AI analysis and URL cleaning...');
       
       // 1. Analyze document first
       const analysisResult = await this.analyzeDocument(file, {
@@ -861,51 +951,53 @@ class DocumentAnalyzer {
       // 2. Get SharePoint context
       const requestDigest = await this.getRequestDigest();
       
-      // 3. ✅ CORRECT: Generate SiteAssets path using SELECTED subsection
+      // 3. ✅ CLEAN: Generate SiteAssets path with cleaning
       const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
-      console.log('📂 Generated SiteAssets path for new upload:', sharePointPath);
+      console.log('📂 Generated clean SiteAssets path for new upload:', sharePointPath);
       
-      // 4. Upload with smart file naming
+      // 4. Upload with enhanced file naming and URL cleaning
       const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
       
-      // 5. Create procedure list item with comprehensive AI data
+      // 5. Create procedure list item with comprehensive AI data and cleaned URLs
       const procedureData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         Title: formData.name || 'Untitled Procedure',
-        ExpiryDate: formData.expiry || new Date().toISOString(),
+        ExpiryDate: formData.expiry || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         PrimaryOwner: formData.primary_owner || 'Unknown',
         PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
         SecondaryOwner: formData.secondary_owner || '',
         SecondaryOwnerEmail: formData.secondary_owner_email || '',
         LOB: formData.lob || 'Unknown',
-        ProcedureSubsection: formData.procedure_subsection || '', // ✅ Selected subsection
+        ProcedureSubsection: formData.procedure_subsection || '',
         SharePointPath: sharePointPath || '',
-        DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
-        OriginalFilename: (file && file.name) || 'unknown.doc',
+        DocumentLink: fileUploadResult?.serverRelativeUrl || '',
+        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be cleaned
+        OriginalFilename: file?.name || 'unknown.doc',
         ActualFilename: fileUploadResult?.actualFileName || file.name,
-        FileSize: (file && file.size) || 0,
+        FileSize: file?.size || 0,
+        FileRenamed: fileUploadResult?.fileRenamed || false,
         
         // ✅ SAFE AI ANALYSIS RESULTS
-        QualityScore: (analysisResult && analysisResult.score) || 0,
-        TemplateCompliance: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.templateCompliance) || 'Unknown',
-        AnalysisDetails: JSON.stringify((analysisResult && analysisResult.details) || {}),
-        AIRecommendations: JSON.stringify((analysisResult && analysisResult.aiRecommendations) || []),
+        QualityScore: analysisResult?.score || 0,
+        TemplateCompliance: analysisResult?.details?.summary?.templateCompliance || 'Unknown',
+        AnalysisDetails: JSON.stringify(analysisResult?.details || {}),
+        AIRecommendations: JSON.stringify(analysisResult?.aiRecommendations || []),
         
         // ✅ SAFE HSBC-SPECIFIC DATA
-        RiskRating: (analysisResult && analysisResult.details && analysisResult.details.riskRating) || 'Not Specified',
-        PeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.periodicReview) || 'Not Specified',
-        DocumentOwners: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.owners) || []),
-        SignOffDates: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.signOffDates) || []),
-        Departments: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.departments) || []),
+        RiskRating: analysisResult?.details?.riskRating || 'Not Specified',
+        PeriodicReview: analysisResult?.details?.periodicReview || 'Not Specified',
+        DocumentOwners: JSON.stringify(analysisResult?.details?.owners || []),
+        SignOffDates: JSON.stringify(analysisResult?.details?.signOffDates || []),
+        Departments: JSON.stringify(analysisResult?.details?.departments || []),
         
         // ✅ SAFE ANALYSIS METRICS
-        FoundElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.foundElements) || []),
-        MissingElements: JSON.stringify((analysisResult && analysisResult.details && analysisResult.details.missingElements) || []),
-        HasDocumentControl: (analysisResult && analysisResult.details && analysisResult.details.hasDocumentControl) || false,
-        HasRiskAssessment: (analysisResult && analysisResult.details && analysisResult.details.hasRiskAssessment) || false,
-        HasPeriodicReview: (analysisResult && analysisResult.details && analysisResult.details.hasPeriodicReview) || false,
-        StructureScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.structureScore) || 0,
-        GovernanceScore: (analysisResult && analysisResult.details && analysisResult.details.summary && analysisResult.details.summary.governanceScore) || 0,
+        FoundElements: JSON.stringify(analysisResult?.details?.foundElements || []),
+        MissingElements: JSON.stringify(analysisResult?.details?.missingElements || []),
+        HasDocumentControl: analysisResult?.details?.hasDocumentControl || false,
+        HasRiskAssessment: analysisResult?.details?.hasRiskAssessment || false,
+        HasPeriodicReview: analysisResult?.details?.hasPeriodicReview || false,
+        StructureScore: analysisResult?.details?.summary?.structureScore || 0,
+        GovernanceScore: analysisResult?.details?.summary?.governanceScore || 0,
         
         // Upload metadata
         UploadedBy: formData.primary_owner || 'Unknown',
@@ -927,7 +1019,7 @@ class DocumentAnalyzer {
           procedureId: procedureResult.Id,
           procedureName: formData.name,
           lob: formData.lob,
-          subsection: formData.procedure_subsection, // ✅ Selected subsection
+          subsection: formData.procedure_subsection,
           qualityScore: analysisResult.score,
           templateCompliance: analysisResult.details?.summary?.templateCompliance,
           riskRating: analysisResult.details?.riskRating,
@@ -939,22 +1031,25 @@ class DocumentAnalyzer {
           originalFileName: file.name,
           actualFileName: fileUploadResult?.actualFileName,
           fileRenamed: fileUploadResult?.fileRenamed,
-          sharePointPath: sharePointPath
+          sharePointPath: sharePointPath,
+          urlCleaned: true
         }),
         ProcedureId: procedureResult.Id,
         LOB: formData.lob
       }, requestDigest);
 
-      // ✅ CORRECT: SharePoint URL with SiteAssets
-      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
+      // ✅ CLEAN: SharePoint URL with cleaning
+      const sharePointUrl = fileUploadResult?.webUrl || `${sharePointPaths.baseSite}/${sharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
+      const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
      
-      console.log('🎉 Procedure upload completed successfully:', {
+      console.log('🎉 Procedure upload completed successfully with URL cleaning:', {
         procedureId: procedureResult.Id,
         qualityScore: analysisResult.score,
-        sharePointUrl,
-        sharePointPath,
+        sharePointUrl: finalCleanUrl,
+        sharePointPath: sharePointPath,
         selectedSubsection: formData.procedure_subsection,
-        fileRenamed: fileUploadResult?.fileRenamed
+        fileRenamed: fileUploadResult?.fileRenamed,
+        urlCleaned: true
       });
 
       return {
@@ -963,10 +1058,11 @@ class DocumentAnalyzer {
         qualityScore: analysisResult.score,
         templateCompliance: analysisResult.details?.summary?.templateCompliance,
         sharePointPath: sharePointPath,
-        sharePointUrl: sharePointUrl,
+        sharePointUrl: finalCleanUrl, // ✅ Cleaned URL
         analysisResult: analysisResult,
         fileRenamed: fileUploadResult?.fileRenamed,
-        actualFileName: fileUploadResult?.actualFileName
+        actualFileName: fileUploadResult?.actualFileName,
+        urlCleaned: true
       };
      
     } catch (error) {
@@ -975,21 +1071,19 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ CORRECT: Generate SiteAssets path with selected subsection
+  // ✅ CLEAN: Generate SiteAssets path with validation
   generateSiteAssetsPath(lob, subsection) {
-    // ✅ Use the SELECTED subsection, not "General" unless no selection
     let cleanSubsection = subsection || 'General';
     
-    // Clean subsection name for folder path (keep underscores, replace spaces)
+    // Clean subsection name for folder path
     cleanSubsection = cleanSubsection
-      .replace(/[^a-zA-Z0-9\s_]/g, '') // Remove special characters except underscores
-      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .replace(/[^a-zA-Z0-9\s_]/g, '')
+      .replace(/\s+/g, '_')
       .trim();
     
-    // ✅ CORRECT: Always include SiteAssets as base
     const path = `SiteAssets/${lob}/${cleanSubsection}`;
     
-    console.log(`📂 Generated SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
+    console.log(`📂 Generated clean SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
     return path;
   }
 
@@ -1015,18 +1109,21 @@ class DocumentAnalyzer {
    }
  }
 
-  // ✅ NEW: Upload with smart file naming
+  // ✅ ENHANCED: Upload with smart file naming and URL cleaning
   async uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest) {
     try {
-      // ✅ CORRECT: Upload URL with SiteAssets path and proper case
+      // ✅ CLEAN: Upload URL with proper path cleaning
       const basePath = `/sites/EmployeeEng/${sharePointPath}`;
+      const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
       
       // Generate unique filename
-      const uniqueFileName = await this.generateUniqueFileName(file.name, basePath, sharePointPaths.baseSite, requestDigest);
+      const uniqueFileResult = await this.generateUniqueFileName(file.name, cleanBasePath, sharePointPaths.baseSite, requestDigest);
+      const uniqueFileName = uniqueFileResult.fileName;
+      const isFileRenamed = uniqueFileResult.isRenamed;
       
-      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${basePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
+      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
      
-      console.log('📤 Uploading to SiteAssets path with unique naming:', uploadUrl);
+      console.log('📤 Uploading to clean SiteAssets path with unique naming:', uploadUrl);
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -1044,17 +1141,23 @@ class DocumentAnalyzer {
       }
 
       const result = await response.json();
+      
+      // ✅ CLEAN: Generate clean URLs
+      const webUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${uniqueFileName}`;
+      const cleanWebUrl = this.cleanAndValidateUrl(webUrl);
      
-      console.log('✅ File uploaded to SiteAssets SharePoint with unique name:', result.d.ServerRelativeUrl);
-      console.log(`📁 Original filename: ${file.name}`);
-      console.log(`📁 Saved filename: ${uniqueFileName}`);
-      console.log(`📁 File renamed: ${file.name !== uniqueFileName}`);
+      console.log('✅ File uploaded to SiteAssets SharePoint with unique name and clean URLs:', {
+        serverRelativeUrl: result.d.ServerRelativeUrl,
+        webUrl: cleanWebUrl,
+        actualFileName: uniqueFileName,
+        fileRenamed: isFileRenamed
+      });
      
       return {
         serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: `${sharePointPaths.baseSite}/${sharePointPath}/${uniqueFileName}`,
+        webUrl: cleanWebUrl, // ✅ Cleaned URL
         actualFileName: uniqueFileName,
-        fileRenamed: file.name !== uniqueFileName
+        fileRenamed: isFileRenamed
       };
      
     } catch (error) {
@@ -1062,13 +1165,16 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ LEGACY: Keep existing method for compatibility
+  // ✅ LEGACY: Keep existing method for compatibility with URL cleaning
   async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
     try {
-      // ✅ CORRECT: Upload URL with SiteAssets path
-      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${encodeURIComponent(file.name)}',overwrite=true)`;
+      // ✅ CLEAN: Upload URL with path cleaning
+      const basePath = `/sites/EmployeeEng/${sharePointPath}`;
+      const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
+      
+      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(file.name)}',overwrite=true)`;
      
-      console.log('📤 Uploading to SiteAssets path:', uploadUrl);
+      console.log('📤 Uploading to clean SiteAssets path:', uploadUrl);
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -1086,12 +1192,16 @@ class DocumentAnalyzer {
       }
 
       const result = await response.json();
+      
+      // ✅ CLEAN: Generate clean URLs
+      const webUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
+      const cleanWebUrl = this.cleanAndValidateUrl(webUrl);
      
-      console.log('✅ File uploaded to SiteAssets SharePoint:', result.d.ServerRelativeUrl);
+      console.log('✅ File uploaded to clean SiteAssets SharePoint:', result.d.ServerRelativeUrl);
      
       return {
         serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`
+        webUrl: cleanWebUrl // ✅ Cleaned URL
       };
      
     } catch (error) {
@@ -1154,10 +1264,9 @@ class DocumentAnalyzer {
      
     } catch (error) {
       console.warn('⚠️ Audit log creation failed:', error.message);
-      return null; // Don't fail the whole process for audit log
+      return null;
     }
   }
 }
 
 export default DocumentAnalyzer;
-
