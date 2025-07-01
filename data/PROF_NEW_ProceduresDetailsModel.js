@@ -6,23 +6,67 @@ import {
   ListItemText, Avatar, LinearProgress, Alert, IconButton, Skeleton, Link,
   Stack, Paper, Tooltip, Badge, useTheme, styled, keyframes, alpha,
   CardHeader, Accordion, AccordionSummary, AccordionDetails, Fab,
-  Timeline, TimelineItem, TimelineSeparator, TimelineConnector, 
-  TimelineContent, TimelineDot, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
 
-// 🎯 **ALL MISSING ICON IMPORTS:**
+// 🎯 **ALL ICON IMPORTS (NO @mui/lab needed):**
 import {
   Close, Visibility, Description, CalendarToday, Schedule, CheckCircle,
   CloudDownload, Email, Person, Security, Business, Warning, 
   LocalFireDepartment, AutoAwesome, Psychology, Insights, TrendingUp,
   ExpandMore, Grade, AdminPanelSettings, Share, Assignment,
   Error as ErrorIcon, Timeline as TimelineIcon, Link as LinkIcon,
-  History, TrendingDown, Analytics, Edit
+  History, TrendingDown, Analytics, Edit, Circle
 } from '@mui/icons-material';
 
 // Motion imports
 import { motion, AnimatePresence } from 'framer-motion';
+const CustomTimeline = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  paddingLeft: 32,
+  '&::before': {
+    content: '""',
+    position: 'absolute',
+    left: 19,
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: '#e0e0e0'
+  }
+}));
+
+const CustomTimelineItem = styled(Box)(({ theme }) => ({
+  position: 'relative',
+  paddingBottom: 24,
+  '&:last-child': {
+    paddingBottom: 0
+  }
+}));
+
+const CustomTimelineDot = styled(Box)(({ theme, variant = 'default' }) => ({
+  position: 'absolute',
+  left: -32,
+  top: 0,
+  width: 40,
+  height: 40,
+  borderRadius: '50%',
+  backgroundColor: variant === 'primary' ? HSBCColors.professional.info : '#90caf9',
+  color: 'white',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '0.75rem',
+  fontWeight: 'bold',
+  zIndex: 2,
+  border: '3px solid white',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+}));
+
+const CustomTimelineContent = styled(Box)(({ theme }) => ({
+  marginLeft: 16,
+  marginTop: -8
+}));
+
 
 // 🎨 **Professional Corporate Colors**
 const HSBCColors = {
@@ -869,182 +913,168 @@ const ProcedureDetailsModal = ({
                       </Box>
                     )}
 
-                    {/* Detailed Amendment Timeline */}
-                    <Accordion defaultExpanded>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <Typography variant="h6" fontWeight="bold">
-                          📋 Detailed Amendment Timeline
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails sx={{ p: 0 }}>
-                        <Timeline sx={{ py: 2 }}>
-                          {amendmentHistory.slice().reverse().map((amendment, index) => (
-                            <TimelineItem key={amendment.amendmentNumber}>
-                              <TimelineSeparator>
-                                <TimelineDot 
-                                  sx={{ 
-                                    bgcolor: index === 0 ? HSBCColors.professional.info : '#90caf9',
-                                    width: 40,
-                                    height: 40,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                  }}
-                                >
-                                  <Typography variant="caption" fontWeight="bold" color="white">
-                                    #{amendment.amendmentNumber}
-                                  </Typography>
-                                </TimelineDot>
-                                {index < amendmentHistory.length - 1 && <TimelineConnector />}
-                              </TimelineSeparator>
-                              
-                              <TimelineContent sx={{ py: 0, px: 2 }}>
-                                <ProfessionalCard sx={{ 
-                                  mb: 2,
-                                  border: index === 0 ? `2px solid ${HSBCColors.professional.info}` : '1px solid #e0e0e0',
-                                  bgcolor: index === 0 ? alpha(HSBCColors.professional.info, 0.05) : 'white'
-                                }}>
-                                  <CardContent sx={{ p: 3 }}>
-                                    <Grid container spacing={2}>
-                                      <Grid item xs={12} md={8}>
-                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
-                                          Amendment #{amendment.amendmentNumber}
-                                          {index === 0 && (
-                                            <Chip 
-                                              label="Latest" 
-                                              color="primary" 
-                                              size="small" 
-                                              sx={{ ml: 1 }} 
-                                            />
-                                          )}
-                                        </Typography>
-                                        
-                                        <Typography variant="body1" gutterBottom sx={{ fontStyle: 'italic' }}>
-                                          "{amendment.summary}"
-                                        </Typography>
-
-                                        <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                                          <Stack direction="row" alignItems="center" spacing={1}>
-                                            <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                            <Typography variant="body2">
-                                              {amendment.amendedBy} ({amendment.amendedByRole})
-                                            </Typography>
-                                          </Stack>
-                                          
-                                          <Stack direction="row" alignItems="center" spacing={1}>
-                                            <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
-                                            <Typography variant="body2">
-                                              {formatDate(amendment.date)}
-                                            </Typography>
-                                          </Stack>
-                                        </Stack>
-                                      </Grid>
-
-                                      <Grid item xs={12} md={4}>
-                                        <Box sx={{ textAlign: 'center' }}>
-                                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                                            Quality Score Change
-                                          </Typography>
-                                          
-                                          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
-                                            <Typography 
-                                              variant="h6" 
-                                              fontWeight="bold"
-                                              color={getScoreColor(amendment.previousScore)}
-                                            >
-                                              {amendment.previousScore}%
-                                            </Typography>
-                                            
-                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                              {getScoreChangeIcon(amendment.scoreChange)}
-                                            </Box>
-                                            
-                                            <Typography 
-                                              variant="h6" 
-                                              fontWeight="bold"
-                                              color={getScoreColor(amendment.newScore)}
-                                            >
-                                              {amendment.newScore}%
-                                            </Typography>
-                                          </Stack>
-
-                                          <Typography 
-                                            variant="body2" 
-                                            sx={{ 
-                                              mt: 1,
-                                              color: amendment.scoreChange > 0 ? HSBCColors.professional.success : HSBCColors.professional.error,
-                                              fontWeight: 'bold'
-                                            }}
-                                          >
-                                            {amendment.scoreChange > 0 ? '+' : ''}{amendment.scoreChange}% change
-                                          </Typography>
-
-                                          {amendment.scoreChange > 0 && (
-                                            <Chip 
-                                              label="Improvement"
-                                              color="success"
-                                              size="small"
-                                              sx={{ mt: 1 }}
-                                            />
-                                          )}
-                                        </Box>
-                                      </Grid>
-                                    </Grid>
-
-                                    {/* File and Technical Details */}
-                                    <Divider sx={{ my: 2 }} />
-                                    <Grid container spacing={2}>
-                                      <Grid item xs={12} sm={6}>
-                                        <Typography variant="caption" color="text.secondary">
-                                          File Details
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          📁 {amendment.fileName} ({formatFileSize(amendment.fileSize)})
-                                        </Typography>
-                                        <Typography variant="body2">
-                                          📂 {amendment.actualSubFolder}
-                                        </Typography>
-                                      </Grid>
-                                      
-                                      <Grid item xs={12} sm={6}>
-                                        <Typography variant="caption" color="text.secondary">
-                                          Actions
-                                        </Typography>
-                                        <Stack direction="row" spacing={1}>
-                                          {amendment.documentUrl && (
-                                            <Button
-                                              size="small"
-                                              startIcon={<CloudDownload />}
-                                              onClick={() => window.open(amendment.documentUrl, '_blank')}
-                                            >
-                                              Download
-                                            </Button>
-                                          )}
-                                          <Button
-                                            size="small"
-                                            startIcon={<Description />}
-                                            onClick={() => {
-                                              console.log('Analysis details:', amendment.analysisDetails);
-                                            }}
-                                          >
-                                            Analysis
-                                          </Button>
-                                        </Stack>
-                                      </Grid>
-                                    </Grid>
-                                  </CardContent>
-                                </ProfessionalCard>
-                              </TimelineContent>
-                            </TimelineItem>
-                          ))}
-                        </Timeline>
-                      </AccordionDetails>
-                    </Accordion>
                   </CardContent>
                 </ProfessionalCard>
               </motion.div>
             )}
+<Accordion defaultExpanded>
+  <AccordionSummary expandIcon={<ExpandMore />}>
+    <Typography variant="h6" fontWeight="bold">
+      📋 Detailed Amendment Timeline
+    </Typography>
+  </AccordionSummary>
+  <AccordionDetails sx={{ p: 0 }}>
+    <CustomTimeline>
+      {amendmentHistory.slice().reverse().map((amendment, index) => (
+        <CustomTimelineItem key={amendment.amendmentNumber}>
+          <CustomTimelineDot 
+            variant={index === 0 ? 'primary' : 'default'}
+          >
+            #{amendment.amendmentNumber}
+          </CustomTimelineDot>
+          
+          <CustomTimelineContent>
+            <ProfessionalCard sx={{ 
+              mb: 2,
+              border: index === 0 ? `2px solid ${HSBCColors.professional.info}` : '1px solid #e0e0e0',
+              bgcolor: index === 0 ? alpha(HSBCColors.professional.info, 0.05) : 'white'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={8}>
+                    <Typography variant="h6" fontWeight="bold" gutterBottom>
+                      Amendment #{amendment.amendmentNumber}
+                      {index === 0 && (
+                        <Chip 
+                          label="Latest" 
+                          color="primary" 
+                          size="small" 
+                          sx={{ ml: 1 }} 
+                        />
+                      )}
+                    </Typography>
+                    
+                    <Typography variant="body1" gutterBottom sx={{ fontStyle: 'italic' }}>
+                      "{amendment.summary}"
+                    </Typography>
 
+                    <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="body2">
+                          {amendment.amendedBy} ({amendment.amendedByRole})
+                        </Typography>
+                      </Stack>
+                      
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="body2">
+                          {formatDate(amendment.date)}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  </Grid>
+
+                  <Grid item xs={12} md={4}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Quality Score Change
+                      </Typography>
+                      
+                      <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                        <Typography 
+                          variant="h6" 
+                          fontWeight="bold"
+                          color={getScoreColor(amendment.previousScore)}
+                        >
+                          {amendment.previousScore}%
+                        </Typography>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          {getScoreChangeIcon(amendment.scoreChange)}
+                        </Box>
+                        
+                        <Typography 
+                          variant="h6" 
+                          fontWeight="bold"
+                          color={getScoreColor(amendment.newScore)}
+                        >
+                          {amendment.newScore}%
+                        </Typography>
+                      </Stack>
+
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          mt: 1,
+                          color: amendment.scoreChange > 0 ? HSBCColors.professional.success : HSBCColors.professional.error,
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        {amendment.scoreChange > 0 ? '+' : ''}{amendment.scoreChange}% change
+                      </Typography>
+
+                      {amendment.scoreChange > 0 && (
+                        <Chip 
+                          label="Improvement"
+                          color="success"
+                          size="small"
+                          sx={{ mt: 1 }}
+                        />
+                      )}
+                    </Box>
+                  </Grid>
+                </Grid>
+
+                {/* File and Technical Details */}
+                <Divider sx={{ my: 2 }} />
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      File Details
+                    </Typography>
+                    <Typography variant="body2">
+                      📁 {amendment.fileName} ({formatFileSize(amendment.fileSize)})
+                    </Typography>
+                    <Typography variant="body2">
+                      📂 {amendment.actualSubFolder}
+                    </Typography>
+                  </Grid>
+                  
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" color="text.secondary">
+                      Actions
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                      {amendment.documentUrl && (
+                        <Button
+                          size="small"
+                          startIcon={<CloudDownload />}
+                          onClick={() => window.open(amendment.documentUrl, '_blank')}
+                        >
+                          Download
+                        </Button>
+                      )}
+                      <Button
+                        size="small"
+                        startIcon={<Description />}
+                        onClick={() => {
+                          console.log('Analysis details:', amendment.analysisDetails);
+                        }}
+                      >
+                        Analysis
+                      </Button>
+                    </Stack>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </ProfessionalCard>
+          </CustomTimelineContent>
+        </CustomTimelineItem>
+      ))}
+    </CustomTimeline>
+  </AccordionDetails>
+</Accordion>
             {/* No Amendments Message */}
             {!hasAmendments && (
               <ProfessionalCard sx={{ mb: 4, textAlign: 'center', bgcolor: '#f8f9fa' }}>
