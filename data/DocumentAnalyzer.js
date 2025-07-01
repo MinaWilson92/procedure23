@@ -141,46 +141,47 @@ class DocumentAnalyzer {
       return fallback;
     }
   }
-// ✅ FIXED: Amendment method with proper HSBC URL usage and path validation
+
+  // ✅ ENHANCED: Complete amendment tracking with history
 async amendProcedureInSharePoint(amendmentData, file) {
-  // ✅ FIX: Define SharePoint URL at method level
   const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
   
   try {
-    console.log('🔄 Starting SharePoint amendment process with HSBC URLs...');
+    console.log('🔄 Starting enhanced SharePoint amendment with full tracking...');
     console.log('📂 Amendment data received:', amendmentData);
 
-    // ✅ CRITICAL: Validate folder paths before proceeding
+    // ✅ Validate folder paths
     const targetFolderPath = amendmentData.fullFolderPath;
     const sharePointPath = amendmentData.sharePointPath;
     
-    console.log('🔍 Path validation check:');
-    console.log(`   targetFolderPath: ${targetFolderPath}`);
-    console.log(`   sharePointPath: ${sharePointPath}`);
-    console.log(`   subFolder: ${amendmentData.subFolder}`);
-    
-    if (!targetFolderPath || targetFolderPath === 'undefined' || targetFolderPath === 'null') {
-      console.error('❌ targetFolderPath is invalid:', targetFolderPath);
-      console.error('❌ Full amendmentData:', amendmentData);
-      throw new Error(`Invalid target folder path: ${targetFolderPath}. Cannot proceed with upload.`);
-    }
-    
-    if (!sharePointPath || sharePointPath === 'undefined' || sharePointPath === 'null') {
-      console.error('❌ sharePointPath is invalid:', sharePointPath);
-      throw new Error(`Invalid SharePoint path: ${sharePointPath}. Cannot proceed with upload.`);
+    if (!targetFolderPath || targetFolderPath === 'undefined') {
+      throw new Error(`Invalid target folder path: ${targetFolderPath}`);
     }
 
-    console.log('✅ Using CORRECT HSBC URLs:');
-    console.log(`🌐 SharePoint Base URL: ${sharePointUrl}`);
-    console.log(`📁 Target Folder Path: ${targetFolderPath}`);
-    console.log(`📁 SharePoint Path: ${sharePointPath}`);
-    console.log(`📁 LOB Folder: ${amendmentData.lobFolder}`);
-    console.log(`📁 Actual Sub Folder: ${amendmentData.subFolder}`);
+    console.log('✅ Using HSBC URLs with amendment tracking:');
+    console.log(`📁 Target Path: ${targetFolderPath}`);
+    console.log(`📊 Previous Score: ${amendmentData.previous_score || 'N/A'}`);
+    console.log(`📊 New Score: ${amendmentData.new_score}`);
 
-    // ✅ STEP 1: Get request digest from CORRECT HSBC URL
+    // ✅ STEP 1: Get current procedure data to build amendment history
+    const currentDataUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})?$select=QualityScore,AmendmentHistory,AmendmentCount,PreviousScore,AmendmentTimeline`;
+    
+    const currentDataResponse = await fetch(currentDataUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json; odata=verbose'
+      }
+    });
+
+    let currentProcedure = null;
+    if (currentDataResponse.ok) {
+      const currentData = await currentDataResponse.json();
+      currentProcedure = currentData.d;
+      console.log('✅ Retrieved current procedure data:', currentProcedure);
+    }
+
+    // ✅ STEP 2: Get request digest
     const digestUrl = `${sharePointUrl}/_api/contextinfo`;
-    console.log(`🔐 Getting digest from: ${digestUrl}`);
-    
     const digestResponse = await fetch(digestUrl, {
       method: 'POST',
       headers: {
@@ -190,20 +191,15 @@ async amendProcedureInSharePoint(amendmentData, file) {
     });
 
     if (!digestResponse.ok) {
-      throw new Error(`Failed to get request digest from ${digestUrl}: ${digestResponse.status}`);
+      throw new Error(`Failed to get request digest: ${digestResponse.status}`);
     }
 
     const digestData = await digestResponse.json();
     const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
-    console.log('✅ Request digest obtained successfully');
 
-    // ✅ STEP 2: Upload file to the CORRECT HSBC SiteAssets folder path
-    console.log(`📤 Uploading file to CORRECT HSBC path: ${targetFolderPath}`);
-    
-    // ✅ CORRECTED API CALL: Use HSBC base URL + validated folder path
+    // ✅ STEP 3: Upload file
     const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(file.name)}', overwrite=true)`;
-    
-    console.log(`🌐 Full Upload URL: ${uploadUrl}`);
+    console.log(`📤 Uploading to: ${uploadUrl}`);
 
     const formData = await file.arrayBuffer();
     
@@ -219,46 +215,114 @@ async amendProcedureInSharePoint(amendmentData, file) {
 
     if (!uploadResponse.ok) {
       const errorText = await uploadResponse.text();
-      console.error('❌ Upload failed to HSBC SharePoint:', errorText);
-      throw new Error(`File upload failed to ${uploadUrl}: ${uploadResponse.status} - ${errorText}`);
+      throw new Error(`File upload failed: ${uploadResponse.status} - ${errorText}`);
     }
 
     const uploadResult = await uploadResponse.json();
-    console.log('✅ File uploaded successfully to CORRECT HSBC SiteAssets path:', uploadResult);
+    console.log('✅ File uploaded successfully');
 
-    // ✅ STEP 3: Update procedure in HSBC SharePoint List with amendment info
+    // ✅ STEP 4: Build comprehensive amendment history
+    const currentScore = currentProcedure?.QualityScore || amendmentData.original_score || 0;
+    const newScore = amendmentData.new_score;
+    const currentAmendmentCount = currentProcedure?.AmendmentCount || 0;
+    const newAmendmentCount = currentAmendmentCount + 1;
+
+    // Parse existing amendment history
+    let amendmentHistory = [];
+    try {
+      if (currentProcedure?.AmendmentHistory) {
+        amendmentHistory = JSON.parse(currentProcedure.AmendmentHistory);
+      }
+    } catch (parseError) {
+      console.warn('⚠️ Could not parse existing amendment history, starting fresh');
+      amendmentHistory = [];
+    }
+
+    // Create new amendment record
+    const newAmendment = {
+      amendmentNumber: newAmendmentCount,
+      date: new Date().toISOString(),
+      amendedBy: amendmentData.amended_by_name,
+      amendedByStaffId: amendmentData.amended_by,
+      amendedByRole: amendmentData.amended_by_role,
+      summary: amendmentData.amendment_summary,
+      previousScore: currentScore,
+      newScore: newScore,
+      scoreChange: newScore - currentScore,
+      fileName: file.name,
+      fileSize: file.size,
+      targetFolder: sharePointPath,
+      actualSubFolder: amendmentData.subFolder,
+      documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+      analysisDetails: amendmentData.new_analysis_details,
+      aiRecommendations: amendmentData.new_ai_recommendations
+    };
+
+    // Add to history
+    amendmentHistory.push(newAmendment);
+
+    // Build human-readable timeline
+    let amendmentTimeline = [];
+    try {
+      if (currentProcedure?.AmendmentTimeline) {
+        amendmentTimeline = JSON.parse(currentProcedure.AmendmentTimeline);
+      }
+    } catch (parseError) {
+      amendmentTimeline = [];
+    }
+
+    const timelineEntry = `Amendment #${newAmendmentCount} - ${new Date().toLocaleDateString()} by ${amendmentData.amended_by_name}: ${amendmentData.amendment_summary} (Score: ${currentScore}% → ${newScore}%)`;
+    amendmentTimeline.push(timelineEntry);
+
+    console.log('📋 Built amendment tracking data:');
+    console.log(`   Amendment #: ${newAmendmentCount}`);
+    console.log(`   Previous Score: ${currentScore}%`);
+    console.log(`   New Score: ${newScore}%`);
+    console.log(`   Score Change: ${newScore - currentScore > 0 ? '+' : ''}${newScore - currentScore}%`);
+
+    // ✅ STEP 5: Update procedure with comprehensive amendment tracking
     const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
-    console.log(`📝 Updating procedure list at: ${listUpdateUrl}`);
     
     const updateData = {
       __metadata: { type: 'SP.Data.ProceduresListItem' },
+      
+      // ✅ CORE AMENDMENT TRACKING
+      QualityScore: newScore, // Current score
+      PreviousScore: currentScore, // Score before this amendment
+      AmendmentCount: newAmendmentCount, // Total amendments
+      LatestAmendmentSummary: amendmentData.amendment_summary, // Latest summary
+      AmendmentHistory: JSON.stringify(amendmentHistory), // Complete history
+      AmendmentTimeline: JSON.stringify(amendmentTimeline), // Human-readable timeline
+      
+      // ✅ LATEST AMENDMENT INFO
+      LastAmendedBy: amendmentData.amended_by_name,
+      LastAmendmentDate: new Date().toISOString(),
+      LastAmendedByStaffId: amendmentData.amended_by,
+      LastAmendedByRole: amendmentData.amended_by_role,
       
       // Update secondary owner if provided
       SecondaryOwner: amendmentData.secondary_owner || '',
       SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
       
-      // Update quality scores with new analysis
-      QualityScore: amendmentData.new_score,
+      // Update analysis data with new analysis
       AnalysisDetails: JSON.stringify(amendmentData.new_analysis_details),
       AIRecommendations: JSON.stringify(amendmentData.new_ai_recommendations),
       
-      // Amendment tracking
-      AmendmentSummary: amendmentData.amendment_summary,
-      AmendedBy: amendmentData.amended_by,
-      AmendedByName: amendmentData.amended_by_name,
-      AmendmentDate: amendmentData.amendment_date,
-      LastModifiedOn: amendmentData.last_modified_on,
-      LastModifiedBy: amendmentData.last_modified_by,
-      
-      // Updated document info pointing to CORRECT HSBC SiteAssets path
-      DocumentLink: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
-      OriginalFilename: amendmentData.original_filename,
-      FileSize: amendmentData.file_size,
+      // Updated document info
+      DocumentLink: uploadResult.d.ServerRelativeUrl,
+      SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+      OriginalFilename: file.name,
+      FileSize: file.size,
       SharePointUploaded: true,
-
+      SiteAssetsPath: sharePointPath,
+      ActualSubFolder: amendmentData.subFolder,
+      
+      // ✅ AMENDMENT METADATA
+      LastModifiedOn: new Date().toISOString(),
+      LastModifiedBy: amendmentData.amended_by_name
     };
 
-    console.log('📝 Updating HSBC procedure list item with amendment data...');
+    console.log('📝 Updating procedure with comprehensive amendment tracking...');
 
     const updateResponse = await fetch(listUpdateUrl, {
       method: 'POST',
@@ -274,32 +338,34 @@ async amendProcedureInSharePoint(amendmentData, file) {
 
     if (!updateResponse.ok) {
       const errorText = await updateResponse.text();
-      console.error('❌ HSBC list update failed:', errorText);
-      throw new Error(`List update failed at ${listUpdateUrl}: ${updateResponse.status} - ${errorText}`);
+      throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
     }
 
-    console.log('✅ HSBC procedure list updated successfully');
+    console.log('✅ Procedure updated with comprehensive amendment tracking');
 
-    // ✅ STEP 4: Log amendment in HSBC audit trail
+    // ✅ STEP 6: Enhanced audit log
     const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
-    console.log(`📋 Adding audit log entry at: ${auditUrl}`);
     
     const auditData = {
       __metadata: { type: 'SP.Data.AuditLogListItem' },
-      Title: 'Procedure Amendment',
+      Title: `Procedure Amendment #${newAmendmentCount}`,
       UserId: amendmentData.amended_by,
       ActionType: 'AMEND',
       LogTimestamp: new Date().toISOString(),
       Details: JSON.stringify({
         procedureId: amendmentData.procedureId,
         procedureName: amendmentData.originalName,
+        amendmentNumber: newAmendmentCount,
         amendmentSummary: amendmentData.amendment_summary,
-        oldScore: amendmentData.originalScore || 0,
-        newScore: amendmentData.new_score,
+        previousScore: currentScore,
+        newScore: newScore,
+        scoreChange: newScore - currentScore,
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
         uploadPath: targetFolderPath,
-        hsbc_sharepoint_url: sharePointUrl
+        fileName: file.name,
+        amendedBy: amendmentData.amended_by_name,
+        totalAmendments: newAmendmentCount
       })
     };
 
@@ -313,32 +379,31 @@ async amendProcedureInSharePoint(amendmentData, file) {
       body: JSON.stringify(auditData)
     });
 
-    console.log('✅ HSBC audit log entry created successfully');
-    console.log('✅ Amendment completed successfully with CORRECT HSBC SiteAssets folder structure');
+    console.log('✅ Enhanced audit log entry created');
+    console.log('✅ Amendment completed with comprehensive tracking');
 
     return {
       success: true,
-      message: 'Procedure amended successfully',
+      message: 'Procedure amended successfully with full tracking',
+      amendmentNumber: newAmendmentCount,
+      previousScore: currentScore,
+      newScore: newScore,
+      scoreChange: newScore - currentScore,
       uploadedTo: targetFolderPath,
       sharePointPath: sharePointPath,
       actualSubFolder: amendmentData.subFolder,
       documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
-      hsbc_base_url: sharePointUrl
+      amendmentHistory: amendmentHistory,
+      timelineEntry: timelineEntry
     };
 
   } catch (error) {
-    console.error('❌ HSBC SharePoint amendment failed:', error);
+    console.error('❌ Enhanced amendment failed:', error);
     return {
       success: false,
       message: error.message || 'Amendment failed',
       error: error,
-      attempted_url: sharePointUrl,
-      debug_info: {
-        received_amendmentData: amendmentData,
-        targetFolderPath: amendmentData?.fullFolderPath,
-        sharePointPath: amendmentData?.sharePointPath,
-        subFolder: amendmentData?.subFolder
-      }
+      attempted_url: sharePointUrl
     };
   }
 }
