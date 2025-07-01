@@ -604,27 +604,41 @@ console.log('🔧 EXPLICIT DOCUMENT URL CONSTRUCTION:', {
         amendmentHistory = [];
       }
       
-      const newAmendment = {
-        amendmentNumber: newAmendmentCount,
-        date: new Date().toISOString(),
-        amendedBy: amendmentData.amended_by_name,
-        amendedByStaffId: amendmentData.amended_by,
-        amendedByRole: amendmentData.amended_by_role,
-        summary: amendmentData.amendment_summary,
-        previousScore: currentScore,
-        newScore: newScore,
-        scoreChange: newScore - currentScore,
-        fileName: file.name,
-        actualFileName: uniqueFileName,
-        fileSize: file.size,
-        fileRenamed: isFileRenamed,
-        targetFolder: sharePointPath,
-        actualSubFolder: amendmentData.subFolder,
-        documentUrl: cleanDocumentUrl, // ✅ CLEAN URL for amendment
-        analysisDetails: amendmentData.new_analysis_details,
-        aiRecommendations: amendmentData.new_ai_recommendations,
-        uploadTimestamp: new Date().toISOString()
-      };
+const newAmendment = {
+  amendmentNumber: newAmendmentCount,
+  date: new Date().toISOString(),
+  amendedBy: amendmentData.amended_by_name,
+  amendedByStaffId: amendmentData.amended_by,
+  amendedByRole: amendmentData.amended_by_role,
+  summary: amendmentData.amendment_summary,
+  previousScore: currentScore,
+  newScore: newScore,
+  scoreChange: newScore - currentScore,
+  fileName: file.name,
+  actualFileName: uniqueFileName,
+  fileSize: file.size,
+  fileRenamed: isFileRenamed,
+  targetFolder: sharePointPath,
+  actualSubFolder: amendmentData.subFolder,
+  
+  // ✅ CRITICAL FIX: Construct document URL using SERVER RELATIVE URL ONLY
+  documentUrl: `https://teams.global.hsbc${serverRelativeUrl}`, // ✅ DIRECT construction
+  
+  analysisDetails: amendmentData.new_analysis_details,
+  aiRecommendations: amendmentData.new_ai_recommendations,
+  uploadTimestamp: new Date().toISOString()
+};
+
+console.log('🔍 AMENDMENT HISTORY URL CHECK:');
+console.log('📊 serverRelativeUrl:', serverRelativeUrl);
+console.log('📊 newAmendment.documentUrl:', newAmendment.documentUrl);
+
+if (newAmendment.documentUrl.includes('teams.global.hsbc/teams.global.hsbc/')) {
+  console.error('❌ CRITICAL: Domain duplication in amendment history URL!');
+  newAmendment.documentUrl = newAmendment.documentUrl.replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+  console.log('🔧 FIXED amendment URL:', newAmendment.documentUrl);
+}
+
 
       amendmentHistory.push(newAmendment);
 
