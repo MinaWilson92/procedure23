@@ -1,4 +1,4 @@
-// services/DocumentAnalyzer.js - Complete Fixed Version with Enhanced URL Handling
+// services/DocumentAnalyzer.js - Complete Fixed Version with Domain Duplication Fixes
 import { sharePointPaths } from './paths';
 import SharePointService from './SharePointService';
 
@@ -30,30 +30,45 @@ class DocumentAnalyzer {
     };
   }
 
-  // ✅ ENHANCED: Comprehensive URL cleaning and validation
+  // ✅ ENHANCED: Comprehensive URL cleaning with domain duplication fix
   cleanAndValidateUrl(url) {
     if (!url) return '';
     
-    console.log('🔧 Starting URL cleaning for:', url);
+    console.log('🔧 Starting ENHANCED URL cleaning for:', url);
     
-    // Step 1: Remove multiple duplicate segments
+    // Step 1: Fix domain duplication patterns first (CRITICAL FIX)
     let cleanUrl = url
+      .replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
+      .replace(/https:\/\/teams\.global\.hsbc\/https:\/\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
+      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
+      .replace(/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, '/teams.global.hsbc/');
+    
+    // Step 2: Fix protocol duplication
+    cleanUrl = cleanUrl.replace(/https:\/\/https:\/\//gi, 'https://');
+    
+    // Step 3: Remove path segment duplications
+    cleanUrl = cleanUrl
       .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
       .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
       .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/\/+/g, '/') // Remove multiple consecutive slashes
-      .replace(/([^:]\/)\/+/g, '$1'); // Remove duplicate slashes except after protocol
+      .replace(/\/siteassets\/siteassets\//gi, '/SiteAssets/')
+      .replace(/\/SiteAssets\/SiteAssets\//gi, '/SiteAssets/');
     
-    // Step 2: Fix case sensitivity issues
-    cleanUrl = cleanUrl.replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
+    // Step 4: Remove multiple consecutive slashes (except after protocol)
+    cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, '$1');
     
-    // Step 3: Validate and fix common issues
+    // Step 5: Fix case sensitivity issues
+    cleanUrl = cleanUrl
+      .replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/siteassets\//gi, '/SiteAssets/');
+    
+    // Step 6: Validate and fix structure issues
     if (cleanUrl.includes('undefined') || cleanUrl.includes('null')) {
       console.warn('⚠️ Invalid URL detected:', cleanUrl);
       return '';
     }
     
-    // Step 4: Ensure proper structure
+    // Step 7: Ensure proper structure for relative URLs
     if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/sites/EmployeeEng/')) {
       if (cleanUrl.startsWith('/')) {
         cleanUrl = `/sites/EmployeeEng${cleanUrl}`;
@@ -62,13 +77,120 @@ class DocumentAnalyzer {
       }
     }
     
-    // Step 5: Convert to full URL if needed
+    // Step 8: Convert to full URL if needed (WITHOUT domain duplication)
     if (cleanUrl.startsWith('/sites/EmployeeEng/')) {
       cleanUrl = `https://teams.global.hsbc${cleanUrl}`;
     }
     
-    console.log('✅ URL cleaned successfully:', cleanUrl);
+    // Step 9: Final validation to ensure no domain duplication remains
+    if (cleanUrl.includes('teams.global.hsbc/teams.global.hsbc/')) {
+      console.error('❌ CRITICAL: Domain duplication still detected:', cleanUrl);
+      cleanUrl = cleanUrl.replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+    }
+    
+    console.log('✅ URL cleaned successfully (domain fixed):', cleanUrl);
     return cleanUrl;
+  }
+
+  // ✅ ENHANCED: Clean and validate folder paths with domain duplication fix
+  cleanAndValidateFolderPath(folderPath) {
+    if (!folderPath) return '/sites/EmployeeEng/SiteAssets/IWPB/General';
+    
+    console.log('🔧 Cleaning folder path with domain fix:', folderPath);
+    
+    // Step 1: Remove domain duplications in paths
+    let cleanPath = folderPath
+      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
+      .replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
+      .replace(/https:\/\/teams\.global\.hsbc\/https:\/\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
+      .replace(/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, '/teams.global.hsbc/');
+    
+    // Step 2: Remove path segment duplications
+    cleanPath = cleanPath
+      .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/siteassets\/siteassets\//gi, '/SiteAssets/')
+      .replace(/\/SiteAssets\/SiteAssets\//gi, '/SiteAssets/')
+      .replace(/\/\/+/g, '/'); // Remove multiple consecutive slashes
+    
+    // Step 3: Fix case sensitivity
+    cleanPath = cleanPath
+      .replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
+      .replace(/\/siteassets\//gi, '/SiteAssets/');
+    
+    // Step 4: Remove any protocol prefixes from folder paths
+    cleanPath = cleanPath.replace(/^https?:\/\/[^\/]+/gi, '');
+    
+    // Step 5: Ensure proper structure
+    if (!cleanPath.startsWith('/sites/EmployeeEng/')) {
+      if (cleanPath.startsWith('/')) {
+        cleanPath = `/sites/EmployeeEng${cleanPath}`;
+      } else {
+        cleanPath = `/sites/EmployeeEng/${cleanPath}`;
+      }
+    }
+    
+    // Step 6: Validate path structure
+    if (cleanPath.includes('undefined') || cleanPath.includes('null')) {
+      console.warn('⚠️ Invalid folder path detected, using fallback');
+      cleanPath = '/sites/EmployeeEng/SiteAssets/IWPB/General';
+    }
+    
+    console.log('✅ Folder path cleaned (domain fixed):', cleanPath);
+    return cleanPath;
+  }
+
+  // ✅ NEW: Construct clean SharePoint URL without any duplication
+  constructCleanSharePointUrl(basePath, relativePath, fileName) {
+    // Clean base path and remove domain duplication
+    let cleanBasePath = basePath
+      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
+      .replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
+      .replace(/\/+$/, ''); // Remove trailing slashes
+    
+    // Clean relative path
+    let cleanRelativePath = relativePath
+      .replace(/^\/+/, '') // Remove leading slashes
+      .replace(/\/+$/, '') // Remove trailing slashes
+      .replace(/\/\/+/g, '/') // Remove multiple consecutive slashes
+      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+    
+    // Clean filename
+    let cleanFileName = fileName ? fileName.replace(/^\/+/, '') : '';
+    
+    // Construct final URL
+    let finalUrl;
+    if (cleanBasePath.startsWith('http')) {
+      if (cleanFileName) {
+        finalUrl = `${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}/${cleanFileName}`;
+      } else {
+        finalUrl = `${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}`;
+      }
+    } else {
+      if (cleanFileName) {
+        finalUrl = `https://teams.global.hsbc${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}/${cleanFileName}`;
+      } else {
+        finalUrl = `https://teams.global.hsbc${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}`;
+      }
+    }
+    
+    // Final cleanup - fix double slashes except after protocol
+    finalUrl = finalUrl.replace(/([^:]\/)\/+/g, '$1');
+    
+    // Ensure protocol is correct
+    if (finalUrl.startsWith('http:/')) {
+      finalUrl = finalUrl.replace(/^http:\/([^\/])/, 'https://$1');
+    }
+    
+    console.log('🔧 Constructed clean SharePoint URL:', {
+      basePath: cleanBasePath,
+      relativePath: cleanRelativePath,
+      fileName: cleanFileName,
+      finalUrl: finalUrl
+    });
+    
+    return finalUrl;
   }
 
   // ✅ ENHANCED: Smart file naming with comprehensive duplicate prevention
@@ -161,40 +283,6 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ ENHANCED: Clean and validate folder paths
-  cleanAndValidateFolderPath(folderPath) {
-    if (!folderPath) return '/sites/EmployeeEng/SiteAssets/IWPB/General';
-    
-    console.log('🔧 Cleaning folder path:', folderPath);
-    
-    // Remove duplicate path segments
-    let cleanPath = folderPath
-          .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/\/+/g, '/'); // Remove multiple consecutive slashes
-    
-    // Fix case sensitivity
-    cleanPath = cleanPath.replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
-    
-    // Ensure proper structure
-    if (!cleanPath.startsWith('/sites/EmployeeEng/')) {
-      if (cleanPath.startsWith('/')) {
-        cleanPath = `/sites/EmployeeEng${cleanPath}`;
-      } else {
-        cleanPath = `/sites/EmployeeEng/${cleanPath}`;
-      }
-    }
-    
-    // Validate path structure
-    if (cleanPath.includes('undefined') || cleanPath.includes('null')) {
-      console.warn('⚠️ Invalid folder path detected, using fallback');
-      cleanPath = '/sites/EmployeeEng/SiteAssets/IWPB/General';
-    }
-    
-    console.log('✅ Folder path cleaned:', cleanPath);
-    return cleanPath;
-  }
-
   // ============================================================================
   // UI HELPER METHODS
   // ============================================================================
@@ -239,7 +327,7 @@ class DocumentAnalyzer {
         };
       }
 
-      // Clean the URL first
+      // Clean the URL first using enhanced cleaning
       const cleanedUrl = this.cleanAndValidateUrl(documentLink);
       console.log('🔍 Analyzing cleaned document URL:', cleanedUrl);
 
@@ -307,35 +395,30 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ COMPLETELY FIXED: Amendment with comprehensive URL handling and tracking
+  // ✅ COMPLETELY FIXED: Amendment with comprehensive URL handling and domain duplication fix
   async amendProcedureInSharePoint(amendmentData, file) {
     const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
     
     try {
-      console.log('🔄 Starting ENHANCED SharePoint amendment with comprehensive URL fixing...');
+      console.log('🔄 Starting ENHANCED SharePoint amendment with DOMAIN DUPLICATION FIX...');
       console.log('📂 Amendment data received:', amendmentData);
 
-      // ✅ STEP 1: Clean and validate all paths
+      // ✅ STEP 1: Clean and validate all paths with domain duplication fix
       let targetFolderPath = this.cleanAndValidateFolderPath(amendmentData.fullFolderPath);
       const sharePointPath = amendmentData.sharePointPath;
       
-      console.log('🔍 ENHANCED path validation and cleaning:');
+      console.log('🔍 DOMAIN DUPLICATION FIX - path validation:');
       console.log('   Original path:', amendmentData.fullFolderPath);
       console.log('   Cleaned path:', targetFolderPath);
       console.log('   SharePoint path:', sharePointPath);
       
-      // Final validation
-      if (!targetFolderPath || targetFolderPath === 'undefined') {
-        throw new Error(`Invalid target folder path: ${targetFolderPath}`);
+      // Final validation for domain duplication
+      if (targetFolderPath.includes('teams.global.hsbc/teams.global.hsbc/')) {
+        console.error('❌ CRITICAL: Domain duplication still detected:', targetFolderPath);
+        throw new Error('Domain duplication detected after cleaning. Please check folder path construction.');
       }
 
-      // Double-check for any remaining duplication
-      if (targetFolderPath.includes('/sites/EmployeeEng/sites/EmployeeEng/')) {
-        console.error('❌ CRITICAL: Path duplication still detected:', targetFolderPath);
-        throw new Error('Path duplication detected after cleaning. Please check folder path construction.');
-      }
-
-      console.log('✅ Using CLEANED HSBC URLs with amendment tracking:');
+      console.log('✅ Using DOMAIN-CLEANED HSBC URLs with amendment tracking:');
       console.log(`📁 Final Target Path: ${targetFolderPath}`);
 
       // ✅ STEP 2: Get current procedure data
@@ -370,8 +453,8 @@ class DocumentAnalyzer {
       const digestData = await digestResponse.json();
       const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
 
-      // ✅ STEP 4: Generate unique filename and upload file
-      console.log(`📤 Preparing upload to CLEANED HSBC path: ${targetFolderPath}`);
+      // ✅ STEP 4: Generate unique filename and upload file with domain duplication fix
+      console.log(`📤 Preparing upload to DOMAIN-CLEANED HSBC path: ${targetFolderPath}`);
       
       // Generate unique filename with enhanced logic
       const uniqueFileResult = await this.generateUniqueFileName(file.name, targetFolderPath, sharePointUrl, requestDigest);
@@ -385,7 +468,7 @@ class DocumentAnalyzer {
       });
 
       const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(uniqueFileName)}', overwrite=false)`;
-      console.log(`📤 Uploading to: ${uploadUrl}`);
+      console.log(`📤 Upload URL (domain duplication fixed): ${uploadUrl}`);
 
       const formData = await file.arrayBuffer();
       
@@ -407,7 +490,7 @@ class DocumentAnalyzer {
       const uploadResult = await uploadResponse.json();
       console.log('✅ File uploaded successfully to:', uploadResult.d.ServerRelativeUrl);
 
-      // ✅ STEP 5: Build comprehensive amendment history with cleaned URLs
+      // ✅ STEP 5: Build comprehensive amendment history with CLEAN URLs
       const currentScore = currentProcedure?.QualityScore || amendmentData.original_score || 0;
       const newScore = amendmentData.new_score;
       const currentAmendmentCount = currentProcedure?.AmendmentCount || 0;
@@ -424,8 +507,14 @@ class DocumentAnalyzer {
         amendmentHistory = [];
       }
 
-      // Create new amendment record with cleaned URLs
-      const cleanDocumentUrl = this.cleanAndValidateUrl(`${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`);
+      // ✅ CREATE CLEAN DOCUMENT URL WITHOUT DOMAIN DUPLICATION
+      const cleanDocumentUrl = this.constructCleanSharePointUrl(
+        'https://teams.global.hsbc',
+        uploadResult.d.ServerRelativeUrl,
+        ''
+      );
+      
+      console.log('🔧 Constructed CLEAN document URL:', cleanDocumentUrl);
       
       const newAmendment = {
         amendmentNumber: newAmendmentCount,
@@ -443,7 +532,7 @@ class DocumentAnalyzer {
         fileRenamed: isFileRenamed, // Enhanced flag
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        documentUrl: cleanDocumentUrl, // ✅ CLEANED URL
+        documentUrl: cleanDocumentUrl, // ✅ CLEAN URL WITHOUT DOMAIN DUPLICATION
         analysisDetails: amendmentData.new_analysis_details,
         aiRecommendations: amendmentData.new_ai_recommendations,
         uploadTimestamp: new Date().toISOString()
@@ -465,7 +554,7 @@ class DocumentAnalyzer {
       const timelineEntry = `Amendment #${newAmendmentCount} - ${new Date().toLocaleDateString()} by ${amendmentData.amended_by_name}: ${amendmentData.amendment_summary} (Score: ${currentScore}% → ${newScore}%)`;
       amendmentTimeline.push(timelineEntry);
 
-      console.log('📋 Built ENHANCED amendment tracking data:');
+      console.log('📋 Built ENHANCED amendment tracking data with CLEAN URLs:');
       console.log(`   Amendment #: ${newAmendmentCount}`);
       console.log(`   Previous Score: ${currentScore}%`);
       console.log(`   New Score: ${newScore}%`);
@@ -473,9 +562,9 @@ class DocumentAnalyzer {
       console.log(`   Original filename: ${file.name}`);
       console.log(`   Saved filename: ${uniqueFileName}`);
       console.log(`   File renamed: ${isFileRenamed}`);
-      console.log(`   Document URL (cleaned): ${cleanDocumentUrl}`);
+      console.log(`   Document URL (CLEAN): ${cleanDocumentUrl}`);
 
-      // ✅ STEP 6: Update procedure with comprehensive data and cleaned URLs
+      // ✅ STEP 6: Update procedure with comprehensive data and CLEAN URLs
       const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
       
       const updateData = {
@@ -503,9 +592,9 @@ class DocumentAnalyzer {
         AnalysisDetails: JSON.stringify(amendmentData.new_analysis_details),
         AIRecommendations: JSON.stringify(amendmentData.new_ai_recommendations),
         
-        // ✅ CLEANED document info
+        // ✅ CLEAN document info WITHOUT DOMAIN DUPLICATION
         DocumentLink: uploadResult.d.ServerRelativeUrl, // SharePoint relative URL
-        SharePointURL: cleanDocumentUrl, // Full cleaned URL
+        SharePointURL: cleanDocumentUrl, // ✅ CLEAN full URL without domain duplication
         OriginalFilename: file.name,
         ActualFilename: uniqueFileName,
         FileSize: file.size,
@@ -519,7 +608,7 @@ class DocumentAnalyzer {
         LastModifiedBy: amendmentData.amended_by_name
       };
 
-      console.log('📝 Updating procedure with ENHANCED amendment tracking...');
+      console.log('📝 Updating procedure with DOMAIN-CLEANED amendment tracking...');
 
       const updateResponse = await fetch(listUpdateUrl, {
         method: 'POST',
@@ -538,9 +627,9 @@ class DocumentAnalyzer {
         throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
       }
 
-      console.log('✅ Procedure updated with ENHANCED amendment tracking');
+      console.log('✅ Procedure updated with DOMAIN-CLEANED amendment tracking');
 
-      // ✅ STEP 7: Enhanced audit log
+      // ✅ STEP 7: Enhanced audit log with clean URLs
       const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
       
       const auditData = {
@@ -563,10 +652,11 @@ class DocumentAnalyzer {
           originalFileName: file.name,
           savedFileName: uniqueFileName,
           fileRenamed: isFileRenamed,
-          documentUrl: cleanDocumentUrl,
+          documentUrl: cleanDocumentUrl, // ✅ CLEAN URL in audit log
           amendedBy: amendmentData.amended_by_name,
           totalAmendments: newAmendmentCount,
-          urlCleaned: true
+          urlCleaned: true,
+          domainDuplicationFixed: true
         })
       };
 
@@ -580,12 +670,12 @@ class DocumentAnalyzer {
         body: JSON.stringify(auditData)
       });
 
-      console.log('✅ ENHANCED audit log entry created');
-      console.log('✅ Amendment completed with COMPREHENSIVE tracking and URL cleaning');
+      console.log('✅ ENHANCED audit log entry created with CLEAN URLs');
+      console.log('✅ Amendment completed with COMPREHENSIVE tracking and DOMAIN DUPLICATION FIX');
 
       return {
         success: true,
-        message: 'Procedure amended successfully with comprehensive tracking and URL cleaning',
+                message: 'Procedure amended successfully with comprehensive tracking and domain duplication fix',
         amendmentNumber: newAmendmentCount,
         previousScore: currentScore,
         newScore: newScore,
@@ -593,17 +683,18 @@ class DocumentAnalyzer {
         uploadedTo: targetFolderPath,
         sharePointPath: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        documentUrl: cleanDocumentUrl, // ✅ Returns cleaned URL
+        documentUrl: cleanDocumentUrl, // ✅ Returns CLEAN URL without domain duplication
         amendmentHistory: amendmentHistory,
         timelineEntry: timelineEntry,
         originalFileName: file.name,
         savedFileName: uniqueFileName,
         fileRenamed: isFileRenamed,
-        urlCleaned: true
+        urlCleaned: true,
+        domainDuplicationFixed: true
       };
 
     } catch (error) {
-      console.error('❌ ENHANCED amendment failed:', error);
+      console.error('❌ ENHANCED amendment with domain fix failed:', error);
       return {
         success: false,
         message: error.message || 'Amendment failed',
@@ -613,10 +704,10 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ ENHANCED: Upload with comprehensive URL cleaning
+  // ✅ ENHANCED: Upload amendment with domain duplication fix
   async uploadAmendmentWithAnalysis(amendmentData, file) {
     try {
-      console.log('🚀 Starting amendment upload with ENHANCED AI analysis and URL cleaning...');
+      console.log('🚀 Starting amendment upload with ENHANCED AI analysis and DOMAIN DUPLICATION FIX...');
       
       // 1. Analyze the new document
       const analysisResult = await this.analyzeDocument(file, {
@@ -637,14 +728,14 @@ class DocumentAnalyzer {
       // 2. Get SharePoint context
       const requestDigest = await this.getRequestDigest();
       
-      // 3. ✅ CLEAN: Use existing SiteAssets folder path with cleaning
+      // 3. ✅ CLEAN: Use existing SiteAssets folder path with domain duplication fix
       const cleanedSharePointPath = amendmentData.sharePointPath || 'SiteAssets/IWPB/General';
-      console.log('📂 Using cleaned SiteAssets SharePoint path:', cleanedSharePointPath);
+      console.log('📂 Using DOMAIN-CLEANED SiteAssets SharePoint path:', cleanedSharePointPath);
       
-      // 4. Upload with enhanced file naming and URL cleaning
+      // 4. Upload with enhanced file naming and domain duplication fix
       const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, cleanedSharePointPath, requestDigest);
       
-      // 5. Create amended procedure list item with cleaned URLs
+      // 5. Create amended procedure list item with CLEAN URLs
       const amendedProcedureData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         Title: amendmentData.originalName,
@@ -657,7 +748,7 @@ class DocumentAnalyzer {
         ProcedureSubsection: amendmentData.subFolder || '',
         SharePointPath: cleanedSharePointPath || '',
         DocumentLink: fileUploadResult?.serverRelativeUrl || '',
-        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be cleaned
+        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be CLEAN without domain duplication
         OriginalFilename: file?.name || 'unknown.doc',
         ActualFilename: fileUploadResult?.actualFileName || file.name,
         FileSize: file?.size || 0,
@@ -702,7 +793,7 @@ class DocumentAnalyzer {
         amendment_summary: amendmentData.amendment_summary
       }, requestDigest);
      
-      // 7. Create audit log entry
+      // 7. Create audit log entry with CLEAN URLs
       await this.createAuditLogEntry({
         __metadata: { type: 'SP.Data.AuditLogListItem' },
         Title: `Procedure Amended: ${amendmentData.originalName}`,
@@ -723,17 +814,22 @@ class DocumentAnalyzer {
           originalFileName: file.name,
           actualFileName: fileUploadResult?.actualFileName,
           fileRenamed: fileUploadResult?.fileRenamed,
-          urlCleaned: true
+          urlCleaned: true,
+          domainDuplicationFixed: true
         }),
         ProcedureId: procedureResult.Id,
         LOB: amendmentData.originalLOB
       }, requestDigest);
 
-      // ✅ CLEAN: SharePoint URL with cleaned paths
-      const sharePointUrl = fileUploadResult?.webUrl || `${sharePointPaths.baseSite}/${cleanedSharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
+      // ✅ CONSTRUCT CLEAN SharePoint URL with domain duplication fix
+      const sharePointUrl = fileUploadResult?.webUrl || this.constructCleanSharePointUrl(
+        sharePointPaths.baseSite,
+        cleanedSharePointPath,
+        fileUploadResult?.actualFileName || file.name
+      );
       const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
      
-      console.log('🎉 Amendment upload completed successfully with URL cleaning:', {
+      console.log('🎉 Amendment upload completed successfully with DOMAIN DUPLICATION FIX:', {
         newProcedureId: procedureResult.Id,
         originalProcedureId: amendmentData.procedureId,
         qualityScore: analysisResult.score,
@@ -741,7 +837,8 @@ class DocumentAnalyzer {
         sharePointPath: cleanedSharePointPath,
         actualSubfolder: amendmentData.subFolder,
         fileRenamed: fileUploadResult?.fileRenamed,
-        urlCleaned: true
+        urlCleaned: true,
+        domainDuplicationFixed: true
       });
 
       return {
@@ -750,22 +847,22 @@ class DocumentAnalyzer {
         qualityScore: analysisResult.score,
         templateCompliance: analysisResult.details?.summary?.templateCompliance,
         sharePointPath: cleanedSharePointPath,
-        sharePointUrl: finalCleanUrl, // ✅ Cleaned URL
+        sharePointUrl: finalCleanUrl, // ✅ CLEAN URL without domain duplication
         analysisResult: analysisResult,
-        message: `Amendment uploaded successfully to cleaned path: SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
+        message: `Amendment uploaded successfully to domain-cleaned path: SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
         fileRenamed: fileUploadResult?.fileRenamed,
         actualFileName: fileUploadResult?.actualFileName,
-        urlCleaned: true
+        urlCleaned: true,
+        domainDuplicationFixed: true
       };
      
     } catch (error) {
-      console.error('❌ Upload amendment failed:', error);
+      console.error('❌ Upload amendment with domain fix failed:', error);
       throw new Error(`Amendment upload failed: ${error.message}`);
     }
   }
 
-  // ✅ Continue existing methods with URL cleaning enhancements...
-
+  // ✅ UPDATE ORIGINAL PROCEDURE RECORD
   async updateOriginalProcedureRecord(originalProcedureId, updateData, requestDigest) {
     try {
       console.log('🔄 Updating original procedure record:', originalProcedureId);
@@ -891,7 +988,7 @@ class DocumentAnalyzer {
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
+        const textContent = await page.getTextContent();
         const pageText = textContent.items.map(item => item.str).join(' ');
         fullText += pageText + '\n';
       }
@@ -925,12 +1022,12 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // ✅ ENHANCED SHAREPOINT INTEGRATION WITH URL CLEANING
+  // ✅ ENHANCED SHAREPOINT INTEGRATION WITH DOMAIN DUPLICATION FIX
   // ============================================================================
 
   async uploadProcedureWithAnalysis(formData, file) {
     try {
-      console.log('🚀 Starting procedure upload with AI analysis and URL cleaning...');
+      console.log('🚀 Starting procedure upload with AI analysis and DOMAIN DUPLICATION FIX...');
       
       // 1. Analyze document first
       const analysisResult = await this.analyzeDocument(file, {
@@ -951,14 +1048,14 @@ class DocumentAnalyzer {
       // 2. Get SharePoint context
       const requestDigest = await this.getRequestDigest();
       
-      // 3. ✅ CLEAN: Generate SiteAssets path with cleaning
+      // 3. ✅ CLEAN: Generate SiteAssets path with domain duplication fix
       const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
-      console.log('📂 Generated clean SiteAssets path for new upload:', sharePointPath);
+      console.log('📂 Generated DOMAIN-CLEAN SiteAssets path for new upload:', sharePointPath);
       
-      // 4. Upload with enhanced file naming and URL cleaning
+      // 4. Upload with enhanced file naming and domain duplication fix
       const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
       
-      // 5. Create procedure list item with comprehensive AI data and cleaned URLs
+      // 5. Create procedure list item with comprehensive AI data and CLEAN URLs
       const procedureData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         Title: formData.name || 'Untitled Procedure',
@@ -971,7 +1068,7 @@ class DocumentAnalyzer {
         ProcedureSubsection: formData.procedure_subsection || '',
         SharePointPath: sharePointPath || '',
         DocumentLink: fileUploadResult?.serverRelativeUrl || '',
-        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be cleaned
+        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be CLEAN without domain duplication
         OriginalFilename: file?.name || 'unknown.doc',
         ActualFilename: fileUploadResult?.actualFileName || file.name,
         FileSize: file?.size || 0,
@@ -1008,7 +1105,7 @@ class DocumentAnalyzer {
      
       const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
      
-      // 6. Create comprehensive audit log entry
+      // 6. Create comprehensive audit log entry with CLEAN URLs
       await this.createAuditLogEntry({
         __metadata: { type: 'SP.Data.AuditLogListItem' },
         Title: `Procedure Created: ${formData.name}`,
@@ -1032,24 +1129,30 @@ class DocumentAnalyzer {
           actualFileName: fileUploadResult?.actualFileName,
           fileRenamed: fileUploadResult?.fileRenamed,
           sharePointPath: sharePointPath,
-          urlCleaned: true
+          urlCleaned: true,
+          domainDuplicationFixed: true
         }),
         ProcedureId: procedureResult.Id,
         LOB: formData.lob
       }, requestDigest);
 
-      // ✅ CLEAN: SharePoint URL with cleaning
-      const sharePointUrl = fileUploadResult?.webUrl || `${sharePointPaths.baseSite}/${sharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
+      // ✅ CONSTRUCT CLEAN SharePoint URL with domain duplication fix
+      const sharePointUrl = fileUploadResult?.webUrl || this.constructCleanSharePointUrl(
+        sharePointPaths.baseSite,
+        sharePointPath,
+        fileUploadResult?.actualFileName || file.name
+      );
       const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
      
-      console.log('🎉 Procedure upload completed successfully with URL cleaning:', {
+      console.log('🎉 Procedure upload completed successfully with DOMAIN DUPLICATION FIX:', {
         procedureId: procedureResult.Id,
         qualityScore: analysisResult.score,
         sharePointUrl: finalCleanUrl,
         sharePointPath: sharePointPath,
         selectedSubsection: formData.procedure_subsection,
         fileRenamed: fileUploadResult?.fileRenamed,
-        urlCleaned: true
+        urlCleaned: true,
+        domainDuplicationFixed: true
       });
 
       return {
@@ -1058,15 +1161,16 @@ class DocumentAnalyzer {
         qualityScore: analysisResult.score,
         templateCompliance: analysisResult.details?.summary?.templateCompliance,
         sharePointPath: sharePointPath,
-        sharePointUrl: finalCleanUrl, // ✅ Cleaned URL
+        sharePointUrl: finalCleanUrl, // ✅ CLEAN URL without domain duplication
         analysisResult: analysisResult,
         fileRenamed: fileUploadResult?.fileRenamed,
         actualFileName: fileUploadResult?.actualFileName,
-        urlCleaned: true
+        urlCleaned: true,
+        domainDuplicationFixed: true
       };
      
     } catch (error) {
-      console.error('❌ Upload procedure failed:', error);
+      console.error('❌ Upload procedure with domain fix failed:', error);
       throw new Error(`Upload failed: ${error.message}`);
     }
   }
@@ -1083,7 +1187,7 @@ class DocumentAnalyzer {
     
     const path = `SiteAssets/${lob}/${cleanSubsection}`;
     
-    console.log(`📂 Generated clean SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
+    console.log(`📂 Generated DOMAIN-CLEAN SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
     return path;
   }
 
@@ -1109,11 +1213,19 @@ class DocumentAnalyzer {
    }
  }
 
-  // ✅ ENHANCED: Upload with smart file naming and URL cleaning
+  // ✅ ENHANCED: Upload with smart file naming and DOMAIN DUPLICATION FIX
   async uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest) {
     try {
-      // ✅ CLEAN: Upload URL with proper path cleaning
-      const basePath = `/sites/EmployeeEng/${sharePointPath}`;
+      // ✅ CLEAN: Upload URL with DOMAIN DUPLICATION FIX
+      const cleanSharePointPath = sharePointPath
+        .replace(/^\/+/, '') // Remove leading slashes
+        .replace(/\/+$/, '') // Remove trailing slashes
+        .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
+        .replace(/siteassets\/siteassets\//gi, 'SiteAssets/')
+        .replace(/SiteAssets\/SiteAssets\//gi, 'SiteAssets/');
+      
+      // Construct clean base path
+      const basePath = `/sites/EmployeeEng/${cleanSharePointPath}`;
       const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
       
       // Generate unique filename
@@ -1121,9 +1233,17 @@ class DocumentAnalyzer {
       const uniqueFileName = uniqueFileResult.fileName;
       const isFileRenamed = uniqueFileResult.isRenamed;
       
-      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
+      // ✅ CONSTRUCT UPLOAD URL WITHOUT DOMAIN DUPLICATION
+      const baseUrl = sharePointPaths.baseSite.replace(/\/+$/, ''); // Remove trailing slashes
+      const uploadUrl = `${baseUrl}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
      
-      console.log('📤 Uploading to clean SiteAssets path with unique naming:', uploadUrl);
+      console.log('📤 Uploading with DOMAIN DUPLICATION FIX:', {
+        cleanSharePointPath,
+        cleanBasePath,
+        uploadUrl,
+        uniqueFileName,
+        isFileRenamed
+      });
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -1142,39 +1262,48 @@ class DocumentAnalyzer {
 
       const result = await response.json();
       
-      // ✅ CLEAN: Generate clean URLs
-      const webUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${uniqueFileName}`;
-      const cleanWebUrl = this.cleanAndValidateUrl(webUrl);
+      // ✅ CONSTRUCT CLEAN WEB URL WITHOUT DOMAIN DUPLICATION
+      const webUrl = this.constructCleanSharePointUrl(
+        'https://teams.global.hsbc',
+        cleanBasePath,
+        uniqueFileName
+      );
      
-      console.log('✅ File uploaded to SiteAssets SharePoint with unique name and clean URLs:', {
+      console.log('✅ File uploaded with CLEAN URLs (DOMAIN DUPLICATION FIXED):', {
         serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: cleanWebUrl,
+        webUrl: webUrl,
         actualFileName: uniqueFileName,
         fileRenamed: isFileRenamed
       });
      
       return {
         serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: cleanWebUrl, // ✅ Cleaned URL
+        webUrl: webUrl, // ✅ CLEAN URL without domain duplication
         actualFileName: uniqueFileName,
         fileRenamed: isFileRenamed
       };
      
     } catch (error) {
+      console.error('❌ File upload with domain fix failed:', error);
       throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
     }
   }
 
-  // ✅ LEGACY: Keep existing method for compatibility with URL cleaning
+  // ✅ LEGACY: Keep existing method for compatibility with DOMAIN DUPLICATION FIX
   async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
     try {
-      // ✅ CLEAN: Upload URL with path cleaning
-      const basePath = `/sites/EmployeeEng/${sharePointPath}`;
+      // ✅ CLEAN: Upload URL with DOMAIN DUPLICATION FIX
+      const cleanSharePointPath = sharePointPath
+        .replace(/^\/+/, '') // Remove leading slashes
+        .replace(/\/+$/, '') // Remove trailing slashes
+        .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+      
+      const basePath = `/sites/EmployeeEng/${cleanSharePointPath}`;
       const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
       
       const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(file.name)}',overwrite=true)`;
      
-      console.log('📤 Uploading to clean SiteAssets path:', uploadUrl);
+      console.log('📤 Uploading to DOMAIN-CLEAN SiteAssets path:', uploadUrl);
 
       const response = await fetch(uploadUrl, {
         method: 'POST',
@@ -1193,15 +1322,18 @@ class DocumentAnalyzer {
 
       const result = await response.json();
       
-      // ✅ CLEAN: Generate clean URLs
-      const webUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
-      const cleanWebUrl = this.cleanAndValidateUrl(webUrl);
+      // ✅ CONSTRUCT CLEAN WEB URL WITHOUT DOMAIN DUPLICATION
+      const webUrl = this.constructCleanSharePointUrl(
+        'https://teams.global.hsbc',
+        cleanBasePath,
+        file.name
+      );
      
-      console.log('✅ File uploaded to clean SiteAssets SharePoint:', result.d.ServerRelativeUrl);
+      console.log('✅ File uploaded to DOMAIN-CLEAN SiteAssets SharePoint:', result.d.ServerRelativeUrl);
      
       return {
         serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: cleanWebUrl // ✅ Cleaned URL
+        webUrl: webUrl // ✅ CLEAN URL without domain duplication
       };
      
     } catch (error) {
@@ -1258,13 +1390,13 @@ class DocumentAnalyzer {
         console.log('✅ Audit log entry created');
         return await response.json();
       } else {
-        console.warn('⚠️ Failed to create audit log entry, but continuing...');
+                console.warn('⚠️ Failed to create audit log entry, but continuing...');
         return null;
       }
      
     } catch (error) {
       console.warn('⚠️ Audit log creation failed:', error.message);
-      return null;
+      return null; // Don't fail the whole process for audit log
     }
   }
 }
