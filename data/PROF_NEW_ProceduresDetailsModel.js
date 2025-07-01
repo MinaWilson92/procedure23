@@ -225,46 +225,61 @@ const ProcedureDetailsModal = ({
   const [amendmentTimeline, setAmendmentTimeline] = useState([]);
 
   // ✅ ENHANCED: Smart URL cleaning with comprehensive duplicate removal
-  const cleanSharePointUrl = (url) => {
-    if (!url) return '';
-    
-    console.log('🔧 Original URL:', url);
-    
-    // Step 1: Remove multiple duplicate segments
-    let cleanUrl = url
-      .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/\/+/g, '/') // Remove multiple consecutive slashes
-      .replace(/([^:]\/)\/+/g, '$1'); // Remove duplicate slashes except after protocol
-    
-    // Step 2: Fix case sensitivity issues
-    cleanUrl = cleanUrl.replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
-    
-    // Step 3: Handle relative vs absolute URLs
-    if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/sites/EmployeeEng/')) {
-      if (cleanUrl.startsWith('/')) {
-        cleanUrl = `/sites/EmployeeEng${cleanUrl}`;
-      } else {
-        cleanUrl = `/sites/EmployeeEng/${cleanUrl}`;
-      }
-    }
-    
-    // Step 4: Convert to full URL if needed
+  // ✅ COMPLETELY FIXED: Enhanced URL cleaning with comprehensive duplicate removal
+const cleanSharePointUrl = (url) => {
+  if (!url) return '';
+  
+  console.log('🔧 Original URL:', url);
+  
+  // Step 1: Handle various input formats
+  let cleanUrl = url.toString().trim();
+  
+  // Step 2: Remove duplicate domain segments (your main issue)
+  // Pattern: https://teams.hsbc.global/teams.hsbc.global/... → https://teams.hsbc.global/...
+  cleanUrl = cleanUrl.replace(/https:\/\/teams\.hsbc\.global\/teams\.hsbc\.global\//gi, 'https://teams.hsbc.global/');
+  cleanUrl = cleanUrl.replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/');
+  
+  // Step 3: Remove duplicate site path segments  
+  cleanUrl = cleanUrl.replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/');
+  cleanUrl = cleanUrl.replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/');
+  cleanUrl = cleanUrl.replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
+  
+  // Step 4: Remove multiple consecutive slashes (but preserve protocol://)
+  cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, '$1');
+  
+  // Step 5: Fix case sensitivity for known paths
+  cleanUrl = cleanUrl.replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/');
+  cleanUrl = cleanUrl.replace(/\/Sites\/employeeeng\//gi, '/sites/EmployeeEng/');
+  
+  // Step 6: Handle relative URLs properly
+  if (!cleanUrl.startsWith('http')) {
+    // If it's a relative URL starting with /sites/EmployeeEng, make it absolute
     if (cleanUrl.startsWith('/sites/EmployeeEng/')) {
       cleanUrl = `https://teams.global.hsbc${cleanUrl}`;
     }
-    
-    // Step 5: Final validation and cleanup
-    if (cleanUrl.includes('undefined') || cleanUrl.includes('null')) {
-      console.warn('⚠️ Invalid URL detected, using fallback');
-      return '';
+    // If it doesn't start with /sites/, add the full path
+    else if (cleanUrl.startsWith('/')) {
+      cleanUrl = `https://teams.global.hsbc/sites/EmployeeEng${cleanUrl}`;
     }
-    
-    console.log('✅ Cleaned URL:', cleanUrl);
-    return cleanUrl;
-  };
-
+    // If it's a bare filename or path, add full prefix
+    else {
+      cleanUrl = `https://teams.global.hsbc/sites/EmployeeEng/${cleanUrl}`;
+    }
+  }
+  
+  // Step 7: Final cleanup - remove any remaining duplicates
+  const domainPattern = /https:\/\/([^\/]+)\/\1\//gi;
+  cleanUrl = cleanUrl.replace(domainPattern, 'https://$1/');
+  
+  // Step 8: Validate result
+  if (cleanUrl.includes('undefined') || cleanUrl.includes('null')) {
+    console.warn('⚠️ Invalid URL detected, using fallback');
+    return '';
+  }
+  
+  console.log('✅ Cleaned URL:', cleanUrl);
+  return cleanUrl;
+};
   // ✅ ENHANCED: Get latest document version with smart logic
   const getLatestDocumentUrl = () => {
     if (!procedureDetails) return '';
@@ -384,39 +399,38 @@ const ProcedureDetailsModal = ({
   }, [open, procedureId]);
 
   // ✅ Parse amendment data
-  const parseAmendmentData = (procedureData) => {
-    try {
-      let history = [];
-      if (procedureData.AmendmentHistory) {
-        const historyData = procedureData.AmendmentHistory;
-        if (typeof historyData === 'string') {
-          history = JSON.parse(historyData);
-        } else if (Array.isArray(historyData)) {
-          history = historyData;
-        }
+ const parseAmendmentData = (procedureData) => {
+  try {
+    let history = [];
+    if (procedureData.AmendmentHistory) {
+      const historyData = procedureData.AmendmentHistory;
+      
+      // 🔍 DEBUG: Log the raw JSON data
+      console.log('🔍 Raw AmendmentHistory JSON:', historyData);
+      
+      if (typeof historyData === 'string') {
+        history = JSON.parse(historyData);
+      } else if (Array.isArray(historyData)) {
+        history = historyData;
       }
       
-      let timeline = [];
-      if (procedureData.AmendmentTimeline) {
-        const timelineData = procedureData.AmendmentTimeline;
-        if (typeof timelineData === 'string') {
-          timeline = JSON.parse(timelineData);
-        } else if (Array.isArray(timelineData)) {
-          timeline = timelineData;
-        }
-      }
+      // 🔍 DEBUG: Log parsed data to see URLs
+      console.log('🔍 Parsed AmendmentHistory:', history);
       
-      console.log('📋 Parsed amendment data:', { history, timeline });
-      setAmendmentHistory(history);
-      setAmendmentTimeline(timeline);
-      
-    } catch (error) {
-      console.error('❌ Error parsing amendment data:', error);
-      setAmendmentHistory([]);
-      setAmendmentTimeline([]);
+      // 🔍 DEBUG: Check each amendment's URL
+      history.forEach((amendment, index) => {
+        console.log(`🔍 Amendment ${index + 1} URL:`, amendment.documentUrl);
+        console.log(`🔍 Amendment ${index + 1} full data:`, amendment);
+      });
     }
-  };
-
+    
+    setAmendmentHistory(history);
+    
+  } catch (error) {
+    console.error('❌ Error parsing amendment data:', error);
+    setAmendmentHistory([]);
+  }
+};
   const loadProcedureDetails = async () => {
     try {
       setLoading(true);
