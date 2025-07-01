@@ -1,11 +1,14 @@
-// components/ProcedureDetailsModal.js - Professional HSBC Modal Experience
+// components/ProcedureDetailsModal.js - Professional HSBC Modal Experience with Amendment History
 import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Box, Typography, 
   Grid, Card, CardContent, Chip, Divider, List, ListItem, ListItemIcon, 
   ListItemText, Avatar, LinearProgress, Alert, IconButton, Skeleton, Link,
   Stack, Paper, Tooltip, Badge, useTheme, styled, keyframes, alpha,
-  CardHeader, Accordion, AccordionSummary, AccordionDetails, Fab
+  CardHeader, Accordion, AccordionSummary, AccordionDetails, Fab,
+  Timeline, TimelineItem, TimelineSeparator, TimelineConnector, 
+  TimelineContent, TimelineDot, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow
 } from '@mui/material';
 
 // 🎯 **ALL MISSING ICON IMPORTS:**
@@ -14,9 +17,8 @@ import {
   CloudDownload, Email, Person, Security, Business, Warning, 
   LocalFireDepartment, AutoAwesome, Psychology, Insights, TrendingUp,
   ExpandMore, Grade, AdminPanelSettings, Share, Assignment,
-  Error as ErrorIcon,
-  Timeline as TimelineIcon,
-  Link as LinkIcon
+  Error as ErrorIcon, Timeline as TimelineIcon, Link as LinkIcon,
+  History, TrendingDown, Analytics, Edit
 } from '@mui/icons-material';
 
 // Motion imports
@@ -187,13 +189,18 @@ const ProcedureDetailsModal = ({
   onClose, 
   procedureId, 
   sharePointAvailable = false,
-  user 
+  user,
+  onAmend
 }) => {
   const theme = useTheme();
   const [loading, setLoading] = useState(false);
   const [procedureDetails, setProcedureDetails] = useState(null);
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // ✅ NEW: Amendment history state
+  const [amendmentHistory, setAmendmentHistory] = useState([]);
+  const [amendmentTimeline, setAmendmentTimeline] = useState([]);
 
   // 🕒 **Real-time Clock**
   useEffect(() => {
@@ -206,9 +213,11 @@ const ProcedureDetailsModal = ({
     const selectFields = [
       'Id', 'Title', 'Created', 'Modified',
       'ExpiryDate', 'PrimaryOwner', 'PrimaryOwnerEmail', 'SecondaryOwner', 'SecondaryOwnerEmail',
-      'LOB', 'ProcedureSubsection', 'QualityScore', 'OriginalFilename', 'FileSize',
+      'LOB', 'ProcedureSubsection', 'QualityScore', 'PreviousScore', 'OriginalFilename', 'FileSize',
       'UploadedBy', 'UploadedAt', 'Status', 'AnalysisDetails', 'AIRecommendations',
-      'RiskRating', 'PeriodicReview', 'DocumentOwners', 'FoundElements', 'DocumentLink', 'SignOffDate'
+      'RiskRating', 'PeriodicReview', 'DocumentOwners', 'FoundElements', 'DocumentLink', 'SignOffDate',
+      'AmendmentCount', 'AmendmentHistory', 'AmendmentTimeline', 'LatestAmendmentSummary',
+      'LastAmendedBy', 'LastAmendmentDate'
     ].join(',');
 
     return `https://teams.global.hsbc/sites/EmployeeEng/_api/web/lists/getbytitle('Procedures')/items(${id})?$select=${selectFields}`;
@@ -219,6 +228,42 @@ const ProcedureDetailsModal = ({
       loadProcedureDetails();
     }
   }, [open, procedureId]);
+
+  // ✅ Parse amendment data
+  const parseAmendmentData = (procedureData) => {
+    try {
+      // Parse amendment history JSON
+      let history = [];
+      if (procedureData.AmendmentHistory) {
+        const historyData = procedureData.AmendmentHistory;
+        if (typeof historyData === 'string') {
+          history = JSON.parse(historyData);
+        } else if (Array.isArray(historyData)) {
+          history = historyData;
+        }
+      }
+      
+      // Parse timeline
+      let timeline = [];
+      if (procedureData.AmendmentTimeline) {
+        const timelineData = procedureData.AmendmentTimeline;
+        if (typeof timelineData === 'string') {
+          timeline = JSON.parse(timelineData);
+        } else if (Array.isArray(timelineData)) {
+          timeline = timelineData;
+        }
+      }
+      
+      console.log('📋 Parsed amendment data:', { history, timeline });
+      setAmendmentHistory(history);
+      setAmendmentTimeline(timeline);
+      
+    } catch (error) {
+      console.error('❌ Error parsing amendment data:', error);
+      setAmendmentHistory([]);
+      setAmendmentTimeline([]);
+    }
+  };
 
   const loadProcedureDetails = async () => {
     try {
@@ -244,6 +289,7 @@ const ProcedureDetailsModal = ({
         console.log('✅ Detailed procedure data:', data.d);
         const details = processDetailedData(data.d);
         setProcedureDetails(details);
+        parseAmendmentData(data.d); // ✅ Parse amendment history
       } else {
         throw new Error(`Failed to load: ${response.status}`);
       }
@@ -278,6 +324,7 @@ const ProcedureDetailsModal = ({
       riskRating: spItem.RiskRating,
       periodicReview: spItem.PeriodicReview,
       qualityScore: spItem.QualityScore,
+      previousScore: spItem.PreviousScore,
       signOffDate: spItem.SignOffDate,
       documentLink: spItem.DocumentLink,
       originalFilename: spItem.OriginalFilename,
@@ -290,12 +337,17 @@ const ProcedureDetailsModal = ({
       analysisDetails: safeJsonParse(spItem.AnalysisDetails),
       aiRecommendations: safeJsonParse(spItem.AIRecommendations, []),
       foundElements: safeJsonParse(spItem.FoundElements, []),
-      documentOwners: safeJsonParse(spItem.DocumentOwners, [])
+      documentOwners: safeJsonParse(spItem.DocumentOwners, []),
+      // ✅ Amendment tracking fields
+      amendmentCount: spItem.AmendmentCount || 0,
+      latestAmendmentSummary: spItem.LatestAmendmentSummary,
+      lastAmendedBy: spItem.LastAmendedBy,
+      lastAmendmentDate: spItem.LastAmendmentDate
     };
   };
 
   const loadMockDetails = () => {
-    setProcedureDetails({
+    const mockData = {
       id: procedureId,
       name: "Risk Assessment Framework - Enhanced Analytics",
       uploadedOn: "2024-05-15T10:30:00Z",
@@ -307,6 +359,7 @@ const ProcedureDetailsModal = ({
       riskRating: "High",
       periodicReview: "Annual",
       qualityScore: 92,
+      previousScore: 85,
       signOffDate: "2024-05-20",
       documentLink: "https://sharepoint.hsbc.com/sites/procedures/documents/risk-framework.pdf",
       originalFilename: "HSBC_Risk_Assessment_Framework_v2.1.pdf",
@@ -334,8 +387,57 @@ const ProcedureDetailsModal = ({
         "Michael Chen - Head of Credit Risk",
         "Sarah Johnson - Risk Director",
         "David Park - Compliance Officer"
-      ]
-    });
+      ],
+      amendmentCount: 2,
+      latestAmendmentSummary: "Updated risk calculation methodology",
+      lastAmendedBy: "Sarah Johnson",
+      lastAmendmentDate: "2024-06-10T14:20:00Z"
+    };
+    
+    setProcedureDetails(mockData);
+    
+    // Mock amendment history
+    const mockAmendmentHistory = [
+      {
+        amendmentNumber: 1,
+        date: "2024-05-25T10:30:00Z",
+        amendedBy: "Michael Chen",
+        amendedByStaffId: "12345",
+        amendedByRole: "Risk Manager",
+        summary: "Initial risk framework improvements",
+        previousScore: 78,
+        newScore: 85,
+        scoreChange: 7,
+        fileName: "Risk_Framework_v1.1.pdf",
+        fileSize: 2300000,
+        targetFolder: "SiteAssets/IWPB/Risk_Management",
+        actualSubFolder: "Risk_Management"
+      },
+      {
+        amendmentNumber: 2,
+        date: "2024-06-10T14:20:00Z",
+        amendedBy: "Sarah Johnson",
+        amendedByStaffId: "67890",
+        amendedByRole: "Risk Director",
+        summary: "Updated risk calculation methodology",
+        previousScore: 85,
+        newScore: 92,
+        scoreChange: 7,
+        fileName: "Risk_Framework_v2.1.pdf",
+        fileSize: 2450000,
+        targetFolder: "SiteAssets/IWPB/Risk_Management",
+        actualSubFolder: "Risk_Management"
+      }
+    ];
+    
+    setAmendmentHistory(mockAmendmentHistory);
+  };
+
+  // ✅ Helper functions for amendment display
+  const getScoreChangeIcon = (change) => {
+    if (change > 0) return <TrendingUp sx={{ color: HSBCColors.professional.success }} />;
+    if (change < 0) return <TrendingDown sx={{ color: HSBCColors.professional.error }} />;
+    return <Analytics sx={{ color: '#9e9e9e' }} />;
   };
 
   const formatFileSize = (bytes) => {
@@ -382,6 +484,11 @@ const ProcedureDetailsModal = ({
   const qualityInfo = procedureDetails ? getQualityInfo(procedureDetails.qualityScore) : null;
   const daysLeft = procedureDetails ? getDaysUntilExpiry(procedureDetails.expiry) : null;
   const expiryStatus = daysLeft !== null ? getExpiryStatus(daysLeft) : null;
+  
+  // ✅ Amendment calculations
+  const hasAmendments = amendmentHistory.length > 0;
+  const totalAmendments = procedureDetails?.amendmentCount || amendmentHistory.length;
+  const latestAmendment = amendmentHistory[amendmentHistory.length - 1];
 
   return (
     <ProfessionalDialog 
@@ -440,6 +547,22 @@ const ProcedureDetailsModal = ({
                       backgroundColor: 'rgba(255,255,255,0.1)'
                     }}
                   />
+                  
+                  {hasAmendments && (
+                    <Badge badgeContent={totalAmendments} color="secondary">
+                      <Chip 
+                        icon={<History />}
+                        label="Amended"
+                        color="info"
+                        variant="outlined"
+                        sx={{ 
+                          borderColor: 'white',
+                          color: 'white',
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }}
+                      />
+                    </Badge>
+                  )}
                   
                   <IconButton onClick={onClose} sx={{ color: 'white' }}>
                     <Close />
@@ -612,6 +735,330 @@ const ProcedureDetailsModal = ({
                 </CardContent>
               </ProfessionalCard>
             </motion.div>
+            {/* ✅ NEW: Amendment History Section */}
+            {hasAmendments && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <ProfessionalCard 
+                  variant="info"
+                  sx={{ mb: 4 }}
+                >
+                  <CardContent sx={{ p: 0 }}>
+                    {/* Amendment Header */}
+                    <Box sx={{ 
+                      background: 'linear-gradient(135deg, #3498DB 0%, #2980B9 100%)',
+                      color: 'white',
+                      p: 3
+                    }}>
+                      <Stack direction="row" alignItems="center" spacing={2}>
+                        <TimelineIcon sx={{ fontSize: 28 }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="h6" fontWeight={700}>
+                            Amendment History
+                          </Typography>
+                          <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                            Complete tracking of all procedure amendments and quality improvements
+                          </Typography>
+                        </Box>
+                        <Chip 
+                          label={`${totalAmendments} Amendment${totalAmendments !== 1 ? 's' : ''}`}
+                          sx={{ 
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            color: 'white',
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      </Stack>
+                    </Box>
+
+                    {/* Amendment Summary Stats */}
+                    <Box sx={{ p: 3, bgcolor: '#f8f9fa' }}>
+                      <Grid container spacing={3}>
+                        <Grid item xs={12} sm={3}>
+                          <ProfessionalPaper sx={{ textAlign: 'center' }}>
+                            <Typography variant="h4" fontWeight="bold" color={HSBCColors.professional.info}>
+                              {totalAmendments}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Total Amendments
+                            </Typography>
+                          </ProfessionalPaper>
+                        </Grid>
+                        
+                        <Grid item xs={12} sm={3}>
+                          <ProfessionalPaper sx={{ textAlign: 'center' }}>
+                            <Typography 
+                              variant="h4" 
+                              fontWeight="bold" 
+                              color={getScoreColor(procedureDetails.qualityScore)}
+                            >
+                              {procedureDetails.qualityScore}%
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Current Score
+                            </Typography>
+                          </ProfessionalPaper>
+                        </Grid>
+
+                        <Grid item xs={12} sm={3}>
+                          <ProfessionalPaper sx={{ textAlign: 'center' }}>
+                            <Typography 
+                              variant="h4" 
+                              fontWeight="bold" 
+                              color="text.secondary"
+                            >
+                              {procedureDetails.previousScore || 0}%
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              Previous Score
+                            </Typography>
+                          </ProfessionalPaper>
+                        </Grid>
+
+                        <Grid item xs={12} sm={3}>
+                          <ProfessionalPaper sx={{ textAlign: 'center' }}>
+                            <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                              {getScoreChangeIcon(
+                                (procedureDetails.qualityScore || 0) - 
+                                (procedureDetails.previousScore || 0)
+                              )}
+                              <Typography 
+                                variant="h4" 
+                                fontWeight="bold"
+                                color={
+                                  (procedureDetails.qualityScore || 0) - 
+                                  (procedureDetails.previousScore || 0) > 0 
+                                  ? HSBCColors.professional.success : HSBCColors.professional.error
+                                }
+                              >
+                                {(procedureDetails.qualityScore || 0) - 
+                                 (procedureDetails.previousScore || 0) > 0 ? '+' : ''}
+                                {(procedureDetails.qualityScore || 0) - 
+                                 (procedureDetails.previousScore || 0)}%
+                              </Typography>
+                            </Stack>
+                            <Typography variant="caption" color="text.secondary">
+                              Score Change
+                            </Typography>
+                          </ProfessionalPaper>
+                        </Grid>
+                      </Grid>
+                    </Box>
+
+                    {/* Latest Amendment Summary */}
+                    {latestAmendment && (
+                      <Box sx={{ p: 3, bgcolor: alpha(HSBCColors.professional.info, 0.05) }}>
+                        <Alert severity="info" sx={{ mb: 0 }}>
+                          <Typography variant="body2" fontWeight="bold" gutterBottom>
+                            Latest Amendment (#{latestAmendment.amendmentNumber})
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Summary:</strong> {latestAmendment.summary}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Date:</strong> {formatDate(latestAmendment.date)} by {latestAmendment.amendedBy}
+                          </Typography>
+                          <Typography variant="body2">
+                            <strong>Quality Impact:</strong> {latestAmendment.previousScore}% → {latestAmendment.newScore}% 
+                            ({latestAmendment.scoreChange > 0 ? '+' : ''}{latestAmendment.scoreChange}%)
+                          </Typography>
+                        </Alert>
+                      </Box>
+                    )}
+
+                    {/* Detailed Amendment Timeline */}
+                    <Accordion defaultExpanded>
+                      <AccordionSummary expandIcon={<ExpandMore />}>
+                        <Typography variant="h6" fontWeight="bold">
+                          📋 Detailed Amendment Timeline
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ p: 0 }}>
+                        <Timeline sx={{ py: 2 }}>
+                          {amendmentHistory.slice().reverse().map((amendment, index) => (
+                            <TimelineItem key={amendment.amendmentNumber}>
+                              <TimelineSeparator>
+                                <TimelineDot 
+                                  sx={{ 
+                                    bgcolor: index === 0 ? HSBCColors.professional.info : '#90caf9',
+                                    width: 40,
+                                    height: 40,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <Typography variant="caption" fontWeight="bold" color="white">
+                                    #{amendment.amendmentNumber}
+                                  </Typography>
+                                </TimelineDot>
+                                {index < amendmentHistory.length - 1 && <TimelineConnector />}
+                              </TimelineSeparator>
+                              
+                              <TimelineContent sx={{ py: 0, px: 2 }}>
+                                <ProfessionalCard sx={{ 
+                                  mb: 2,
+                                  border: index === 0 ? `2px solid ${HSBCColors.professional.info}` : '1px solid #e0e0e0',
+                                  bgcolor: index === 0 ? alpha(HSBCColors.professional.info, 0.05) : 'white'
+                                }}>
+                                  <CardContent sx={{ p: 3 }}>
+                                    <Grid container spacing={2}>
+                                      <Grid item xs={12} md={8}>
+                                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                                          Amendment #{amendment.amendmentNumber}
+                                          {index === 0 && (
+                                            <Chip 
+                                              label="Latest" 
+                                              color="primary" 
+                                              size="small" 
+                                              sx={{ ml: 1 }} 
+                                            />
+                                          )}
+                                        </Typography>
+                                        
+                                        <Typography variant="body1" gutterBottom sx={{ fontStyle: 'italic' }}>
+                                          "{amendment.summary}"
+                                        </Typography>
+
+                                        <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                                          <Stack direction="row" alignItems="center" spacing={1}>
+                                            <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                            <Typography variant="body2">
+                                              {amendment.amendedBy} ({amendment.amendedByRole})
+                                            </Typography>
+                                          </Stack>
+                                          
+                                          <Stack direction="row" alignItems="center" spacing={1}>
+                                            <CalendarToday sx={{ fontSize: 16, color: 'text.secondary' }} />
+                                            <Typography variant="body2">
+                                              {formatDate(amendment.date)}
+                                            </Typography>
+                                          </Stack>
+                                        </Stack>
+                                      </Grid>
+
+                                      <Grid item xs={12} md={4}>
+                                        <Box sx={{ textAlign: 'center' }}>
+                                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                                            Quality Score Change
+                                          </Typography>
+                                          
+                                          <Stack direction="row" alignItems="center" justifyContent="center" spacing={1}>
+                                            <Typography 
+                                              variant="h6" 
+                                              fontWeight="bold"
+                                              color={getScoreColor(amendment.previousScore)}
+                                            >
+                                              {amendment.previousScore}%
+                                            </Typography>
+                                            
+                                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                              {getScoreChangeIcon(amendment.scoreChange)}
+                                            </Box>
+                                            
+                                            <Typography 
+                                              variant="h6" 
+                                              fontWeight="bold"
+                                              color={getScoreColor(amendment.newScore)}
+                                            >
+                                              {amendment.newScore}%
+                                            </Typography>
+                                          </Stack>
+
+                                          <Typography 
+                                            variant="body2" 
+                                            sx={{ 
+                                              mt: 1,
+                                              color: amendment.scoreChange > 0 ? HSBCColors.professional.success : HSBCColors.professional.error,
+                                              fontWeight: 'bold'
+                                            }}
+                                          >
+                                            {amendment.scoreChange > 0 ? '+' : ''}{amendment.scoreChange}% change
+                                          </Typography>
+
+                                          {amendment.scoreChange > 0 && (
+                                            <Chip 
+                                              label="Improvement"
+                                              color="success"
+                                              size="small"
+                                              sx={{ mt: 1 }}
+                                            />
+                                          )}
+                                        </Box>
+                                      </Grid>
+                                    </Grid>
+
+                                    {/* File and Technical Details */}
+                                    <Divider sx={{ my: 2 }} />
+                                    <Grid container spacing={2}>
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography variant="caption" color="text.secondary">
+                                          File Details
+                                        </Typography>
+                                        <Typography variant="body2">
+                                          📁 {amendment.fileName} ({formatFileSize(amendment.fileSize)})
+                                        </Typography>
+                                        <Typography variant="body2">
+                                          📂 {amendment.actualSubFolder}
+                                        </Typography>
+                                      </Grid>
+                                      
+                                      <Grid item xs={12} sm={6}>
+                                        <Typography variant="caption" color="text.secondary">
+                                          Actions
+                                        </Typography>
+                                        <Stack direction="row" spacing={1}>
+                                          {amendment.documentUrl && (
+                                            <Button
+                                              size="small"
+                                              startIcon={<CloudDownload />}
+                                              onClick={() => window.open(amendment.documentUrl, '_blank')}
+                                            >
+                                              Download
+                                            </Button>
+                                          )}
+                                          <Button
+                                            size="small"
+                                            startIcon={<Description />}
+                                            onClick={() => {
+                                              console.log('Analysis details:', amendment.analysisDetails);
+                                            }}
+                                          >
+                                            Analysis
+                                          </Button>
+                                        </Stack>
+                                      </Grid>
+                                    </Grid>
+                                  </CardContent>
+                                </ProfessionalCard>
+                              </TimelineContent>
+                            </TimelineItem>
+                          ))}
+                        </Timeline>
+                      </AccordionDetails>
+                    </Accordion>
+                  </CardContent>
+                </ProfessionalCard>
+              </motion.div>
+            )}
+
+            {/* No Amendments Message */}
+            {!hasAmendments && (
+              <ProfessionalCard sx={{ mb: 4, textAlign: 'center', bgcolor: '#f8f9fa' }}>
+                <CardContent sx={{ p: 4 }}>
+                  <History sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+                  <Typography variant="h6" color="text.secondary" gutterBottom>
+                    No Amendments Yet
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    This procedure has not been amended since its initial upload.
+                  </Typography>
+                </CardContent>
+              </ProfessionalCard>
+            )}
 
             <Grid container spacing={4}>
               {/* 📋 **LEFT COLUMN - Document Information** */}
@@ -1061,6 +1508,8 @@ const ProcedureDetailsModal = ({
                      <Stack spacing={3}>
                        {/* Document Uploaded */}
                        <ProfessionalPaper>
+                                              {/* Document Uploaded */}
+                       <ProfessionalPaper>
                          <Stack direction="row" alignItems="center" spacing={3}>
                            <Avatar sx={{ 
                              background: HSBCColors.professional.success,
@@ -1299,6 +1748,26 @@ const ProcedureDetailsModal = ({
            </Button>
          )}
          
+         {/* Amendment Button for Admin Users */}
+         {user?.role === 'admin' && onAmend && (
+           <Button 
+             variant="contained" 
+             startIcon={<Edit />}
+             onClick={() => onAmend(procedureDetails)}
+             sx={{
+               background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+               borderRadius: '8px',
+               px: 4,
+               py: 1.5,
+               fontWeight: 700,
+               flex: 2,
+               boxShadow: '0 4px 16px rgba(255,152,0,0.2)'
+             }}
+           >
+             Create Amendment
+           </Button>
+         )}
+         
          {user?.role === 'admin' && (
            <Tooltip title="Admin Actions">
              <IconButton
@@ -1340,14 +1809,22 @@ const ProcedureDetailsModal = ({
                size="medium"
                onClick={() => {
                  // Share functionality
-                 navigator.share?.({
-                   title: procedureDetails.name,
-                   text: `Check out this procedure: ${procedureDetails.name}`,
-                   url: window.location.href
-                 }).catch(() => {
-                   // Fallback to copy link
-                   navigator.clipboard?.writeText(window.location.href);
-                 });
+                 if (navigator.share) {
+                   navigator.share({
+                     title: procedureDetails.name,
+                     text: `Check out this procedure: ${procedureDetails.name}`,
+                     url: window.location.href
+                   }).catch(() => {
+                     // Fallback to copy link
+                     if (navigator.clipboard) {
+                       navigator.clipboard.writeText(window.location.href);
+                       alert('Link copied to clipboard!');
+                     }
+                   });
+                 } else if (navigator.clipboard) {
+                   navigator.clipboard.writeText(window.location.href);
+                   alert('Link copied to clipboard!');
+                 }
                }}
                sx={{
                  background: HSBCColors.professional.info,
