@@ -183,37 +183,73 @@ class DocumentAnalyzer {
     return cleanPath;
   }
 
-  // ✅ CRITICAL FIX: Safe URL construction method
-  constructSafeSharePointUrl(relativePath, fileName = '') {
-    // Clean inputs first
-    let cleanRelativePath = relativePath
-      .replace(/^\/+/, '') // Remove leading slashes
-      .replace(/\/+$/, '') // Remove trailing slashes
-      .replace(/\/\/+/g, '/') // Remove multiple slashes
-      .replace(/teams\.global\.hsbc/gi, ''); // Remove any domain fragments
-    
-    let cleanFileName = fileName ? fileName.replace(/^\/+/, '') : '';
-    
-    // Construct URL using CLEAN components
-    let safeUrl;
-    if (cleanFileName) {
+// ✅ CRITICAL FIX: Safe URL construction method with EXPLICIT domain duplication prevention
+constructSafeSharePointUrl(relativePath, fileName = '') {
+  // ✅ STEP 1: Clean inputs first to remove any existing domain fragments
+  let cleanRelativePath = String(relativePath || '')
+    .replace(/^\/+/, '') // Remove leading slashes
+    .replace(/\/+$/, '') // Remove trailing slashes
+    .replace(/\/\/+/g, '/') // Remove multiple slashes
+    .replace(/teams\.global\.hsbc/gi, '') // Remove any domain fragments
+    .replace(/https?:\/\/[^\/]+/gi, ''); // Remove any protocol+domain
+
+  let cleanFileName = fileName ? String(fileName).replace(/^\/+/, '') : '';
+  
+  console.log('🔧 SAFE URL construction inputs (CLEANED):', {
+    originalRelativePath: relativePath,
+    cleanRelativePath,
+    fileName: cleanFileName,
+    baseUrl: this.CLEAN_BASE_URL,
+    sitePath: this.CLEAN_SITE_PATH
+  });
+
+  // ✅ STEP 2: Construct URL using CLEAN components with EXPLICIT concatenation
+  let safeUrl;
+  
+  if (cleanFileName) {
+    // Method 1: Explicit concatenation with slashes controlled
+    if (cleanRelativePath) {
       safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}/${cleanRelativePath}/${cleanFileName}`;
     } else {
-      safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}/${cleanRelativePath}`;
+      safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}/${cleanFileName}`;
     }
-    
-    // Final cleanup - remove double slashes except after protocol
-    safeUrl = safeUrl.replace(/([^:]\/)\/+/g, '$1');
-    
-    console.log('🔧 SAFE URL constructed:', {
-      input: { relativePath, fileName },
-      output: safeUrl,
-      baseUrl: this.CLEAN_BASE_URL,
-      sitePath: this.CLEAN_SITE_PATH
-    });
-    
-    return safeUrl;
+  } else {
+    // Method 2: Just the path without filename
+    if (cleanRelativePath) {
+      safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}/${cleanRelativePath}`;
+    } else {
+      safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}`;
+    }
   }
+  
+  // ✅ STEP 3: Final cleanup - remove double slashes except after protocol
+  safeUrl = safeUrl.replace(/([^:]\/)\/+/g, '$1');
+  
+  // ✅ STEP 4: CRITICAL - Final domain duplication check with emergency fix
+  if (safeUrl.includes('teams.global.hsbc/teams.global.hsbc/')) {
+    console.error('❌ EMERGENCY: Domain duplication detected in constructSafeSharePointUrl:', safeUrl);
+    safeUrl = safeUrl.replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+    console.log('🔧 EMERGENCY FIX applied:', safeUrl);
+  }
+  
+  // ✅ STEP 5: Validate final URL structure
+  if (!safeUrl.startsWith('https://teams.global.hsbc/sites/EmployeeEng')) {
+    console.error('❌ CRITICAL: Invalid URL structure detected:', safeUrl);
+    // Reconstruct from scratch
+    safeUrl = `https://teams.global.hsbc/sites/EmployeeEng/${cleanRelativePath}${cleanFileName ? '/' + cleanFileName : ''}`;
+    safeUrl = safeUrl.replace(/([^:]\/)\/+/g, '$1');
+  }
+
+  console.log('🔧 SAFE URL constructed with EXPLICIT domain duplication prevention:', {
+    input: { relativePath, fileName },
+    output: safeUrl,
+    baseUrl: this.CLEAN_BASE_URL,
+    sitePath: this.CLEAN_SITE_PATH,
+    hasDuplication: safeUrl.includes('teams.global.hsbc/teams.global.hsbc/')
+  });
+  
+  return safeUrl;
+}
 
   // ✅ CRITICAL FIX: Enhanced parsing for amendment URLs with domain duplication prevention
   parseExistingDocumentPath(documentLink) {
@@ -513,8 +549,25 @@ class DocumentAnalyzer {
 
       // ✅ CRITICAL: Construct CLEAN document URL for amendments using SAFE method
       const serverRelativeUrl = uploadResult.d.ServerRelativeUrl;
-      const cleanDocumentUrl = this.constructSafeSharePointUrl(serverRelativeUrl, '');
-      
+
+      let cleanDocumentUrl;
+if (serverRelativeUrl.startsWith('/sites/EmployeeEng/')) {
+  cleanDocumentUrl = `https://teams.global.hsbc${serverRelativeUrl}`;
+} else {
+  cleanDocumentUrl = `https://teams.global.hsbc/sites/EmployeeEng${serverRelativeUrl.startsWith('/') ? '' : '/'}${serverRelativeUrl}`;
+}
+
+// ✅ FINAL safety check
+if (cleanDocumentUrl.includes('teams.global.hsbc/teams.global.hsbc/')) {
+  console.error('❌ EMERGENCY: Domain duplication in final document URL:', cleanDocumentUrl);
+  cleanDocumentUrl = cleanDocumentUrl.replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+}
+
+console.log('🔧 EXPLICIT DOCUMENT URL CONSTRUCTION:', {
+  serverRelativeUrl,
+  finalCleanUrl: cleanDocumentUrl,
+  hasDuplication: cleanDocumentUrl.includes('teams.global.hsbc/teams.global.hsbc/')
+});
       console.log('🔧 CRITICAL FIX - Document URL construction:', {
         serverRelativeUrl,
         finalCleanUrl: cleanDocumentUrl,
