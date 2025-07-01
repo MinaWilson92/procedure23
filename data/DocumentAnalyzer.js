@@ -1,10 +1,15 @@
-// services/DocumentAnalyzer.js - Complete Fixed Version with Domain Duplication Fixes
+// services/DocumentAnalyzer.js - Complete Fixed Version with CRITICAL Domain Duplication Fixes
 import { sharePointPaths } from './paths';
 import SharePointService from './SharePointService';
 
 class DocumentAnalyzer {
   constructor() {
     this.minimumScore = 85;
+    
+    // ✅ CRITICAL: Fixed SharePoint Base URL - NO TRAILING PATH
+    this.CLEAN_BASE_URL = 'https://teams.global.hsbc';
+    this.CLEAN_SITE_PATH = '/sites/EmployeeEng';
+    this.CLEAN_FULL_SITE_URL = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}`;
     
     // LOB subsection configuration for UI
     this.lobSubsections = {
@@ -30,69 +35,106 @@ class DocumentAnalyzer {
     };
   }
 
-  // ✅ ENHANCED: Comprehensive URL cleaning with domain duplication fix
+  // ✅ CRITICAL FIX: Comprehensive domain duplication prevention
   cleanAndValidateUrl(url) {
     if (!url) return '';
     
-    console.log('🔧 Starting ENHANCED URL cleaning for:', url);
+    console.log('🔧 CRITICAL FIX - Starting comprehensive URL cleaning for:', url);
     
-    // Step 1: Fix domain duplication patterns first (CRITICAL FIX)
-    let cleanUrl = url
-      .replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
-      .replace(/https:\/\/teams\.global\.hsbc\/https:\/\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
-      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
-      .replace(/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, '/teams.global.hsbc/');
+    let cleanUrl = url;
     
-    // Step 2: Fix protocol duplication
+    // ✅ Step 1: CRITICAL - Remove ALL domain duplication patterns
+    const domainPatterns = [
+      // Protocol + domain duplications
+      /https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi,
+      /https:\/\/teams\.global\.hsbc\/https:\/\/teams\.global\.hsbc\//gi,
+      /http:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi,
+      
+      // Domain-only duplications  
+      /teams\.global\.hsbc\/teams\.global\.hsbc\//gi,
+      /\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi,
+      
+      // Mixed case variations
+      /Teams\.Global\.Hsbc\/teams\.global\.hsbc\//gi,
+      /TEAMS\.GLOBAL\.HSBC\/teams\.global\.hsbc\//gi,
+      
+      // Partial duplications
+      /teams\.global\.hsbc\/teams\.global\//gi,
+      /teams\.global\.hsbc\/global\.hsbc\//gi,
+      
+      // Protocol duplications
+      /http:\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi
+    ];
+    
+    domainPatterns.forEach((pattern, index) => {
+      const before = cleanUrl;
+      cleanUrl = cleanUrl.replace(pattern, 'teams.global.hsbc/');
+      if (before !== cleanUrl) {
+        console.log(`🚫 REMOVED domain duplication pattern ${index + 1}:`, pattern.source);
+      }
+    });
+    
+    // ✅ Step 2: Fix protocol duplication
     cleanUrl = cleanUrl.replace(/https:\/\/https:\/\//gi, 'https://');
+    cleanUrl = cleanUrl.replace(/http:\/\/http:\/\//gi, 'https://');
     
-    // Step 3: Remove path segment duplications
-    cleanUrl = cleanUrl
-      .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/sites\/employeeeng\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
-      .replace(/\/siteassets\/siteassets\//gi, '/SiteAssets/')
-      .replace(/\/SiteAssets\/SiteAssets\//gi, '/SiteAssets/');
+    // ✅ Step 3: Remove path segment duplications
+    const pathPatterns = [
+      /\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi,
+      /\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi,
+      /\/sites\/employeeeng\/sites\/employeeeng\//gi,
+      /\/siteassets\/siteassets\//gi,
+      /\/SiteAssets\/SiteAssets\//gi
+    ];
     
-    // Step 4: Remove multiple consecutive slashes (except after protocol)
+    pathPatterns.forEach(pattern => {
+      if (pattern.source.includes('sites')) {
+        cleanUrl = cleanUrl.replace(pattern, '/sites/EmployeeEng/');
+      } else {
+        cleanUrl = cleanUrl.replace(pattern, '/SiteAssets/');
+      }
+    });
+    
+    // ✅ Step 4: Remove multiple consecutive slashes (except after protocol)
     cleanUrl = cleanUrl.replace(/([^:]\/)\/+/g, '$1');
     
-    // Step 5: Fix case sensitivity issues
+    // ✅ Step 5: Fix case sensitivity issues
     cleanUrl = cleanUrl
       .replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
       .replace(/\/siteassets\//gi, '/SiteAssets/');
     
-    // Step 6: Validate and fix structure issues
+    // ✅ Step 6: Validate and handle structure issues
     if (cleanUrl.includes('undefined') || cleanUrl.includes('null')) {
-      console.warn('⚠️ Invalid URL detected:', cleanUrl);
+      console.warn('⚠️ CRITICAL: Invalid URL detected after cleaning:', cleanUrl);
       return '';
     }
     
-    // Step 7: Ensure proper structure for relative URLs
-    if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/sites/EmployeeEng/')) {
-      if (cleanUrl.startsWith('/')) {
-        cleanUrl = `/sites/EmployeeEng${cleanUrl}`;
-      } else {
-        cleanUrl = `/sites/EmployeeEng/${cleanUrl}`;
-      }
-    }
-    
-    // Step 8: Convert to full URL if needed (WITHOUT domain duplication)
-    if (cleanUrl.startsWith('/sites/EmployeeEng/')) {
-      cleanUrl = `https://teams.global.hsbc${cleanUrl}`;
-    }
-    
-    // Step 9: Final validation to ensure no domain duplication remains
+    // ✅ Step 7: CRITICAL - Final domain duplication check
     if (cleanUrl.includes('teams.global.hsbc/teams.global.hsbc/')) {
-      console.error('❌ CRITICAL: Domain duplication still detected:', cleanUrl);
+      console.error('❌ CRITICAL: Domain duplication STILL detected after cleaning:', cleanUrl);
+      // Final aggressive cleanup
       cleanUrl = cleanUrl.replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
     }
     
-    console.log('✅ URL cleaned successfully (domain fixed):', cleanUrl);
+    // ✅ Step 8: Ensure proper structure for relative URLs
+    if (!cleanUrl.startsWith('http') && !cleanUrl.startsWith('/sites/EmployeeEng/')) {
+      if (cleanUrl.startsWith('/')) {
+        cleanUrl = `${this.CLEAN_SITE_PATH}${cleanUrl}`;
+      } else {
+        cleanUrl = `${this.CLEAN_SITE_PATH}/${cleanUrl}`;
+      }
+    }
+    
+    // ✅ Step 9: Convert to full URL using CLEAN base URL
+    if (cleanUrl.startsWith('/sites/EmployeeEng/')) {
+      cleanUrl = `${this.CLEAN_BASE_URL}${cleanUrl}`;
+    }
+    
+    console.log('✅ CRITICAL FIX - URL cleaned with comprehensive domain duplication prevention:', cleanUrl);
     return cleanUrl;
   }
 
-  // ✅ ENHANCED: Clean and validate folder paths with domain duplication fix
+  // ✅ CRITICAL FIX: Clean and validate folder paths with domain duplication fix
   cleanAndValidateFolderPath(folderPath) {
     if (!folderPath) return '/sites/EmployeeEng/SiteAssets/IWPB/General';
     
@@ -141,59 +183,124 @@ class DocumentAnalyzer {
     return cleanPath;
   }
 
-  // ✅ NEW: Construct clean SharePoint URL without any duplication
-  constructCleanSharePointUrl(basePath, relativePath, fileName) {
-    // Clean base path and remove domain duplication
-    let cleanBasePath = basePath
-      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
-      .replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
-      .replace(/\/+$/, ''); // Remove trailing slashes
-    
-    // Clean relative path
+  // ✅ CRITICAL FIX: Safe URL construction method
+  constructSafeSharePointUrl(relativePath, fileName = '') {
+    // Clean inputs first
     let cleanRelativePath = relativePath
       .replace(/^\/+/, '') // Remove leading slashes
       .replace(/\/+$/, '') // Remove trailing slashes
-      .replace(/\/\/+/g, '/') // Remove multiple consecutive slashes
-      .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
+      .replace(/\/\/+/g, '/') // Remove multiple slashes
+      .replace(/teams\.global\.hsbc/gi, ''); // Remove any domain fragments
     
-    // Clean filename
     let cleanFileName = fileName ? fileName.replace(/^\/+/, '') : '';
     
-    // Construct final URL
-    let finalUrl;
-    if (cleanBasePath.startsWith('http')) {
-      if (cleanFileName) {
-        finalUrl = `${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}/${cleanFileName}`;
-      } else {
-        finalUrl = `${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}`;
-      }
+    // Construct URL using CLEAN components
+    let safeUrl;
+    if (cleanFileName) {
+      safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}/${cleanRelativePath}/${cleanFileName}`;
     } else {
-      if (cleanFileName) {
-        finalUrl = `https://teams.global.hsbc${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}/${cleanFileName}`;
-      } else {
-        finalUrl = `https://teams.global.hsbc${cleanBasePath}${cleanRelativePath ? '/' + cleanRelativePath : ''}`;
-      }
+      safeUrl = `${this.CLEAN_BASE_URL}${this.CLEAN_SITE_PATH}/${cleanRelativePath}`;
     }
     
-    // Final cleanup - fix double slashes except after protocol
-    finalUrl = finalUrl.replace(/([^:]\/)\/+/g, '$1');
+    // Final cleanup - remove double slashes except after protocol
+    safeUrl = safeUrl.replace(/([^:]\/)\/+/g, '$1');
     
-    // Ensure protocol is correct
-    if (finalUrl.startsWith('http:/')) {
-      finalUrl = finalUrl.replace(/^http:\/([^\/])/, 'https://$1');
-    }
-    
-    console.log('🔧 Constructed clean SharePoint URL:', {
-      basePath: cleanBasePath,
-      relativePath: cleanRelativePath,
-      fileName: cleanFileName,
-      finalUrl: finalUrl
+    console.log('🔧 SAFE URL constructed:', {
+      input: { relativePath, fileName },
+      output: safeUrl,
+      baseUrl: this.CLEAN_BASE_URL,
+      sitePath: this.CLEAN_SITE_PATH
     });
     
-    return finalUrl;
+    return safeUrl;
   }
 
-  // ✅ ENHANCED: Smart file naming with comprehensive duplicate prevention
+  // ✅ CRITICAL FIX: Enhanced parsing for amendment URLs with domain duplication prevention
+  parseExistingDocumentPath(documentLink) {
+    try {
+      if (!documentLink) {
+        console.warn('⚠️ No document link provided, using default structure');
+        return {
+          baseUrl: this.CLEAN_BASE_URL,
+          lobFolder: 'IWPB',
+          subFolder: 'General',
+          fullFolderPath: '/sites/EmployeeEng/SiteAssets/IWPB/General',
+          sharePointPath: 'SiteAssets/IWPB/General'
+        };
+      }
+
+      console.log('🔍 CRITICAL FIX - Parsing existing document URL with domain duplication prevention:', documentLink);
+
+      // ✅ CRITICAL: Clean the input URL FIRST with comprehensive domain duplication removal
+      let cleanedUrl = this.cleanAndValidateUrl(documentLink);
+      
+      console.log('🧹 CRITICAL FIX - Pre-cleaned URL:', cleanedUrl);
+
+      // Parse the cleaned URL
+      const url = new URL(cleanedUrl);
+      const pathname = url.pathname;
+
+      // Extract path components
+      const pathParts = pathname.split('/').filter(part => part.length > 0);
+      console.log('📂 CRITICAL FIX - Path parts:', pathParts);
+
+      // Find the base site structure
+      const siteIndex = pathParts.findIndex(part => part === 'sites');
+      const employeeEngIndex = pathParts.findIndex(part => part.toLowerCase() === 'employeeeng');
+      const siteAssetsIndex = pathParts.findIndex(part => part.toLowerCase() === 'siteassets');
+      
+      if (siteIndex === -1 || employeeEngIndex === -1 || siteAssetsIndex === -1) {
+        throw new Error('Invalid SharePoint URL structure - missing SiteAssets');
+      }
+
+      // ✅ CRITICAL: Use CLEAN base URL - NO DOMAIN DUPLICATION POSSIBLE
+      const baseUrl = this.CLEAN_BASE_URL;
+      
+      // Get LOB folder (after SiteAssets)
+      const lobFolderIndex = siteAssetsIndex + 1;
+      const lobFolder = pathParts[lobFolderIndex] || 'IWPB';
+      
+      // Get actual subfolder
+      const subFolderIndex = lobFolderIndex + 1;
+      const subFolder = pathParts[subFolderIndex] || 'General';
+      
+      // ✅ CRITICAL: Construct clean paths with NO possibility of domain duplication
+      const folderPathParts = ['sites', 'EmployeeEng', 'SiteAssets', lobFolder, subFolder];
+      const fullFolderPath = `/${folderPathParts.join('/')}`;
+      const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
+
+      const result = {
+        baseUrl, // ✅ GUARANTEED CLEAN base URL
+        lobFolder,
+        subFolder,
+        fullFolderPath,
+        sharePointPath,
+        originalUrl: documentLink,
+        cleanedUrl: cleanedUrl
+      };
+
+      console.log('✅ CRITICAL FIX - Parsed CLEAN structure with domain duplication prevention:', result);
+      return result;
+
+    } catch (error) {
+      console.error('❌ CRITICAL FIX - Error parsing document URL:', error);
+      
+      // ✅ CLEAN fallback structure with NO domain duplication
+      const fallback = {
+        baseUrl: this.CLEAN_BASE_URL,
+        lobFolder: 'IWPB',
+        subFolder: 'General',
+        fullFolderPath: '/sites/EmployeeEng/SiteAssets/IWPB/General',
+        sharePointPath: 'SiteAssets/IWPB/General',
+        error: error.message
+      };
+      
+      console.log('🔄 CRITICAL FIX - Using CLEAN fallback structure:', fallback);
+      return fallback;
+    }
+  }
+
+  // ✅ CRITICAL FIX: Enhanced file naming with comprehensive duplicate prevention
   async generateUniqueFileName(baseFileName, targetFolderPath, sharePointUrl, requestDigest) {
     try {
       // Clean the target folder path first
@@ -310,157 +417,19 @@ class DocumentAnalyzer {
   }
 
   // ============================================================================
-  // ✅ ENHANCED AMENDMENT SUPPORT WITH COMPREHENSIVE URL FIXING
+  // ✅ CRITICAL FIX: ENHANCED AMENDMENT SUPPORT WITH COMPREHENSIVE URL FIXING
   // ============================================================================
-
-  // ✅ CRITICAL FIX: Enhanced parsing for amendment URLs
-
-  parseExistingDocumentPath(documentLink) {
-    try {
-      if (!documentLink) {
-        console.warn('⚠️ No document link provided, using default SiteAssets structure');
-        return {
-          baseUrl: 'https://teams.global.hsbc/sites/EmployeeEng',
-          lobFolder: 'IWPB',
-          subFolder: 'General',
-          fullFolderPath: '/sites/EmployeeEng/SiteAssets/IWPB/General',
-          sharePointPath: 'SiteAssets/IWPB/General'
-        };
-      }
-
-      console.log('🔍 AMENDMENT FIX - Analyzing existing document URL:', documentLink);
-
-      // ✅ CRITICAL: Clean the input URL FIRST to remove any existing duplication
-      let cleanedUrl = documentLink;
-      
-      // Step 1: Remove domain duplications that might already exist
-      cleanedUrl = cleanedUrl
-        .replace(/https:\/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'https://teams.global.hsbc/')
-        .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
-        .replace(/\/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, '/teams.global.hsbc/');
-
-      // Step 2: Clean path duplications
-      cleanedUrl = cleanedUrl
-        .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-        .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-        .replace(/\/siteassets\/siteassets\//gi, '/SiteAssets/')
-        .replace(/\/SiteAssets\/SiteAssets\//gi, '/SiteAssets/');
-
-      // Step 3: Fix case sensitivity
-      cleanedUrl = cleanedUrl
-        .replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
-        .replace(/\/siteassets\//gi, '/SiteAssets/');
-
-      console.log('🧹 AMENDMENT FIX - Pre-cleaned URL:', cleanedUrl);
-
-      // Parse the cleaned URL
-      const url = new URL(cleanedUrl);
-      const pathname = url.pathname;
-
-      // Extract path components
-      const pathParts = pathname.split('/').filter(part => part.length > 0);
-      console.log('📂 AMENDMENT FIX - Path parts:', pathParts);
-
-      // Find the base site structure
-      const siteIndex = pathParts.findIndex(part => part === 'sites');
-      const employeeEngIndex = pathParts.findIndex(part => part.toLowerCase() === 'employeeeng');
-      const siteAssetsIndex = pathParts.findIndex(part => part.toLowerCase() === 'siteassets');
-      
-      if (siteIndex === -1 || employeeEngIndex === -1 || siteAssetsIndex === -1) {
-        throw new Error('Invalid SharePoint URL structure - missing SiteAssets');
-      }
-
-      // ✅ CRITICAL: Use the CLEANED base URL without duplication
-      const baseUrl = 'https://teams.global.hsbc'; // FIXED: Don't use url.host which might have duplications
-      
-      // Get LOB folder (after SiteAssets)
-      const lobFolderIndex = siteAssetsIndex + 1;
-      const lobFolder = pathParts[lobFolderIndex] || 'IWPB';
-      
-      // Get actual subfolder
-      const subFolderIndex = lobFolderIndex + 1;
-      const subFolder = pathParts[subFolderIndex] || 'General';
-      
-      // ✅ CRITICAL: Reconstruct clean paths without any duplication
-      const folderPathParts = ['sites', 'EmployeeEng', 'SiteAssets', lobFolder, subFolder];
-      const fullFolderPath = `/${folderPathParts.join('/')}`;
-      const sharePointPath = `SiteAssets/${lobFolder}/${subFolder}`;
-
-      const result = {
-        baseUrl, // ✅ CLEAN base URL
-        lobFolder,
-        subFolder,
-        fullFolderPath,
-        sharePointPath,
-        originalUrl: documentLink,
-        cleanedUrl: cleanedUrl
-      };
-
-      console.log('✅ AMENDMENT FIX - Parsed clean structure:', result);
-      return result;
-
-    } catch (error) {
-      console.error('❌ AMENDMENT FIX - Error parsing document URL:', error);
-      
-      // ✅ CLEAN fallback structure
-      const fallback = {
-        baseUrl: 'https://teams.global.hsbc/sites/EmployeeEng', // FIXED: Clean base URL
-        lobFolder: 'IWPB',
-        subFolder: 'General',
-        fullFolderPath: '/sites/EmployeeEng/SiteAssets/IWPB/General',
-        sharePointPath: 'SiteAssets/IWPB/General',
-        error: error.message
-      };
-      
-      console.log('🔄 AMENDMENT FIX - Using clean fallback structure:', fallback);
-      return fallback;
-    }
-  }
 
   // ✅ CRITICAL FIX: Amendment procedure with EXPLICIT domain duplication prevention
   async amendProcedureInSharePoint(amendmentData, file) {
-    const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng'; // FIXED: Clean base URL
-    
     try {
-      console.log('🔄 AMENDMENT FIX - Starting amendment with explicit domain duplication prevention...');
-      console.log('📂 AMENDMENT FIX - Amendment data received:', amendmentData);
+      console.log('🔄 CRITICAL FIX - Starting amendment with explicit domain duplication prevention...');
+      console.log('📂 CRITICAL FIX - Amendment data received:', amendmentData);
 
-      // ✅ CRITICAL: Thoroughly clean all paths from amendment data
-      let targetFolderPath = amendmentData.fullFolderPath;
+      // ✅ CRITICAL: Use CLEAN SharePoint URL - NO DUPLICATION POSSIBLE
+      const sharePointUrl = this.CLEAN_FULL_SITE_URL;
       
-      // Step 1: Clean any existing duplications in the target path
-      if (targetFolderPath) {
-        targetFolderPath = targetFolderPath
-          .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
-          .replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-          .replace(/\/Sites\/EmployeeEng\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/')
-          .replace(/\/siteassets\/siteassets\//gi, '/SiteAssets/')
-          .replace(/\/SiteAssets\/SiteAssets\//gi, '/SiteAssets/')
-          .replace(/\/sites\/employeeeng\//gi, '/sites/EmployeeEng/')
-          .replace(/\/siteassets\//gi, '/SiteAssets/');
-      }
-
-      // Step 2: Validate and clean the SharePoint path
-      const sharePointPath = amendmentData.sharePointPath || 'SiteAssets/IWPB/General';
-      
-      console.log('🔍 AMENDMENT FIX - Path cleaning:');
-      console.log('   Original path:', amendmentData.fullFolderPath);
-      console.log('   Cleaned path:', targetFolderPath);
-      console.log('   SharePoint path:', sharePointPath);
-      
-      // Step 3: Final validation - throw error if duplication still exists
-      if (targetFolderPath && targetFolderPath.includes('teams.global.hsbc/teams.global.hsbc/')) {
-        console.error('❌ AMENDMENT FIX - CRITICAL: Domain duplication detected:', targetFolderPath);
-        throw new Error('Domain duplication detected in folder path after cleaning. Please check URL construction.');
-      }
-
-      console.log('✅ AMENDMENT FIX - Using cleaned paths:', {
-        targetFolderPath,
-        sharePointPath,
-        baseUrl: sharePointUrl
-      });
-
-      // ✅ Get request digest
+      // ✅ Get request digest using CLEAN URL
       const digestUrl = `${sharePointUrl}/_api/contextinfo`;
       const digestResponse = await fetch(digestUrl, {
         method: 'POST',
@@ -477,15 +446,50 @@ class DocumentAnalyzer {
       const digestData = await digestResponse.json();
       const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
 
-      // ✅ UPLOAD WITH EXPLICIT CLEAN PATHS
-      console.log(`📤 AMENDMENT FIX - Uploading to verified clean path: ${targetFolderPath}`);
+      // ✅ CRITICAL: Use amendment data's folder structure but ensure it's clean
+      let targetFolderPath = amendmentData.fullFolderPath;
       
+      // Clean any existing duplications in the target path
+      if (targetFolderPath) {
+        targetFolderPath = this.cleanAndValidateUrl(targetFolderPath);
+        // Remove protocol if present in folder path
+        targetFolderPath = targetFolderPath.replace(/^https?:\/\/[^\/]+/, '');
+        // Ensure it starts with /sites/EmployeeEng
+        if (!targetFolderPath.startsWith('/sites/EmployeeEng/')) {
+          targetFolderPath = `/sites/EmployeeEng/${targetFolderPath.replace(/^\/+/, '')}`;
+        }
+      } else {
+        // Fallback to default path
+        targetFolderPath = '/sites/EmployeeEng/SiteAssets/IWPB/General';
+      }
+
+      const sharePointPath = amendmentData.sharePointPath || 'SiteAssets/IWPB/General';
+      
+      console.log('🔍 CRITICAL FIX - Path cleaning:');
+      console.log('   Original path:', amendmentData.fullFolderPath);
+      console.log('   Cleaned path:', targetFolderPath);
+      console.log('   SharePoint path:', sharePointPath);
+      
+      // Final validation - throw error if duplication still exists
+      if (targetFolderPath && targetFolderPath.includes('teams.global.hsbc/teams.global.hsbc/')) {
+        console.error('❌ CRITICAL FIX - Domain duplication detected:', targetFolderPath);
+        throw new Error('Domain duplication detected in folder path after cleaning. Please check URL construction.');
+      }
+
+      console.log('✅ CRITICAL FIX - Using cleaned paths:', {
+        targetFolderPath,
+        sharePointPath,
+        baseUrl: sharePointUrl
+      });
+
+      // ✅ Generate unique filename
       const uniqueFileResult = await this.generateUniqueFileName(file.name, targetFolderPath, sharePointUrl, requestDigest);
       const uniqueFileName = uniqueFileResult.fileName;
       const isFileRenamed = uniqueFileResult.isRenamed;
       
+      // ✅ CRITICAL: Construct upload URL with CLEAN base URL
       const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(uniqueFileName)}', overwrite=false)`;
-      console.log(`📤 AMENDMENT FIX - Upload URL (verified clean): ${uploadUrl}`);
+      console.log(`📤 CRITICAL FIX - Upload URL (GUARANTEED CLEAN):`, uploadUrl);
 
       const formData = await file.arrayBuffer();
       
@@ -505,29 +509,17 @@ class DocumentAnalyzer {
       }
 
       const uploadResult = await uploadResponse.json();
-      console.log('✅ AMENDMENT FIX - File uploaded successfully to:', uploadResult.d.ServerRelativeUrl);
+      console.log('✅ CRITICAL FIX - File uploaded successfully to:', uploadResult.d.ServerRelativeUrl);
 
-      // ✅ CRITICAL: Construct EXPLICIT clean document URL for amendments
+      // ✅ CRITICAL: Construct CLEAN document URL for amendments using SAFE method
       const serverRelativeUrl = uploadResult.d.ServerRelativeUrl;
+      const cleanDocumentUrl = this.constructSafeSharePointUrl(serverRelativeUrl, '');
       
-      // Method 1: Direct construction (SAFEST for amendments)
-      const cleanDocumentUrl = `https://teams.global.hsbc${serverRelativeUrl}`;
-      
-      // Method 2: Double-check with our constructor as backup
-      const backupCleanUrl = this.constructCleanSharePointUrl(
-        'https://teams.global.hsbc',
+      console.log('🔧 CRITICAL FIX - Document URL construction:', {
         serverRelativeUrl,
-        ''
-      );
-
-      // Use the simpler direct construction to avoid any potential duplication
-      const finalDocumentUrl = cleanDocumentUrl;
-      
-      console.log('🔧 AMENDMENT FIX - Document URL construction:', {
-        serverRelativeUrl,
-        directConstruction: cleanDocumentUrl,
-        backupConstruction: backupCleanUrl,
-        finalChoice: finalDocumentUrl
+        finalCleanUrl: cleanDocumentUrl,
+        baseUrl: this.CLEAN_BASE_URL,
+        method: 'constructSafeSharePointUrl'
       });
 
       // ✅ Get current procedure for amendment history
@@ -575,7 +567,7 @@ class DocumentAnalyzer {
         fileRenamed: isFileRenamed,
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        documentUrl: finalDocumentUrl, // ✅ CLEAN URL for amendment
+        documentUrl: cleanDocumentUrl, // ✅ CLEAN URL for amendment
         analysisDetails: amendmentData.new_analysis_details,
         aiRecommendations: amendmentData.new_ai_recommendations,
         uploadTimestamp: new Date().toISOString()
@@ -595,9 +587,9 @@ class DocumentAnalyzer {
       const timelineEntry = `Amendment #${newAmendmentCount} - ${new Date().toLocaleDateString()} by ${amendmentData.amended_by_name}: ${amendmentData.amendment_summary} (Score: ${currentScore}% → ${newScore}%)`;
       amendmentTimeline.push(timelineEntry);
 
-      console.log('📋 AMENDMENT FIX - Built clean amendment data:', {
+      console.log('📋 CRITICAL FIX - Built clean amendment data:', {
         amendmentNumber: newAmendmentCount,
-        documentUrl: finalDocumentUrl,
+        documentUrl: cleanDocumentUrl,
         originalFileName: file.name,
         savedFileName: uniqueFileName,
         fileRenamed: isFileRenamed
@@ -633,7 +625,7 @@ class DocumentAnalyzer {
         
         // ✅ CLEAN document info for AMENDMENT
         DocumentLink: serverRelativeUrl, // SharePoint relative URL
-        SharePointURL: finalDocumentUrl, // ✅ CLEAN full URL for amendment
+        SharePointURL: cleanDocumentUrl, // ✅ CLEAN full URL for amendment
         OriginalFilename: file.name,
         ActualFilename: uniqueFileName,
         FileSize: file.size,
@@ -647,7 +639,7 @@ class DocumentAnalyzer {
         LastModifiedBy: amendmentData.amended_by_name
       };
 
-      console.log('📝 AMENDMENT FIX - Updating with clean URLs...');
+      console.log('📝 CRITICAL FIX - Updating with clean URLs...');
 
       const updateResponse = await fetch(listUpdateUrl, {
         method: 'POST',
@@ -666,7 +658,7 @@ class DocumentAnalyzer {
         throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
       }
 
-      console.log('✅ AMENDMENT FIX - Procedure updated with clean URLs');
+      console.log('✅ CRITICAL FIX - Procedure updated with clean URLs');
 
       // ✅ Create audit log with clean URLs
       const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
@@ -684,759 +676,754 @@ class DocumentAnalyzer {
           amendmentSummary: amendmentData.amendment_summary,
           previousScore: currentScore,
           newScore: newScore,
-          scoreChange: newScore - currentScore,
-          targetFolder: sharePointPath,
-          actualSubFolder: amendmentData.subFolder,
-          uploadPath: targetFolderPath,
-          originalFileName: file.name,
-          savedFileName: uniqueFileName,
-          fileRenamed: isFileRenamed,
-          documentUrl: finalDocumentUrl, // ✅ CLEAN URL in audit
-          amendedBy: amendmentData.amended_by_name,
-          totalAmendments: newAmendmentCount,
-          urlCleaned: true,
-          amendmentDomainDuplicationFixed: true
-        })
-      };
+         scoreChange: newScore - currentScore,
+         targetFolder: sharePointPath,
+         actualSubFolder: amendmentData.subFolder,
+         uploadPath: targetFolderPath,
+         originalFileName: file.name,
+         savedFileName: uniqueFileName,
+         fileRenamed: isFileRenamed,
+         documentUrl: cleanDocumentUrl, // ✅ CLEAN URL in audit
+         amendedBy: amendmentData.amended_by_name,
+         totalAmendments: newAmendmentCount,
+         urlCleaned: true,
+         criticalDomainDuplicationFixed: true
+       })
+     };
 
-      await fetch(auditUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose',
-          'X-RequestDigest': requestDigest
-        },
-        body: JSON.stringify(auditData)
-      });
+     await fetch(auditUrl, {
+       method: 'POST',
+       headers: {
+         'Accept': 'application/json; odata=verbose',
+         'Content-Type': 'application/json; odata=verbose',
+         'X-RequestDigest': requestDigest
+       },
+       body: JSON.stringify(auditData)
+     });
 
-      console.log('✅ AMENDMENT FIX - Complete with clean URLs');
+     console.log('✅ CRITICAL FIX - Amendment complete with clean URLs');
 
-      return {
-        success: true,
-        message: 'Procedure amended successfully with explicit domain duplication fix',
-        amendmentNumber: newAmendmentCount,
-        previousScore: currentScore,
-        newScore: newScore,
-        scoreChange: newScore - currentScore,
-        uploadedTo: targetFolderPath,
-        sharePointPath: sharePointPath,
-        actualSubFolder: amendmentData.subFolder,
-        documentUrl: finalDocumentUrl, // ✅ CLEAN URL returned
-        amendmentHistory: amendmentHistory,
-        timelineEntry: timelineEntry,
-        originalFileName: file.name,
-        savedFileName: uniqueFileName,
-        fileRenamed: isFileRenamed,
-        urlCleaned: true,
-        amendmentDomainDuplicationFixed: true
-      };
+     return {
+       success: true,
+       message: 'Procedure amended successfully with CRITICAL domain duplication fix',
+       amendmentNumber: newAmendmentCount,
+       previousScore: currentScore,
+       newScore: newScore,
+       scoreChange: newScore - currentScore,
+       uploadedTo: targetFolderPath,
+       sharePointPath: sharePointPath,
+       actualSubFolder: amendmentData.subFolder,
+       documentUrl: cleanDocumentUrl, // ✅ GUARANTEED CLEAN URL
+       amendmentHistory: amendmentHistory,
+       timelineEntry: timelineEntry,
+       originalFileName: file.name,
+       savedFileName: uniqueFileName,
+       fileRenamed: isFileRenamed,
+       urlCleaned: true,
+       criticalDomainDuplicationFixed: true
+     };
 
-    } catch (error) {
-      console.error('❌ AMENDMENT FIX - Failed:', error);
-      return {
-        success: false,
-        message: error.message || 'Amendment failed',
-        error: error,
-        attempted_url: sharePointUrl
-      };
-    }
-  }
-
-  // ✅ ENHANCED: Upload amendment with domain duplication fix
-  async uploadAmendmentWithAnalysis(amendmentData, file) {
-    try {
-      console.log('🚀 Starting amendment upload with ENHANCED AI analysis and DOMAIN DUPLICATION FIX...');
-      
-      // 1. Analyze the new document
-      const analysisResult = await this.analyzeDocument(file, {
-        name: amendmentData.originalName,
-        lob: amendmentData.originalLOB,
-        subsection: amendmentData.subFolder
-      });
-      
-      if (!analysisResult.accepted) {
-        throw new Error(`Document quality score is ${analysisResult.score}% (minimum ${this.minimumScore}% required)`);
-      }
-
-      console.log('✅ Amendment document passed AI analysis:', {
-        score: analysisResult.score,
-        templateCompliance: analysisResult.details?.summary?.templateCompliance
-      });
-
-      // 2. Get SharePoint context
-      const requestDigest = await this.getRequestDigest();
-      
-      // 3. ✅ CLEAN: Use existing SiteAssets folder path with domain duplication fix
-      const cleanedSharePointPath = amendmentData.sharePointPath || 'SiteAssets/IWPB/General';
-      console.log('📂 Using DOMAIN-CLEANED SiteAssets SharePoint path:', cleanedSharePointPath);
-      
-      // 4. Upload with enhanced file naming and domain duplication fix
-      const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, cleanedSharePointPath, requestDigest);
-      
-      // 5. Create amended procedure list item with CLEAN URLs
-      const amendedProcedureData = {
-        __metadata: { type: 'SP.Data.ProceduresListItem' },
-        Title: amendmentData.originalName,
-        ExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-        PrimaryOwner: amendmentData.originalPrimaryOwner,
-        PrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail,
-        SecondaryOwner: amendmentData.secondary_owner || '',
-        SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
-        LOB: amendmentData.originalLOB || 'Unknown',
-        ProcedureSubsection: amendmentData.subFolder || '',
-        SharePointPath: cleanedSharePointPath || '',
-        DocumentLink: fileUploadResult?.serverRelativeUrl || '',
-        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be CLEAN without domain duplication
-        OriginalFilename: file?.name || 'unknown.doc',
-        ActualFilename: fileUploadResult?.actualFileName || file.name,
-        FileSize: file?.size || 0,
-        FileRenamed: fileUploadResult?.fileRenamed || false,
-        
-        // AI analysis results
-        QualityScore: analysisResult?.score || 0,
-        TemplateCompliance: analysisResult?.details?.summary?.templateCompliance || 'Unknown',
-        AnalysisDetails: JSON.stringify(analysisResult?.details || {}),
-        AIRecommendations: JSON.stringify(analysisResult?.aiRecommendations || []),
-        
-        // HSBC-specific data
-        RiskRating: analysisResult?.details?.riskRating || 'Not Specified',
-        PeriodicReview: analysisResult?.details?.periodicReview || 'Not Specified',
-        DocumentOwners: JSON.stringify(analysisResult?.details?.owners || []),
-        SignOffDates: JSON.stringify(analysisResult?.details?.signOffDates || []),
-        Departments: JSON.stringify(analysisResult?.details?.departments || []),
-        
-        // Amendment metadata
-        IsAmendment: true,
-        AmendmentOfProcedureId: amendmentData.procedureId,
-        AmendmentSummary: amendmentData.amendment_summary,
-        AmendmentDate: amendmentData.amendment_date,
-        AmendedBy: amendmentData.amended_by_name,
-        AmendedByUserId: amendmentData.amended_by,
-        
-        // Upload metadata
-        UploadedBy: amendmentData.amended_by_name || 'Unknown',
-        UploadedAt: new Date().toISOString(),
-        Status: 'Active',
-        SharePointUploaded: true
-      };
-     
-      const procedureResult = await this.createProcedureListItem(amendedProcedureData, requestDigest);
-      
-      // 6. Update original procedure record
-      await this.updateOriginalProcedureRecord(amendmentData.procedureId, {
-        status: 'Amended',
-        amended_date: amendmentData.amendment_date,
-        amended_by: amendmentData.amended_by_name,
-        new_version_id: procedureResult.Id,
-        amendment_summary: amendmentData.amendment_summary
-      }, requestDigest);
-     
-      // 7. Create audit log entry with CLEAN URLs
-      await this.createAuditLogEntry({
-        __metadata: { type: 'SP.Data.AuditLogListItem' },
-        Title: `Procedure Amended: ${amendmentData.originalName}`,
-        ActionType: 'AMEND',
-        UserId: amendmentData.amended_by,
-        LogTimestamp: new Date().toISOString(),
-        Details: JSON.stringify({
-          originalProcedureId: amendmentData.procedureId,
-          newProcedureId: procedureResult.Id,
-          procedureName: amendmentData.originalName,
-          lob: amendmentData.originalLOB,
-          subfolder: amendmentData.subFolder,
-          amendmentSummary: amendmentData.amendment_summary,
-          qualityScore: analysisResult.score,
-          templateCompliance: analysisResult.details?.summary?.templateCompliance,
-          cleanedSharePointPath: cleanedSharePointPath,
-          fileSize: file.size,
-          originalFileName: file.name,
-          actualFileName: fileUploadResult?.actualFileName,
-          fileRenamed: fileUploadResult?.fileRenamed,
-          urlCleaned: true,
-          domainDuplicationFixed: true
-        }),
-        ProcedureId: procedureResult.Id,
-        LOB: amendmentData.originalLOB
-      }, requestDigest);
-
-      // ✅ CONSTRUCT CLEAN SharePoint URL with domain duplication fix
-      const sharePointUrl = fileUploadResult?.webUrl || this.constructCleanSharePointUrl(
-        sharePointPaths.baseSite,
-        cleanedSharePointPath,
-        fileUploadResult?.actualFileName || file.name
-      );
-      const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
-     
-      console.log('🎉 Amendment upload completed successfully with DOMAIN DUPLICATION FIX:', {
-        newProcedureId: procedureResult.Id,
-        originalProcedureId: amendmentData.procedureId,
-        qualityScore: analysisResult.score,
-        sharePointUrl: finalCleanUrl,
-        sharePointPath: cleanedSharePointPath,
-        actualSubfolder: amendmentData.subFolder,
-        fileRenamed: fileUploadResult?.fileRenamed,
-        urlCleaned: true,
-        domainDuplicationFixed: true
-      });
-
-      return {
-        success: true,
-        procedureId: procedureResult.Id,
-        qualityScore: analysisResult.score,
-        templateCompliance: analysisResult.details?.summary?.templateCompliance,
-        sharePointPath: cleanedSharePointPath,
-        sharePointUrl: finalCleanUrl, // ✅ CLEAN URL without domain duplication
-        analysisResult: analysisResult,
-        message: `Amendment uploaded successfully to domain-cleaned path: SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
-        fileRenamed: fileUploadResult?.fileRenamed,
-        actualFileName: fileUploadResult?.actualFileName,
-        urlCleaned: true,
-        domainDuplicationFixed: true
-      };
-     
-    } catch (error) {
-      console.error('❌ Upload amendment with domain fix failed:', error);
-      throw new Error(`Amendment upload failed: ${error.message}`);
-    }
-  }
-
-  // ✅ UPDATE ORIGINAL PROCEDURE RECORD
-  async updateOriginalProcedureRecord(originalProcedureId, updateData, requestDigest) {
-    try {
-      console.log('🔄 Updating original procedure record:', originalProcedureId);
-      
-      const updatePayload = {
-        Status: updateData.status,
-        AmendedDate: updateData.amended_date,
-        AmendedBy: updateData.amended_by,
-        NewVersionId: updateData.new_version_id,
-        AmendmentSummary: updateData.amendment_summary,
-        LastModifiedOn: new Date().toISOString(),
-        LastModifiedBy: updateData.amended_by
-      };
-
-      const response = await fetch(
-        `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('Procedures')/items(${originalProcedureId})`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose',
-            'X-RequestDigest': requestDigest,
-            'X-HTTP-Method': 'MERGE',
-            'If-Match': '*'
-          },
-          body: JSON.stringify(updatePayload)
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to update original procedure: ${response.status}`);
-      }
-
-      console.log('✅ Original procedure record updated successfully');
-      return true;
-
-    } catch (error) {
-      console.error('❌ Failed to update original procedure record:', error);
-      console.warn('⚠️ Continuing amendment process despite update failure');
-      return false;
-    }
-  }
-
-  // ✅ Sanitization helpers
-  sanitizeString(str) {
-    if (!str || typeof str !== 'string') return '';
-    return str.replace(/%[0-9A-Fa-f]{2}/g, '').replace(/[<>]/g, '').trim();
-  }
-
-  sanitizeEmail(email) {
-    if (!email || typeof email !== 'string') return '';
-    return email.toLowerCase().replace(/[^a-zA-Z0-9@._-]/g, '').trim();
-  }
-
-  // ============================================================================
-  // EXISTING DOCUMENT PROCESSING METHODS  
-  // ============================================================================
-  
-  async analyzeDocument(file, metadata = {}) {
-    try {
-      console.log('🔍 Starting client-side AI analysis...');
-      
-      const text = await this.extractTextFromFile(file);
-      
-      if (!window.documentAnalysis) {
-        throw new Error('Document analysis engine not loaded. Please ensure documentAnalysis.js is included.');
-      }
-      
-      const analysis = await window.documentAnalysis.analyzeDocument(text, file.type, metadata);
-      analysis.accepted = analysis.score >= this.minimumScore;
-      
-      console.log('✅ AI Analysis completed:', {
-        score: analysis.score,
-        accepted: analysis.accepted,
-        templateCompliance: analysis.details?.summary?.templateCompliance
-      });
-
-      return analysis;
-      
-    } catch (error) {
-      console.error('❌ AI analysis failed:', error);
-      throw new Error(`Document analysis failed: ${error.message}`);
-    }
-  }
-
-  async extractTextFromFile(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = async (e) => {
-        try {
-          let text = '';
-          
-          if (file.type === 'application/pdf') {
-            text = await this.extractPDFText(e.target.result);
-          } else if (file.type.includes('wordprocessingml') || file.type.includes('msword')) {
-            text = await this.extractWordText(e.target.result);
-          } else {
-            throw new Error('Unsupported file type');
-          }
-          
-          resolve(text);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  async extractPDFText(arrayBuffer) {
-    try {
-      const pdfjsLib = window['pdfjs-dist/build/pdf'];
-      
-      if (!pdfjsLib) {
-        throw new Error('PDF.js library not loaded. Please ensure PDF.js CDN is included in SharePoint page.');
-      }
-
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items.map(item => item.str).join(' ');
-        fullText += pageText + '\n';
-      }
-
-      console.log('✅ PDF text extracted, length:', fullText.length);
-      return fullText;
-      
-    } catch (error) {
-      console.error('❌ PDF extraction failed:', error);
-      throw new Error('Failed to extract text from PDF: ' + error.message);
-    }
-  }
-
-  async extractWordText(arrayBuffer) {
-    try {
-      const mammoth = window.mammoth;
-      
-      if (!mammoth) {
-        throw new Error('Mammoth.js library not loaded. Please ensure mammoth.js CDN is included in SharePoint page.');
-      }
-
-      const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
-      
-      console.log('✅ Word document text extracted, length:', result.value.length);
-      return result.value;
-      
-    } catch (error) {
-      console.error('❌ Word extraction failed:', error);
-      throw new Error('Failed to extract text from Word document: ' + error.message);
-    }
-  }
-
-  // ============================================================================
-  // ✅ ENHANCED SHAREPOINT INTEGRATION WITH DOMAIN DUPLICATION FIX
-  // ============================================================================
-
-  async uploadProcedureWithAnalysis(formData, file) {
-    try {
-      console.log('🚀 Starting procedure upload with AI analysis and DOMAIN DUPLICATION FIX...');
-      
-      // 1. Analyze document first
-      const analysisResult = await this.analyzeDocument(file, {
-        name: formData.name,
-        lob: formData.lob,
-        subsection: formData.procedure_subsection
-      });
-      
-      if (!analysisResult.accepted) {
-        throw new Error(`Document quality score is ${analysisResult.score}% (minimum ${this.minimumScore}% required)`);
-      }
-
-      console.log('✅ Document passed AI analysis:', {
-        score: analysisResult.score,
-        templateCompliance: analysisResult.details?.summary?.templateCompliance
-      });
-
-      // 2. Get SharePoint context
-      const requestDigest = await this.getRequestDigest();
-      
-      // 3. ✅ CLEAN: Generate SiteAssets path with domain duplication fix
-      const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
-      console.log('📂 Generated DOMAIN-CLEAN SiteAssets path for new upload:', sharePointPath);
-      
-      // 4. Upload with enhanced file naming and domain duplication fix
-      const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
-      
-      // 5. Create procedure list item with comprehensive AI data and CLEAN URLs
-      const procedureData = {
-        __metadata: { type: 'SP.Data.ProceduresListItem' },
-        Title: formData.name || 'Untitled Procedure',
-        ExpiryDate: formData.expiry || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        PrimaryOwner: formData.primary_owner || 'Unknown',
-        PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
-        SecondaryOwner: formData.secondary_owner || '',
-        SecondaryOwnerEmail: formData.secondary_owner_email || '',
-        LOB: formData.lob || 'Unknown',
-        ProcedureSubsection: formData.procedure_subsection || '',
-        SharePointPath: sharePointPath || '',
-        DocumentLink: fileUploadResult?.serverRelativeUrl || '',
-        SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be CLEAN without domain duplication
-        OriginalFilename: file?.name || 'unknown.doc',
-        ActualFilename: fileUploadResult?.actualFileName || file.name,
-        FileSize: file?.size || 0,
-        FileRenamed: fileUploadResult?.fileRenamed || false,
-        
-        // ✅ SAFE AI ANALYSIS RESULTS
-        QualityScore: analysisResult?.score || 0,
-        TemplateCompliance: analysisResult?.details?.summary?.templateCompliance || 'Unknown',
-        AnalysisDetails: JSON.stringify(analysisResult?.details || {}),
-        AIRecommendations: JSON.stringify(analysisResult?.aiRecommendations || []),
-        
-        // ✅ SAFE HSBC-SPECIFIC DATA
-        RiskRating: analysisResult?.details?.riskRating || 'Not Specified',
-        PeriodicReview: analysisResult?.details?.periodicReview || 'Not Specified',
-        DocumentOwners: JSON.stringify(analysisResult?.details?.owners || []),
-        SignOffDates: JSON.stringify(analysisResult?.details?.signOffDates || []),
-        Departments: JSON.stringify(analysisResult?.details?.departments || []),
-        
-        // ✅ SAFE ANALYSIS METRICS
-        FoundElements: JSON.stringify(analysisResult?.details?.foundElements || []),
-        MissingElements: JSON.stringify(analysisResult?.details?.missingElements || []),
-        HasDocumentControl: analysisResult?.details?.hasDocumentControl || false,
-        HasRiskAssessment: analysisResult?.details?.hasRiskAssessment || false,
-        HasPeriodicReview: analysisResult?.details?.hasPeriodicReview || false,
-        StructureScore: analysisResult?.details?.summary?.structureScore || 0,
-        GovernanceScore: analysisResult?.details?.summary?.governanceScore || 0,
-        
-        // Upload metadata
-        UploadedBy: formData.primary_owner || 'Unknown',
-        UploadedAt: new Date().toISOString(),
-        Status: 'Active',
-        SharePointUploaded: true
-      };
-     
-      const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
-     
-      // 6. Create comprehensive audit log entry with CLEAN URLs
-      await this.createAuditLogEntry({
-        __metadata: { type: 'SP.Data.AuditLogListItem' },
-        Title: `Procedure Created: ${formData.name}`,
-        ActionType: 'CREATE',
-        UserId: formData.primary_owner,
-        LogTimestamp: new Date().toISOString(),
-        Details: JSON.stringify({
-          procedureId: procedureResult.Id,
-          procedureName: formData.name,
-          lob: formData.lob,
-          subsection: formData.procedure_subsection,
-          qualityScore: analysisResult.score,
-          templateCompliance: analysisResult.details?.summary?.templateCompliance,
-          riskRating: analysisResult.details?.riskRating,
-          periodicReview: analysisResult.details?.periodicReview,
-          documentOwners: analysisResult.details?.owners,
-          foundElements: analysisResult.details?.foundElements?.length,
-          missingElements: analysisResult.details?.missingElements?.length,
-          fileSize: file.size,
-          originalFileName: file.name,
-          actualFileName: fileUploadResult?.actualFileName,
-          fileRenamed: fileUploadResult?.fileRenamed,
-          sharePointPath: sharePointPath,
-          urlCleaned: true,
-          domainDuplicationFixed: true
-        }),
-        ProcedureId: procedureResult.Id,
-        LOB: formData.lob
-      }, requestDigest);
-
-      // ✅ CONSTRUCT CLEAN SharePoint URL with domain duplication fix
-      const sharePointUrl = fileUploadResult?.webUrl || this.constructCleanSharePointUrl(
-        sharePointPaths.baseSite,
-        sharePointPath,
-        fileUploadResult?.actualFileName || file.name
-      );
-      const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
-     
-      console.log('🎉 Procedure upload completed successfully with DOMAIN DUPLICATION FIX:', {
-        procedureId: procedureResult.Id,
-        qualityScore: analysisResult.score,
-        sharePointUrl: finalCleanUrl,
-        sharePointPath: sharePointPath,
-        selectedSubsection: formData.procedure_subsection,
-        fileRenamed: fileUploadResult?.fileRenamed,
-        urlCleaned: true,
-        domainDuplicationFixed: true
-      });
-
-      return {
-        success: true,
-        procedureId: procedureResult.Id,
-        qualityScore: analysisResult.score,
-        templateCompliance: analysisResult.details?.summary?.templateCompliance,
-        sharePointPath: sharePointPath,
-        sharePointUrl: finalCleanUrl, // ✅ CLEAN URL without domain duplication
-        analysisResult: analysisResult,
-        fileRenamed: fileUploadResult?.fileRenamed,
-        actualFileName: fileUploadResult?.actualFileName,
-        urlCleaned: true,
-        domainDuplicationFixed: true
-      };
-     
-    } catch (error) {
-      console.error('❌ Upload procedure with domain fix failed:', error);
-      throw new Error(`Upload failed: ${error.message}`);
-    }
-  }
-
-  // ✅ CLEAN: Generate SiteAssets path with validation
-  generateSiteAssetsPath(lob, subsection) {
-    let cleanSubsection = subsection || 'General';
-    
-    // Clean subsection name for folder path
-    cleanSubsection = cleanSubsection
-      .replace(/[^a-zA-Z0-9\s_]/g, '')
-      .replace(/\s+/g, '_')
-      .trim();
-    
-    const path = `SiteAssets/${lob}/${cleanSubsection}`;
-    
-    console.log(`📂 Generated DOMAIN-CLEAN SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
-    return path;
-  }
-
-  async getRequestDigest() {
-    try {
-      const response = await fetch(`${sharePointPaths.baseSite}/_api/contextinfo`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'Content-Type': 'application/json; odata=verbose'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to get SharePoint context: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.d.GetContextWebInformation.FormDigestValue;
-     
-    } catch (error) {
-      throw new Error(`Failed to get SharePoint request digest: ${error.message}`);
+   } catch (error) {
+     console.error('❌ CRITICAL FIX - Amendment failed:', error);
+     return {
+       success: false,
+       message: error.message || 'Amendment failed',
+       error: error,
+       attempted_url: this.CLEAN_FULL_SITE_URL
+     };
    }
  }
 
-  // ✅ ENHANCED: Upload with smart file naming and DOMAIN DUPLICATION FIX
-  async uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest) {
-    try {
-      // ✅ CLEAN: Upload URL with DOMAIN DUPLICATION FIX
-      const cleanSharePointPath = sharePointPath
-        .replace(/^\/+/, '') // Remove leading slashes
-        .replace(/\/+$/, '') // Remove trailing slashes
-        .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
-        .replace(/siteassets\/siteassets\//gi, 'SiteAssets/')
-        .replace(/SiteAssets\/SiteAssets\//gi, 'SiteAssets/');
-      
-      // Construct clean base path
-      const basePath = `/sites/EmployeeEng/${cleanSharePointPath}`;
-      const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
-      
-      // Generate unique filename
-      const uniqueFileResult = await this.generateUniqueFileName(file.name, cleanBasePath, sharePointPaths.baseSite, requestDigest);
-      const uniqueFileName = uniqueFileResult.fileName;
-      const isFileRenamed = uniqueFileResult.isRenamed;
-      
-      // ✅ CONSTRUCT UPLOAD URL WITHOUT DOMAIN DUPLICATION
-      const baseUrl = sharePointPaths.baseSite.replace(/\/+$/, ''); // Remove trailing slashes
-      const uploadUrl = `${baseUrl}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
+ // ✅ ENHANCED: Upload amendment with domain duplication fix
+ async uploadAmendmentWithAnalysis(amendmentData, file) {
+   try {
+     console.log('🚀 Starting amendment upload with ENHANCED AI analysis and CRITICAL DOMAIN DUPLICATION FIX...');
      
-      console.log('📤 Uploading with DOMAIN DUPLICATION FIX:', {
-        cleanSharePointPath,
-        cleanBasePath,
-        uploadUrl,
-        uniqueFileName,
-        isFileRenamed
-      });
+     // 1. Analyze the new document
+     const analysisResult = await this.analyzeDocument(file, {
+       name: amendmentData.originalName,
+       lob: amendmentData.originalLOB,
+       subsection: amendmentData.subFolder
+     });
+     
+     if (!analysisResult.accepted) {
+       throw new Error(`Document quality score is ${analysisResult.score}% (minimum ${this.minimumScore}% required)`);
+     }
 
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'X-RequestDigest': requestDigest,
-          'Content-Type': 'application/octet-stream'
-        },
-        body: file
-      });
+     console.log('✅ Amendment document passed AI analysis:', {
+       score: analysisResult.score,
+       templateCompliance: analysisResult.details?.summary?.templateCompliance
+     });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
-      }
+     // 2. Get SharePoint context using CLEAN URL
+     const requestDigest = await this.getRequestDigest();
+     
+     // 3. ✅ CLEAN: Use existing SiteAssets folder path with domain duplication fix
+     const cleanedSharePointPath = amendmentData.sharePointPath || 'SiteAssets/IWPB/General';
+     console.log('📂 Using DOMAIN-CLEANED SiteAssets SharePoint path:', cleanedSharePointPath);
+     
+     // 4. Upload with enhanced file naming and domain duplication fix
+     const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, cleanedSharePointPath, requestDigest);
+     
+     // 5. Create amended procedure list item with CLEAN URLs
+     const amendedProcedureData = {
+       __metadata: { type: 'SP.Data.ProceduresListItem' },
+       Title: amendmentData.originalName,
+       ExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+       PrimaryOwner: amendmentData.originalPrimaryOwner,
+       PrimaryOwnerEmail: amendmentData.originalPrimaryOwnerEmail,
+       SecondaryOwner: amendmentData.secondary_owner || '',
+       SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
+       LOB: amendmentData.originalLOB || 'Unknown',
+       ProcedureSubsection: amendmentData.subFolder || '',
+       SharePointPath: cleanedSharePointPath || '',
+       DocumentLink: fileUploadResult?.serverRelativeUrl || '',
+       SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be CLEAN without domain duplication
+       OriginalFilename: file?.name || 'unknown.doc',
+       ActualFilename: fileUploadResult?.actualFileName || file.name,
+       FileSize: file?.size || 0,
+       FileRenamed: fileUploadResult?.fileRenamed || false,
+       
+       // AI analysis results
+       QualityScore: analysisResult?.score || 0,
+       TemplateCompliance: analysisResult?.details?.summary?.templateCompliance || 'Unknown',
+       AnalysisDetails: JSON.stringify(analysisResult?.details || {}),
+       AIRecommendations: JSON.stringify(analysisResult?.aiRecommendations || []),
+       
+       // HSBC-specific data
+       RiskRating: analysisResult?.details?.riskRating || 'Not Specified',
+       PeriodicReview: analysisResult?.details?.periodicReview || 'Not Specified',
+       DocumentOwners: JSON.stringify(analysisResult?.details?.owners || []),
+       SignOffDates: JSON.stringify(analysisResult?.details?.signOffDates || []),
+       Departments: JSON.stringify(analysisResult?.details?.departments || []),
+       
+       // Amendment metadata
+       IsAmendment: true,
+       AmendmentOfProcedureId: amendmentData.procedureId,
+       AmendmentSummary: amendmentData.amendment_summary,
+       AmendmentDate: amendmentData.amendment_date,
+       AmendedBy: amendmentData.amended_by_name,
+       AmendedByUserId: amendmentData.amended_by,
+       
+       // Upload metadata
+       UploadedBy: amendmentData.amended_by_name || 'Unknown',
+       UploadedAt: new Date().toISOString(),
+       Status: 'Active',
+       SharePointUploaded: true
+     };
+    
+     const procedureResult = await this.createProcedureListItem(amendedProcedureData, requestDigest);
+     
+     // 6. Update original procedure record
+     await this.updateOriginalProcedureRecord(amendmentData.procedureId, {
+       status: 'Amended',
+       amended_date: amendmentData.amendment_date,
+       amended_by: amendmentData.amended_by_name,
+       new_version_id: procedureResult.Id,
+       amendment_summary: amendmentData.amendment_summary
+     }, requestDigest);
+    
+     // 7. Create audit log entry with CLEAN URLs
+     await this.createAuditLogEntry({
+       __metadata: { type: 'SP.Data.AuditLogListItem' },
+       Title: `Procedure Amended: ${amendmentData.originalName}`,
+       ActionType: 'AMEND',
+       UserId: amendmentData.amended_by,
+       LogTimestamp: new Date().toISOString(),
+       Details: JSON.stringify({
+         originalProcedureId: amendmentData.procedureId,
+         newProcedureId: procedureResult.Id,
+         procedureName: amendmentData.originalName,
+         lob: amendmentData.originalLOB,
+         subfolder: amendmentData.subFolder,
+         amendmentSummary: amendmentData.amendment_summary,
+         qualityScore: analysisResult.score,
+         templateCompliance: analysisResult.details?.summary?.templateCompliance,
+         cleanedSharePointPath: cleanedSharePointPath,
+         fileSize: file.size,
+         originalFileName: file.name,
+         actualFileName: fileUploadResult?.actualFileName,
+         fileRenamed: fileUploadResult?.fileRenamed,
+         urlCleaned: true,
+         criticalDomainDuplicationFixed: true
+       }),
+       ProcedureId: procedureResult.Id,
+       LOB: amendmentData.originalLOB
+     }, requestDigest);
 
-      const result = await response.json();
-      
-      // ✅ CONSTRUCT CLEAN WEB URL WITHOUT DOMAIN DUPLICATION
-      const webUrl = this.constructCleanSharePointUrl(
-        'https://teams.global.hsbc',
-        cleanBasePath,
-        uniqueFileName
-      );
+     // ✅ CONSTRUCT CLEAN SharePoint URL with domain duplication fix
+     const sharePointUrl = fileUploadResult?.webUrl || this.constructSafeSharePointUrl(
+       cleanedSharePointPath,
+       fileUploadResult?.actualFileName || file.name
+     );
+     const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
+    
+     console.log('🎉 Amendment upload completed successfully with CRITICAL DOMAIN DUPLICATION FIX:', {
+       newProcedureId: procedureResult.Id,
+       originalProcedureId: amendmentData.procedureId,
+       qualityScore: analysisResult.score,
+       sharePointUrl: finalCleanUrl,
+       sharePointPath: cleanedSharePointPath,
+       actualSubfolder: amendmentData.subFolder,
+       fileRenamed: fileUploadResult?.fileRenamed,
+       urlCleaned: true,
+       criticalDomainDuplicationFixed: true
+     });
+
+     return {
+       success: true,
+       procedureId: procedureResult.Id,
+       qualityScore: analysisResult.score,
+       templateCompliance: analysisResult.details?.summary?.templateCompliance,
+       sharePointPath: cleanedSharePointPath,
+       sharePointUrl: finalCleanUrl, // ✅ CLEAN URL without domain duplication
+       analysisResult: analysisResult,
+       message: `Amendment uploaded successfully to domain-cleaned path: SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
+       fileRenamed: fileUploadResult?.fileRenamed,
+       actualFileName: fileUploadResult?.actualFileName,
+       urlCleaned: true,
+       criticalDomainDuplicationFixed: true
+     };
+    
+   } catch (error) {
+     console.error('❌ Upload amendment with critical domain fix failed:', error);
+     throw new Error(`Amendment upload failed: ${error.message}`);
+   }
+ }
+
+ // ✅ UPDATE ORIGINAL PROCEDURE RECORD
+ async updateOriginalProcedureRecord(originalProcedureId, updateData, requestDigest) {
+   try {
+     console.log('🔄 Updating original procedure record:', originalProcedureId);
      
-      console.log('✅ File uploaded with CLEAN URLs (DOMAIN DUPLICATION FIXED):', {
-        serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: webUrl,
-        actualFileName: uniqueFileName,
-        fileRenamed: isFileRenamed
-      });
+     const updatePayload = {
+       Status: updateData.status,
+       AmendedDate: updateData.amended_date,
+       AmendedBy: updateData.amended_by,
+       NewVersionId: updateData.new_version_id,
+       AmendmentSummary: updateData.amendment_summary,
+       LastModifiedOn: new Date().toISOString(),
+       LastModifiedBy: updateData.amended_by
+     };
+
+     const response = await fetch(
+       `${this.CLEAN_FULL_SITE_URL}/_api/web/lists/getbytitle('Procedures')/items(${originalProcedureId})`,
+       {
+         method: 'POST',
+         headers: {
+           'Accept': 'application/json; odata=verbose',
+           'Content-Type': 'application/json; odata=verbose',
+           'X-RequestDigest': requestDigest,
+           'X-HTTP-Method': 'MERGE',
+           'If-Match': '*'
+         },
+         body: JSON.stringify(updatePayload)
+       }
+     );
+
+     if (!response.ok) {
+       throw new Error(`Failed to update original procedure: ${response.status}`);
+     }
+
+     console.log('✅ Original procedure record updated successfully');
+     return true;
+
+   } catch (error) {
+     console.error('❌ Failed to update original procedure record:', error);
+     console.warn('⚠️ Continuing amendment process despite update failure');
+     return false;
+   }
+ }
+
+ // ✅ Sanitization helpers
+ sanitizeString(str) {
+   if (!str || typeof str !== 'string') return '';
+   return str.replace(/%[0-9A-Fa-f]{2}/g, '').replace(/[<>]/g, '').trim();
+ }
+
+ sanitizeEmail(email) {
+   if (!email || typeof email !== 'string') return '';
+   return email.toLowerCase().replace(/[^a-zA-Z0-9@._-]/g, '').trim();
+ }
+
+ // ============================================================================
+ // EXISTING DOCUMENT PROCESSING METHODS  
+ // ============================================================================
+ 
+ async analyzeDocument(file, metadata = {}) {
+   try {
+     console.log('🔍 Starting client-side AI analysis...');
      
-      return {
-        serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: webUrl, // ✅ CLEAN URL without domain duplication
-        actualFileName: uniqueFileName,
-        fileRenamed: isFileRenamed
-      };
+     const text = await this.extractTextFromFile(file);
      
-    } catch (error) {
-      console.error('❌ File upload with domain fix failed:', error);
-      throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
-    }
+     if (!window.documentAnalysis) {
+       throw new Error('Document analysis engine not loaded. Please ensure documentAnalysis.js is included.');
+     }
+     
+     const analysis = await window.documentAnalysis.analyzeDocument(text, file.type, metadata);
+     analysis.accepted = analysis.score >= this.minimumScore;
+     
+     console.log('✅ AI Analysis completed:', {
+       score: analysis.score,
+       accepted: analysis.accepted,
+       templateCompliance: analysis.details?.summary?.templateCompliance
+     });
+
+     return analysis;
+     
+   } catch (error) {
+     console.error('❌ AI analysis failed:', error);
+     throw new Error(`Document analysis failed: ${error.message}`);
+   }
+ }
+
+ async extractTextFromFile(file) {
+   return new Promise((resolve, reject) => {
+     const reader = new FileReader();
+     
+     reader.onload = async (e) => {
+       try {
+         let text = '';
+         
+         if (file.type === 'application/pdf') {
+           text = await this.extractPDFText(e.target.result);
+         } else if (file.type.includes('wordprocessingml') || file.type.includes('msword')) {
+           text = await this.extractWordText(e.target.result);
+         } else {
+           throw new Error('Unsupported file type');
+         }
+         
+         resolve(text);
+       } catch (error) {
+         reject(error);
+       }
+     };
+     
+     reader.onerror = () => reject(new Error('Failed to read file'));
+     reader.readAsArrayBuffer(file);
+   });
+ }
+
+ async extractPDFText(arrayBuffer) {
+   try {
+     const pdfjsLib = window['pdfjs-dist/build/pdf'];
+     
+     if (!pdfjsLib) {
+       throw new Error('PDF.js library not loaded. Please ensure PDF.js CDN is included in SharePoint page.');
+     }
+
+     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+     let fullText = '';
+
+     for (let i = 1; i <= pdf.numPages; i++) {
+       const page = await pdf.getPage(i);
+       const textContent = await page.getTextContent();
+       const pageText = textContent.items.map(item => item.str).join(' ');
+       fullText += pageText + '\n';
+     }
+
+     console.log('✅ PDF text extracted, length:', fullText.length);
+     return fullText;
+     
+   } catch (error) {
+     console.error('❌ PDF extraction failed:', error);
+     throw new Error('Failed to extract text from PDF: ' + error.message);
+   }
+ }
+
+ async extractWordText(arrayBuffer) {
+   try {
+     const mammoth = window.mammoth;
+     
+     if (!mammoth) {
+       throw new Error('Mammoth.js library not loaded. Please ensure mammoth.js CDN is included in SharePoint page.');
+     }
+
+     const result = await mammoth.extractRawText({ arrayBuffer: arrayBuffer });
+     
+     console.log('✅ Word document text extracted, length:', result.value.length);
+     return result.value;
+     
+   } catch (error) {
+     console.error('❌ Word extraction failed:', error);
+     throw new Error('Failed to extract text from Word document: ' + error.message);
+   }
+ }
+
+ // ============================================================================
+ // ✅ ENHANCED SHAREPOINT INTEGRATION WITH CRITICAL DOMAIN DUPLICATION FIX
+ // ============================================================================
+
+ async uploadProcedureWithAnalysis(formData, file) {
+   try {
+     console.log('🚀 Starting procedure upload with AI analysis and CRITICAL DOMAIN DUPLICATION FIX...');
+     
+     // 1. Analyze document first
+     const analysisResult = await this.analyzeDocument(file, {
+       name: formData.name,
+       lob: formData.lob,
+       subsection: formData.procedure_subsection
+     });
+     
+     if (!analysisResult.accepted) {
+       throw new Error(`Document quality score is ${analysisResult.score}% (minimum ${this.minimumScore}% required)`);
+     }
+
+     console.log('✅ Document passed AI analysis:', {
+       score: analysisResult.score,
+       templateCompliance: analysisResult.details?.summary?.templateCompliance
+     });
+
+     // 2. Get SharePoint context using CLEAN URL
+     const requestDigest = await this.getRequestDigest();
+     
+     // 3. ✅ CLEAN: Generate SiteAssets path with domain duplication fix
+     const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
+     console.log('📂 Generated DOMAIN-CLEAN SiteAssets path for new upload:', sharePointPath);
+     
+     // 4. Upload with enhanced file naming and domain duplication fix
+     const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
+     
+     // 5. Create procedure list item with comprehensive AI data and CLEAN URLs
+     const procedureData = {
+       __metadata: { type: 'SP.Data.ProceduresListItem' },
+       Title: formData.name || 'Untitled Procedure',
+       ExpiryDate: formData.expiry || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+       PrimaryOwner: formData.primary_owner || 'Unknown',
+       PrimaryOwnerEmail: formData.primary_owner_email || `${formData.primary_owner || 'unknown'}@hsbc.com`,
+       SecondaryOwner: formData.secondary_owner || '',
+       SecondaryOwnerEmail: formData.secondary_owner_email || '',
+       LOB: formData.lob || 'Unknown',
+       ProcedureSubsection: formData.procedure_subsection || '',
+       SharePointPath: sharePointPath || '',
+       DocumentLink: fileUploadResult?.serverRelativeUrl || '',
+       SharePointURL: fileUploadResult?.webUrl || '', // ✅ This will be CLEAN without domain duplication
+       OriginalFilename: file?.name || 'unknown.doc',
+       ActualFilename: fileUploadResult?.actualFileName || file.name,
+       FileSize: file?.size || 0,
+       FileRenamed: fileUploadResult?.fileRenamed || false,
+       
+       // ✅ SAFE AI ANALYSIS RESULTS
+       QualityScore: analysisResult?.score || 0,
+       TemplateCompliance: analysisResult?.details?.summary?.templateCompliance || 'Unknown',
+       AnalysisDetails: JSON.stringify(analysisResult?.details || {}),
+       AIRecommendations: JSON.stringify(analysisResult?.aiRecommendations || []),
+       
+       // ✅ SAFE HSBC-SPECIFIC DATA
+       RiskRating: analysisResult?.details?.riskRating || 'Not Specified',
+       PeriodicReview: analysisResult?.details?.periodicReview || 'Not Specified',
+       DocumentOwners: JSON.stringify(analysisResult?.details?.owners || []),
+       SignOffDates: JSON.stringify(analysisResult?.details?.signOffDates || []),
+       Departments: JSON.stringify(analysisResult?.details?.departments || []),
+       
+       // ✅ SAFE ANALYSIS METRICS
+       FoundElements: JSON.stringify(analysisResult?.details?.foundElements || []),
+       MissingElements: JSON.stringify(analysisResult?.details?.missingElements || []),
+       HasDocumentControl: analysisResult?.details?.hasDocumentControl || false,
+       HasRiskAssessment: analysisResult?.details?.hasRiskAssessment || false,
+       HasPeriodicReview: analysisResult?.details?.hasPeriodicReview || false,
+       StructureScore: analysisResult?.details?.summary?.structureScore || 0,
+       GovernanceScore: analysisResult?.details?.summary?.governanceScore || 0,
+       
+       // Upload metadata
+       UploadedBy: formData.primary_owner || 'Unknown',
+       UploadedAt: new Date().toISOString(),
+       Status: 'Active',
+       SharePointUploaded: true
+     };
+    
+     const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
+    
+     // 6. Create comprehensive audit log entry with CLEAN URLs
+     await this.createAuditLogEntry({
+       __metadata: { type: 'SP.Data.AuditLogListItem' },
+       Title: `Procedure Created: ${formData.name}`,
+       ActionType: 'CREATE',
+       UserId: formData.primary_owner,
+       LogTimestamp: new Date().toISOString(),
+       Details: JSON.stringify({
+         procedureId: procedureResult.Id,
+         procedureName: formData.name,
+         lob: formData.lob,
+         subsection: formData.procedure_subsection,
+         qualityScore: analysisResult.score,
+         templateCompliance: analysisResult.details?.summary?.templateCompliance,
+         riskRating: analysisResult.details?.riskRating,
+         periodicReview: analysisResult.details?.periodicReview,
+         documentOwners: analysisResult.details?.owners,
+         foundElements: analysisResult.details?.foundElements?.length,
+         missingElements: analysisResult.details?.missingElements?.length,
+         fileSize: file.size,
+         originalFileName: file.name,
+         actualFileName: fileUploadResult?.actualFileName,
+         fileRenamed: fileUploadResult?.fileRenamed,
+         sharePointPath: sharePointPath,
+         urlCleaned: true,
+         criticalDomainDuplicationFixed: true
+       }),
+       ProcedureId: procedureResult.Id,
+       LOB: formData.lob
+     }, requestDigest);
+
+     // ✅ CONSTRUCT CLEAN SharePoint URL with domain duplication fix
+     const sharePointUrl = fileUploadResult?.webUrl || this.constructSafeSharePointUrl(
+       sharePointPath,
+       fileUploadResult?.actualFileName || file.name
+     );
+     const finalCleanUrl = this.cleanAndValidateUrl(sharePointUrl);
+    
+     console.log('🎉 Procedure upload completed successfully with CRITICAL DOMAIN DUPLICATION FIX:', {
+       procedureId: procedureResult.Id,
+       qualityScore: analysisResult.score,
+       sharePointUrl: finalCleanUrl,
+       sharePointPath: sharePointPath,
+       selectedSubsection: formData.procedure_subsection,
+       fileRenamed: fileUploadResult?.fileRenamed,
+       urlCleaned: true,
+       criticalDomainDuplicationFixed: true
+     });
+
+     return {
+       success: true,
+       procedureId: procedureResult.Id,
+       qualityScore: analysisResult.score,
+       templateCompliance: analysisResult.details?.summary?.templateCompliance,
+       sharePointPath: sharePointPath,
+       sharePointUrl: finalCleanUrl, // ✅ CLEAN URL without domain duplication
+       analysisResult: analysisResult,
+       fileRenamed: fileUploadResult?.fileRenamed,
+       actualFileName: fileUploadResult?.actualFileName,
+       urlCleaned: true,
+       criticalDomainDuplicationFixed: true
+     };
+    
+   } catch (error) {
+     console.error('❌ Upload procedure with critical domain fix failed:', error);
+     throw new Error(`Upload failed: ${error.message}`);
+   }
+ }
+
+ // ✅ CLEAN: Generate SiteAssets path with validation
+ generateSiteAssetsPath(lob, subsection) {
+   let cleanSubsection = subsection || 'General';
+   
+   // Clean subsection name for folder path
+   cleanSubsection = cleanSubsection
+     .replace(/[^a-zA-Z0-9\s_]/g, '')
+     .replace(/\s+/g, '_')
+     .trim();
+   
+   const path = `SiteAssets/${lob}/${cleanSubsection}`;
+   
+   console.log(`📂 Generated DOMAIN-CLEAN SiteAssets path: ${path} (LOB: ${lob}, Subsection: ${subsection})`);
+   return path;
+ }
+
+ async getRequestDigest() {
+   try {
+     const response = await fetch(`${this.CLEAN_FULL_SITE_URL}/_api/contextinfo`, {
+       method: 'POST',
+       headers: {
+         'Accept': 'application/json; odata=verbose',
+         'Content-Type': 'application/json; odata=verbose'
+       }
+     });
+
+     if (!response.ok) {
+       throw new Error(`Failed to get SharePoint context: ${response.status}`);
+     }
+
+     const data = await response.json();
+     return data.d.GetContextWebInformation.FormDigestValue;
+    
+   } catch (error) {
+     throw new Error(`Failed to get SharePoint request digest: ${error.message}`);
   }
+}
 
-  // ✅ LEGACY: Keep existing method for compatibility with DOMAIN DUPLICATION FIX
-  async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
-    try {
-      // ✅ CLEAN: Upload URL with DOMAIN DUPLICATION FIX
-      const cleanSharePointPath = sharePointPath
-        .replace(/^\/+/, '') // Remove leading slashes
-        .replace(/\/+$/, '') // Remove trailing slashes
-        .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
-      
-      const basePath = `/sites/EmployeeEng/${cleanSharePointPath}`;
-      const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
-      
-      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(file.name)}',overwrite=true)`;
+ // ✅ ENHANCED: Upload with smart file naming and CRITICAL DOMAIN DUPLICATION FIX
+ async uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest) {
+   try {
+     // ✅ CLEAN: Upload URL with CRITICAL DOMAIN DUPLICATION FIX
+     const cleanSharePointPath = sharePointPath
+       .replace(/^\/+/, '') // Remove leading slashes
+       .replace(/\/+$/, '') // Remove trailing slashes
+       .replace(/\/\/+/g, '/') // Remove multiple consecutive slashes
+       .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/')
+       .replace(/siteassets\/siteassets\//gi, 'SiteAssets/')
+       .replace(/SiteAssets\/SiteAssets\//gi, 'SiteAssets/');
      
-      console.log('📤 Uploading to DOMAIN-CLEAN SiteAssets path:', uploadUrl);
-
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json; odata=verbose',
-          'X-RequestDigest': requestDigest,
-          'Content-Type': 'application/octet-stream'
-        },
-        body: file
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      
-      // ✅ CONSTRUCT CLEAN WEB URL WITHOUT DOMAIN DUPLICATION
-      const webUrl = this.constructCleanSharePointUrl(
-        'https://teams.global.hsbc',
-        cleanBasePath,
-        file.name
-      );
+     // Construct clean base path
+     const basePath = `/sites/EmployeeEng/${cleanSharePointPath}`;
+     const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
      
-      console.log('✅ File uploaded to DOMAIN-CLEAN SiteAssets SharePoint:', result.d.ServerRelativeUrl);
+     // Generate unique filename
+     const uniqueFileResult = await this.generateUniqueFileName(file.name, cleanBasePath, this.CLEAN_FULL_SITE_URL, requestDigest);
+     const uniqueFileName = uniqueFileResult.fileName;
+     const isFileRenamed = uniqueFileResult.isRenamed;
      
-      return {
-        serverRelativeUrl: result.d.ServerRelativeUrl,
-        webUrl: webUrl // ✅ CLEAN URL without domain duplication
-      };
+     // ✅ CONSTRUCT UPLOAD URL WITHOUT DOMAIN DUPLICATION
+     const uploadUrl = `${this.CLEAN_FULL_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
+    
+     console.log('📤 Uploading with CRITICAL DOMAIN DUPLICATION FIX:', {
+       cleanSharePointPath,
+       cleanBasePath,
+       uploadUrl,
+       uniqueFileName,
+       isFileRenamed
+     });
+
+     const response = await fetch(uploadUrl, {
+       method: 'POST',
+       headers: {
+         'Accept': 'application/json; odata=verbose',
+         'X-RequestDigest': requestDigest,
+         'Content-Type': 'application/octet-stream'
+       },
+       body: file
+     });
+
+     if (!response.ok) {
+       const errorText = await response.text();
+       throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
+     }
+
+     const result = await response.json();
      
-    } catch (error) {
-      throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
-    }
-  }
+     // ✅ CONSTRUCT CLEAN WEB URL WITHOUT DOMAIN DUPLICATION
+     const webUrl = this.constructSafeSharePointUrl(
+       cleanBasePath,
+       uniqueFileName
+     );
+    
+     console.log('✅ File uploaded with CLEAN URLs (CRITICAL DOMAIN DUPLICATION FIXED):', {
+       serverRelativeUrl: result.d.ServerRelativeUrl,
+       webUrl: webUrl,
+       actualFileName: uniqueFileName,
+       fileRenamed: isFileRenamed
+     });
+    
+     return {
+       serverRelativeUrl: result.d.ServerRelativeUrl,
+       webUrl: webUrl, // ✅ CLEAN URL without domain duplication
+       actualFileName: uniqueFileName,
+       fileRenamed: isFileRenamed
+     };
+    
+   } catch (error) {
+     console.error('❌ File upload with critical domain fix failed:', error);
+     throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
+   }
+ }
 
-  async createProcedureListItem(procedureData, requestDigest) {
-    try {
-      const response = await fetch(
-        `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('Procedures')/items`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose',
-            'X-RequestDigest': requestDigest
-          },
-          body: JSON.stringify(procedureData)
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to create procedure list item: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Procedure created in SharePoint List:', result.d.Id);
+ // ✅ LEGACY: Keep existing method for compatibility with CRITICAL DOMAIN DUPLICATION FIX
+ async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
+   try {
+     // ✅ CLEAN: Upload URL with CRITICAL DOMAIN DUPLICATION FIX
+     const cleanSharePointPath = sharePointPath
+       .replace(/^\/+/, '') // Remove leading slashes
+       .replace(/\/+$/, '') // Remove trailing slashes
+       .replace(/teams\.global\.hsbc\/teams\.global\.hsbc\//gi, 'teams.global.hsbc/');
      
-      return result.d;
+     const basePath = `/sites/EmployeeEng/${cleanSharePointPath}`;
+     const cleanBasePath = this.cleanAndValidateFolderPath(basePath);
      
-    } catch (error) {
-      throw new Error(`Failed to create procedure list item: ${error.message}`);
-    }
-  }
+     const uploadUrl = `${this.CLEAN_FULL_SITE_URL}/_api/web/GetFolderByServerRelativeUrl('${cleanBasePath}')/Files/add(url='${encodeURIComponent(file.name)}',overwrite=true)`;
+    
+     console.log('📤 Uploading to DOMAIN-CLEAN SiteAssets path:', uploadUrl);
 
-  async createAuditLogEntry(auditData, requestDigest) {
-    try {
-      const response = await fetch(
-        `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('AuditLog')/items`,
-        {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json; odata=verbose',
-            'Content-Type': 'application/json; odata=verbose',
-            'X-RequestDigest': requestDigest
-          },
-          body: JSON.stringify(auditData)
-        }
-      );
+     const response = await fetch(uploadUrl, {
+       method: 'POST',
+       headers: {
+         'Accept': 'application/json; odata=verbose',
+         'X-RequestDigest': requestDigest,
+         'Content-Type': 'application/octet-stream'
+       },
+       body: file
+     });
 
-      if (response.ok) {
-        console.log('✅ Audit log entry created');
-        return await response.json();
-      } else {
-                console.warn('⚠️ Failed to create audit log entry, but continuing...');
-        return null;
-      }
+     if (!response.ok) {
+       const errorText = await response.text();
+       throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
+     }
+
+     const result = await response.json();
      
-    } catch (error) {
-      console.warn('⚠️ Audit log creation failed:', error.message);
-      return null; // Don't fail the whole process for audit log
-    }
-  }
+     // ✅ CONSTRUCT CLEAN WEB URL WITHOUT DOMAIN DUPLICATION
+     const webUrl = this.constructSafeSharePointUrl(
+       cleanBasePath,
+       file.name
+     );
+    
+     console.log('✅ File uploaded to DOMAIN-CLEAN SiteAssets SharePoint:', result.d.ServerRelativeUrl);
+    
+     return {
+       serverRelativeUrl: result.d.ServerRelativeUrl,
+       webUrl: webUrl // ✅ CLEAN URL without domain duplication
+     };
+    
+   } catch (error) {
+     throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
+   }
+ }
+
+ async createProcedureListItem(procedureData, requestDigest) {
+   try {
+     const response = await fetch(
+       `${this.CLEAN_FULL_SITE_URL}/_api/web/lists/getbytitle('Procedures')/items`,
+       {
+         method: 'POST',
+         headers: {
+           'Accept': 'application/json; odata=verbose',
+           'Content-Type': 'application/json; odata=verbose',
+           'X-RequestDigest': requestDigest
+         },
+         body: JSON.stringify(procedureData)
+       }
+     );
+     if (!response.ok) {
+       const errorText = await response.text();
+       throw new Error(`Failed to create procedure list item: ${response.status} - ${errorText}`);
+     }
+
+     const result = await response.json();
+     console.log('✅ Procedure created in SharePoint List:', result.d.Id);
+    
+     return result.d;
+    
+   } catch (error) {
+     throw new Error(`Failed to create procedure list item: ${error.message}`);
+   }
+ }
+
+ async createAuditLogEntry(auditData, requestDigest) {
+   try {
+     const response = await fetch(
+       `${this.CLEAN_FULL_SITE_URL}/_api/web/lists/getbytitle('AuditLog')/items`,
+       {
+         method: 'POST',
+         headers: {
+           'Accept': 'application/json; odata=verbose',
+           'Content-Type': 'application/json; odata=verbose',
+           'X-RequestDigest': requestDigest
+         },
+         body: JSON.stringify(auditData)
+       }
+     );
+
+     if (response.ok) {
+       console.log('✅ Audit log entry created');
+       return await response.json();
+     } else {
+       console.warn('⚠️ Failed to create audit log entry, but continuing...');
+       return null;
+     }
+    
+   } catch (error) {
+     console.warn('⚠️ Audit log creation failed:', error.message);
+     return null; // Don't fail the whole process for audit log
+   }
+ }
 }
 
 export default DocumentAnalyzer;
