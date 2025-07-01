@@ -8,8 +8,6 @@ import {
   CardHeader, Accordion, AccordionSummary, AccordionDetails, Fab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
-
-// 🎯 **ALL ICON IMPORTS (NO @mui/lab needed):**
 import {
   Close, Visibility, Description, CalendarToday, Schedule, CheckCircle,
   CloudDownload, Email, Person, Security, Business, Warning, 
@@ -18,8 +16,6 @@ import {
   Error as ErrorIcon, Timeline as TimelineIcon, Link as LinkIcon,
   History, TrendingDown, Analytics, Edit, Circle
 } from '@mui/icons-material';
-
-// Motion imports
 import { motion, AnimatePresence } from 'framer-motion';
 const CustomTimeline = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -1033,9 +1029,24 @@ const ProcedureDetailsModal = ({
                     <Typography variant="caption" color="text.secondary">
                       File Details
                     </Typography>
-                    <Typography variant="body2">
-                      📁 {amendment.fileName} ({formatFileSize(amendment.fileSize)})
-                    </Typography>
+<Typography variant="body2">
+  📁 {amendment.fileName} 
+  {amendment.fileRenamed && (
+    <Chip 
+      label="Renamed" 
+      size="small" 
+      color="warning" 
+      sx={{ ml: 1, fontSize: '0.6rem', height: 16 }} 
+    />
+  )}
+  ({formatFileSize(amendment.fileSize)})
+</Typography>
+{amendment.fileRenamed && (
+  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+    💾 Saved as: {amendment.actualFileName}
+  </Typography>
+)}
+
                     <Typography variant="body2">
                       📂 {amendment.actualSubFolder}
                     </Typography>
@@ -1056,14 +1067,41 @@ const ProcedureDetailsModal = ({
                         </Button>
                       )}
                       <Button
-                        size="small"
-                        startIcon={<Description />}
-                        onClick={() => {
-                          console.log('Analysis details:', amendment.analysisDetails);
-                        }}
-                      >
-                        Analysis
-                      </Button>
+  size="small"
+  startIcon={<Description />}
+  onClick={() => {
+    // Show analysis details in a popup
+    const details = amendment.analysisDetails || {};
+    const recommendations = amendment.aiRecommendations || [];
+    
+    let analysisText = `📊 Amendment #${amendment.amendmentNumber} Analysis:\n\n`;
+    
+    if (details.foundElements) {
+      analysisText += `✅ Found Elements: ${details.foundElements.length}\n`;
+    }
+    if (details.missingElements) {
+      analysisText += `❌ Missing Elements: ${details.missingElements.length}\n`;
+    }
+    if (details.templateCompliance) {
+      analysisText += `📋 Template Compliance: ${details.templateCompliance}\n`;
+    }
+    
+    if (recommendations.length > 0) {
+      analysisText += `\n💡 AI Recommendations:\n`;
+      recommendations.forEach((rec, idx) => {
+        analysisText += `${idx + 1}. ${rec.message || rec}\n`;
+      });
+    }
+    
+    if (analysisText.trim() === `📊 Amendment #${amendment.amendmentNumber} Analysis:`) {
+      analysisText += 'No detailed analysis data available for this amendment.';
+    }
+    
+    alert(analysisText);
+  }}
+>
+  Analysis
+</Button>
                     </Stack>
                   </Grid>
                 </Grid>
