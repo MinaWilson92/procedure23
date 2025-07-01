@@ -1,4 +1,4 @@
-// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration + SiteAssets Support
+// services/DocumentAnalyzer.js - Enhanced with AI and SharePoint integration + SiteAssets Support + Smart File Naming
 import { sharePointPaths } from './paths';
 import SharePointService  from './SharePointService';
 
@@ -28,6 +28,79 @@ class DocumentAnalyzer {
         { value: 'Project_Management', label: 'Project Management' }
       ]
     };
+  }
+
+  // ✅ NEW: Smart file naming to prevent overwrites
+  async generateUniqueFileName(baseFileName, targetFolderPath, sharePointUrl, requestDigest) {
+    try {
+      // Extract name and extension
+      const lastDotIndex = baseFileName.lastIndexOf('.');
+      const nameWithoutExt = lastDotIndex > 0 ? baseFileName.substring(0, lastDotIndex) : baseFileName;
+      const extension = lastDotIndex > 0 ? baseFileName.substring(lastDotIndex) : '';
+      
+      console.log('🔍 Generating unique filename for:', baseFileName);
+      console.log('   Name part:', nameWithoutExt);
+      console.log('   Extension:', extension);
+      
+      // Check if original file exists
+      const checkUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files('${encodeURIComponent(baseFileName)}')`;
+      
+      const checkResponse = await fetch(checkUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json; odata=verbose' }
+      });
+      
+      if (checkResponse.status === 404) {
+        // File doesn't exist, use original name
+        console.log('✅ Original filename available:', baseFileName);
+        return baseFileName;
+      }
+      
+      // File exists, generate unique name
+      console.log('⚠️ File exists, generating unique name...');
+      
+      let counter = 1;
+      let uniqueName;
+      let exists = true;
+      
+      while (exists && counter <= 999) {
+        // Generate name with timestamp and counter
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '');
+        uniqueName = `${nameWithoutExt}_v${counter}_${timestamp}${extension}`;
+        
+        const uniqueCheckUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files('${encodeURIComponent(uniqueName)}')`;
+        
+        const uniqueResponse = await fetch(uniqueCheckUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json; odata=verbose' }
+        });
+        
+        if (uniqueResponse.status === 404) {
+          exists = false;
+          console.log('✅ Generated unique filename:', uniqueName);
+          return uniqueName;
+        }
+        
+        counter++;
+      }
+      
+      // Fallback: use timestamp if all else fails
+      const fallbackTimestamp = Date.now();
+      const fallbackName = `${nameWithoutExt}_${fallbackTimestamp}${extension}`;
+      console.log('🔄 Using fallback filename:', fallbackName);
+      return fallbackName;
+      
+    } catch (error) {
+      console.error('❌ Error generating unique filename:', error);
+      // Fallback: add timestamp to original name
+      const timestamp = Date.now();
+      const lastDotIndex = baseFileName.lastIndexOf('.');
+      const nameWithoutExt = lastDotIndex > 0 ? baseFileName.substring(0, lastDotIndex) : baseFileName;
+      const extension = lastDotIndex > 0 ? baseFileName.substring(lastDotIndex) : '';
+      const fallbackName = `${nameWithoutExt}_${timestamp}${extension}`;
+      console.log('🔄 Error fallback filename:', fallbackName);
+      return fallbackName;
+    }
   }
 
   // ============================================================================
@@ -66,10 +139,10 @@ class DocumentAnalyzer {
       if (!documentLink) {
         console.warn('⚠️ No document link provided, using default SiteAssets structure');
         return {
-          baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/employeeeng',
+          baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/EmployeeEng',
           lobFolder: 'IWPB',
           subFolder: 'General',
-          fullFolderPath: '/sites/employeeeng/SiteAssets/IWPB/General',
+          fullFolderPath: '/sites/EmployeeEng/SiteAssets/IWPB/General',
           sharePointPath: 'SiteAssets/IWPB/General'
         };
       }
@@ -80,7 +153,7 @@ class DocumentAnalyzer {
       const url = new URL(documentLink);
       const pathname = url.pathname;
 
-      // ✅ CORRECT PATTERN: /sites/employeeeng/SiteAssets/IWPB/Risk_Management/document.docx
+      // ✅ CORRECT PATTERN: /sites/EmployeeEng/SiteAssets/IWPB/Risk_Management/document.docx
       const pathParts = pathname.split('/').filter(part => part.length > 0);
       
       console.log('📂 URL path parts:', pathParts);
@@ -97,7 +170,7 @@ class DocumentAnalyzer {
       // Extract folder structure
       const baseUrl = `${url.protocol}//${url.host}`;
       
-      // ✅ CORRECT: The folder after /sites/employeeeng/SiteAssets/ should be the LOB folder
+      // ✅ CORRECT: The folder after /sites/EmployeeEng/SiteAssets/ should be the LOB folder
       const lobFolderIndex = siteAssetsIndex + 1;
       const lobFolder = pathParts[lobFolderIndex] || 'IWPB';
       
@@ -105,8 +178,8 @@ class DocumentAnalyzer {
       const subFolderIndex = lobFolderIndex + 1;
       const subFolder = pathParts[subFolderIndex] || 'General';
       
-      // ✅ CORRECT: Reconstruct paths with SiteAssets
-      const folderPathParts = pathParts.slice(siteIndex, subFolderIndex + 1);
+      // ✅ CORRECT: Reconstruct paths with SiteAssets - ensure proper case
+      const folderPathParts = ['sites', 'EmployeeEng', 'SiteAssets', lobFolder, subFolder];
       const fullFolderPath = `/${folderPathParts.join('/')}`;
       
       // ✅ CORRECT: SharePoint API path (SiteAssets/LOB/actual_subfolder)
@@ -129,10 +202,10 @@ class DocumentAnalyzer {
       
       // ✅ CORRECT FALLBACK: Default SiteAssets structure
       const fallback = {
-        baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/employeeeng',
+        baseUrl: sharePointPaths.baseSite || 'https://teams.global.hsbc/sites/EmployeeEng',
         lobFolder: 'IWPB',
         subFolder: 'General',
-        fullFolderPath: '/sites/employeeeng/SiteAssets/IWPB/General',
+        fullFolderPath: '/sites/EmployeeEng/SiteAssets/IWPB/General',
         sharePointPath: 'SiteAssets/IWPB/General',
         error: error.message
       };
@@ -142,271 +215,312 @@ class DocumentAnalyzer {
     }
   }
 
-  // ✅ ENHANCED: Complete amendment tracking with history
-async amendProcedureInSharePoint(amendmentData, file) {
-  const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
-  
-  try {
-    console.log('🔄 Starting enhanced SharePoint amendment with full tracking...');
-    console.log('📂 Amendment data received:', amendmentData);
-
-    // ✅ Validate folder paths
-    const targetFolderPath = amendmentData.fullFolderPath;
-    const sharePointPath = amendmentData.sharePointPath;
+  // ✅ ENHANCED: Complete amendment tracking with history and smart file naming
+  async amendProcedureInSharePoint(amendmentData, file) {
+    const sharePointUrl = 'https://teams.global.hsbc/sites/EmployeeEng';
     
-    if (!targetFolderPath || targetFolderPath === 'undefined') {
-      throw new Error(`Invalid target folder path: ${targetFolderPath}`);
-    }
-
-    console.log('✅ Using HSBC URLs with amendment tracking:');
-    console.log(`📁 Target Path: ${targetFolderPath}`);
-    console.log(`📊 Previous Score: ${amendmentData.previous_score || 'N/A'}`);
-    console.log(`📊 New Score: ${amendmentData.new_score}`);
-
-    // ✅ STEP 1: Get current procedure data to build amendment history
-    const currentDataUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})?$select=QualityScore,AmendmentHistory,AmendmentCount,PreviousScore,AmendmentTimeline`;
-    
-    const currentDataResponse = await fetch(currentDataUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json; odata=verbose'
-      }
-    });
-
-    let currentProcedure = null;
-    if (currentDataResponse.ok) {
-      const currentData = await currentDataResponse.json();
-      currentProcedure = currentData.d;
-      console.log('✅ Retrieved current procedure data:', currentProcedure);
-    }
-
-    // ✅ STEP 2: Get request digest
-    const digestUrl = `${sharePointUrl}/_api/contextinfo`;
-    const digestResponse = await fetch(digestUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json; odata=verbose',
-        'Content-Type': 'application/json; odata=verbose'
-      }
-    });
-
-    if (!digestResponse.ok) {
-      throw new Error(`Failed to get request digest: ${digestResponse.status}`);
-    }
-
-    const digestData = await digestResponse.json();
-    const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
-
-    // ✅ STEP 3: Upload file
-    const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(file.name)}', overwrite=true)`;
-    console.log(`📤 Uploading to: ${uploadUrl}`);
-
-    const formData = await file.arrayBuffer();
-    
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json; odata=verbose',
-        'X-RequestDigest': requestDigest,
-        'Content-Length': formData.byteLength
-      },
-      body: formData
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      throw new Error(`File upload failed: ${uploadResponse.status} - ${errorText}`);
-    }
-
-    const uploadResult = await uploadResponse.json();
-    console.log('✅ File uploaded successfully');
-
-    // ✅ STEP 4: Build comprehensive amendment history
-    const currentScore = currentProcedure?.QualityScore || amendmentData.original_score || 0;
-    const newScore = amendmentData.new_score;
-    const currentAmendmentCount = currentProcedure?.AmendmentCount || 0;
-    const newAmendmentCount = currentAmendmentCount + 1;
-
-    // Parse existing amendment history
-    let amendmentHistory = [];
     try {
-      if (currentProcedure?.AmendmentHistory) {
-        amendmentHistory = JSON.parse(currentProcedure.AmendmentHistory);
+      console.log('🔄 Starting enhanced SharePoint amendment with full tracking...');
+      console.log('📂 Amendment data received:', amendmentData);
+
+      // ✅ CRITICAL: Validate and clean folder paths
+      let targetFolderPath = amendmentData.fullFolderPath;
+      const sharePointPath = amendmentData.sharePointPath;
+      
+      // ✅ CRITICAL: Fix path duplication issue
+      if (targetFolderPath) {
+        // Remove any duplicate path segments
+        targetFolderPath = targetFolderPath.replace(/\/sites\/EmployeeEng\/sites\/EmployeeEng\//gi, '/sites/EmployeeEng/');
+        targetFolderPath = targetFolderPath.replace(/\/Sites\/EmployeeEng\//gi, '/sites/EmployeeEng/');
+        
+        // Ensure correct case
+        if (!targetFolderPath.startsWith('/sites/EmployeeEng/')) {
+          targetFolderPath = `/sites/EmployeeEng${targetFolderPath.startsWith('/') ? '' : '/'}${targetFolderPath}`;
+        }
       }
-    } catch (parseError) {
-      console.warn('⚠️ Could not parse existing amendment history, starting fresh');
-      amendmentHistory = [];
-    }
-
-    // Create new amendment record
-    const newAmendment = {
-      amendmentNumber: newAmendmentCount,
-      date: new Date().toISOString(),
-      amendedBy: amendmentData.amended_by_name,
-      amendedByStaffId: amendmentData.amended_by,
-      amendedByRole: amendmentData.amended_by_role,
-      summary: amendmentData.amendment_summary,
-      previousScore: currentScore,
-      newScore: newScore,
-      scoreChange: newScore - currentScore,
-      fileName: file.name,
-      fileSize: file.size,
-      targetFolder: sharePointPath,
-      actualSubFolder: amendmentData.subFolder,
-      documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
-      analysisDetails: amendmentData.new_analysis_details,
-      aiRecommendations: amendmentData.new_ai_recommendations
-    };
-
-    // Add to history
-    amendmentHistory.push(newAmendment);
-
-    // Build human-readable timeline
-    let amendmentTimeline = [];
-    try {
-      if (currentProcedure?.AmendmentTimeline) {
-        amendmentTimeline = JSON.parse(currentProcedure.AmendmentTimeline);
+      
+      console.log('🔍 Path validation and cleaning:');
+      console.log('   Original path:', amendmentData.fullFolderPath);
+      console.log('   Cleaned path:', targetFolderPath);
+      console.log('   SharePoint path:', sharePointPath);
+      
+      if (!targetFolderPath || targetFolderPath === 'undefined') {
+        throw new Error(`Invalid target folder path: ${targetFolderPath}`);
       }
-    } catch (parseError) {
-      amendmentTimeline = [];
-    }
 
-    const timelineEntry = `Amendment #${newAmendmentCount} - ${new Date().toLocaleDateString()} by ${amendmentData.amended_by_name}: ${amendmentData.amendment_summary} (Score: ${currentScore}% → ${newScore}%)`;
-    amendmentTimeline.push(timelineEntry);
+      // Check for any duplication patterns
+      if (targetFolderPath.includes('/sites/EmployeeEng/sites/EmployeeEng/')) {
+        console.error('❌ FOUND PATH DUPLICATION:', targetFolderPath);
+        throw new Error('Path duplication detected. Please check folder path construction.');
+      }
 
-    console.log('📋 Built amendment tracking data:');
-    console.log(`   Amendment #: ${newAmendmentCount}`);
-    console.log(`   Previous Score: ${currentScore}%`);
-    console.log(`   New Score: ${newScore}%`);
-    console.log(`   Score Change: ${newScore - currentScore > 0 ? '+' : ''}${newScore - currentScore}%`);
+      console.log('✅ Using HSBC URLs with amendment tracking:');
+      console.log(`📁 Target Path: ${targetFolderPath}`);
+      console.log(`📊 Previous Score: ${amendmentData.previous_score || 'N/A'}`);
+      console.log(`📊 New Score: ${amendmentData.new_score}`);
 
-    // ✅ STEP 5: Update procedure with comprehensive amendment tracking
-    const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
-    
-    const updateData = {
-      __metadata: { type: 'SP.Data.ProceduresListItem' },
+      // ✅ STEP 1: Get current procedure data to build amendment history
+      const currentDataUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})?$select=QualityScore,AmendmentHistory,AmendmentCount,PreviousScore,AmendmentTimeline`;
       
-      // ✅ CORE AMENDMENT TRACKING
-      QualityScore: newScore, // Current score
-      PreviousScore: currentScore, // Score before this amendment
-      AmendmentCount: newAmendmentCount, // Total amendments
-      LatestAmendmentSummary: amendmentData.amendment_summary, // Latest summary
-      AmendmentHistory: JSON.stringify(amendmentHistory), // Complete history
-      AmendmentTimeline: JSON.stringify(amendmentTimeline), // Human-readable timeline
-      
-      // ✅ LATEST AMENDMENT INFO
-      LastAmendedBy: amendmentData.amended_by_name,
-      LastAmendmentDate: new Date().toISOString(),
-      LastAmendedByStaffId: amendmentData.amended_by,
-      LastAmendedByRole: amendmentData.amended_by_role,
-      
-      // Update secondary owner if provided
-      SecondaryOwner: amendmentData.secondary_owner || '',
-      SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
-      
-      // Update analysis data with new analysis
-      AnalysisDetails: JSON.stringify(amendmentData.new_analysis_details),
-      AIRecommendations: JSON.stringify(amendmentData.new_ai_recommendations),
-      
-      // Updated document info
-      DocumentLink: uploadResult.d.ServerRelativeUrl,
-      SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
-      OriginalFilename: file.name,
-      FileSize: file.size,
-      SharePointUploaded: true,
-      SiteAssetsPath: sharePointPath,
-      ActualSubFolder: amendmentData.subFolder,
-      
-      // ✅ AMENDMENT METADATA
-      LastModifiedOn: new Date().toISOString(),
-      LastModifiedBy: amendmentData.amended_by_name
-    };
+      const currentDataResponse = await fetch(currentDataUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json; odata=verbose'
+        }
+      });
 
-    console.log('📝 Updating procedure with comprehensive amendment tracking...');
+      let currentProcedure = null;
+      if (currentDataResponse.ok) {
+        const currentData = await currentDataResponse.json();
+        currentProcedure = currentData.d;
+        console.log('✅ Retrieved current procedure data:', currentProcedure);
+      }
 
-    const updateResponse = await fetch(listUpdateUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json; odata=verbose',
-        'Content-Type': 'application/json; odata=verbose',
-        'X-RequestDigest': requestDigest,
-        'X-HTTP-Method': 'MERGE',
-        'If-Match': '*'
-      },
-      body: JSON.stringify(updateData)
-    });
+      // ✅ STEP 2: Get request digest
+      const digestUrl = `${sharePointUrl}/_api/contextinfo`;
+      const digestResponse = await fetch(digestUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose'
+        }
+      });
 
-    if (!updateResponse.ok) {
-      const errorText = await updateResponse.text();
-      throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
-    }
+      if (!digestResponse.ok) {
+        throw new Error(`Failed to get request digest: ${digestResponse.status}`);
+      }
 
-    console.log('✅ Procedure updated with comprehensive amendment tracking');
+      const digestData = await digestResponse.json();
+      const requestDigest = digestData.d.GetContextWebInformation.FormDigestValue;
 
-    // ✅ STEP 6: Enhanced audit log
-    const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
-    
-    const auditData = {
-      __metadata: { type: 'SP.Data.AuditLogListItem' },
-      Title: `Procedure Amendment #${newAmendmentCount}`,
-      UserId: amendmentData.amended_by,
-      ActionType: 'AMEND',
-      LogTimestamp: new Date().toISOString(),
-      Details: JSON.stringify({
-        procedureId: amendmentData.procedureId,
-        procedureName: amendmentData.originalName,
+      // ✅ STEP 3: Generate unique filename and upload file
+      console.log(`📤 Preparing upload to CORRECT HSBC path: ${targetFolderPath}`);
+      
+      // ✅ Generate unique filename to prevent overwrites
+      const uniqueFileName = await this.generateUniqueFileName(file.name, targetFolderPath, sharePointUrl, requestDigest);
+      console.log(`📁 Using filename: ${uniqueFileName} (original: ${file.name})`);
+
+      const uploadUrl = `${sharePointUrl}/_api/web/GetFolderByServerRelativeUrl('${targetFolderPath}')/Files/Add(url='${encodeURIComponent(uniqueFileName)}', overwrite=false)`;
+      console.log(`📤 Uploading to: ${uploadUrl}`);
+
+      const formData = await file.arrayBuffer();
+      
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest,
+          'Content-Length': formData.byteLength
+        },
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`File upload failed: ${uploadResponse.status} - ${errorText}`);
+      }
+
+      const uploadResult = await uploadResponse.json();
+      console.log('✅ File uploaded successfully');
+
+      // ✅ STEP 4: Build comprehensive amendment history
+      const currentScore = currentProcedure?.QualityScore || amendmentData.original_score || 0;
+      const newScore = amendmentData.new_score;
+      const currentAmendmentCount = currentProcedure?.AmendmentCount || 0;
+      const newAmendmentCount = currentAmendmentCount + 1;
+
+      // Parse existing amendment history
+      let amendmentHistory = [];
+      try {
+        if (currentProcedure?.AmendmentHistory) {
+          amendmentHistory = JSON.parse(currentProcedure.AmendmentHistory);
+        }
+      } catch (parseError) {
+        console.warn('⚠️ Could not parse existing amendment history, starting fresh');
+        amendmentHistory = [];
+      }
+
+      // Create new amendment record
+      const newAmendment = {
         amendmentNumber: newAmendmentCount,
-        amendmentSummary: amendmentData.amendment_summary,
+        date: new Date().toISOString(),
+        amendedBy: amendmentData.amended_by_name,
+        amendedByStaffId: amendmentData.amended_by,
+        amendedByRole: amendmentData.amended_by_role,
+        summary: amendmentData.amendment_summary,
         previousScore: currentScore,
         newScore: newScore,
         scoreChange: newScore - currentScore,
+        fileName: file.name, // ✅ Original filename
+        actualFileName: uniqueFileName, // ✅ Actual saved filename
+        fileSize: file.size,
+        fileRenamed: file.name !== uniqueFileName, // ✅ Flag if renamed
         targetFolder: sharePointPath,
         actualSubFolder: amendmentData.subFolder,
-        uploadPath: targetFolderPath,
-        fileName: file.name,
-        amendedBy: amendmentData.amended_by_name,
-        totalAmendments: newAmendmentCount
-      })
-    };
+        documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+        analysisDetails: amendmentData.new_analysis_details,
+        aiRecommendations: amendmentData.new_ai_recommendations
+      };
 
-    await fetch(auditUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json; odata=verbose',
-        'Content-Type': 'application/json; odata=verbose',
-        'X-RequestDigest': requestDigest
-      },
-      body: JSON.stringify(auditData)
-    });
+      // Add to history
+      amendmentHistory.push(newAmendment);
 
-    console.log('✅ Enhanced audit log entry created');
-    console.log('✅ Amendment completed with comprehensive tracking');
+      // Build human-readable timeline
+      let amendmentTimeline = [];
+      try {
+        if (currentProcedure?.AmendmentTimeline) {
+          amendmentTimeline = JSON.parse(currentProcedure.AmendmentTimeline);
+        }
+      } catch (parseError) {
+        amendmentTimeline = [];
+      }
 
-    return {
-      success: true,
-      message: 'Procedure amended successfully with full tracking',
-      amendmentNumber: newAmendmentCount,
-      previousScore: currentScore,
-      newScore: newScore,
-      scoreChange: newScore - currentScore,
-      uploadedTo: targetFolderPath,
-      sharePointPath: sharePointPath,
-      actualSubFolder: amendmentData.subFolder,
-      documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
-      amendmentHistory: amendmentHistory,
-      timelineEntry: timelineEntry
-    };
+      const timelineEntry = `Amendment #${newAmendmentCount} - ${new Date().toLocaleDateString()} by ${amendmentData.amended_by_name}: ${amendmentData.amendment_summary} (Score: ${currentScore}% → ${newScore}%)`;
+      amendmentTimeline.push(timelineEntry);
 
-  } catch (error) {
-    console.error('❌ Enhanced amendment failed:', error);
-    return {
-      success: false,
-      message: error.message || 'Amendment failed',
-      error: error,
-      attempted_url: sharePointUrl
-    };
+      console.log('📋 Built amendment tracking data:');
+      console.log(`   Amendment #: ${newAmendmentCount}`);
+      console.log(`   Previous Score: ${currentScore}%`);
+      console.log(`   New Score: ${newScore}%`);
+      console.log(`   Score Change: ${newScore - currentScore > 0 ? '+' : ''}${newScore - currentScore}%`);
+      console.log(`   Original filename: ${file.name}`);
+      console.log(`   Saved filename: ${uniqueFileName}`);
+      console.log(`   File renamed: ${file.name !== uniqueFileName}`);
+
+      // ✅ STEP 5: Update procedure with comprehensive amendment tracking
+      const listUpdateUrl = `${sharePointUrl}/_api/web/lists/getbytitle('Procedures')/items(${amendmentData.procedureId})`;
+      
+      const updateData = {
+        __metadata: { type: 'SP.Data.ProceduresListItem' },
+        
+        // ✅ CORE AMENDMENT TRACKING
+        QualityScore: newScore, // Current score
+        PreviousScore: currentScore, // Score before this amendment
+        AmendmentCount: newAmendmentCount, // Total amendments
+        LatestAmendmentSummary: amendmentData.amendment_summary, // Latest summary
+        AmendmentHistory: JSON.stringify(amendmentHistory), // Complete history
+        AmendmentTimeline: JSON.stringify(amendmentTimeline), // Human-readable timeline
+        
+        // ✅ LATEST AMENDMENT INFO
+        LastAmendedBy: amendmentData.amended_by_name,
+        LastAmendmentDate: new Date().toISOString(),
+        LastAmendedByStaffId: amendmentData.amended_by,
+        LastAmendedByRole: amendmentData.amended_by_role,
+        
+        // Update secondary owner if provided
+        SecondaryOwner: amendmentData.secondary_owner || '',
+        SecondaryOwnerEmail: amendmentData.secondary_owner_email || '',
+        
+        // Update analysis data with new analysis
+        AnalysisDetails: JSON.stringify(amendmentData.new_analysis_details),
+        AIRecommendations: JSON.stringify(amendmentData.new_ai_recommendations),
+        
+        // Updated document info
+        DocumentLink: uploadResult.d.ServerRelativeUrl,
+        SharePointURL: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+        OriginalFilename: file.name, // ✅ Keep original filename for reference
+        ActualFilename: uniqueFileName, // ✅ Store the actual saved filename
+        FileSize: file.size,
+        SharePointUploaded: true,
+        SiteAssetsPath: sharePointPath,
+        ActualSubFolder: amendmentData.subFolder,
+        
+        // ✅ AMENDMENT METADATA
+        LastModifiedOn: new Date().toISOString(),
+        LastModifiedBy: amendmentData.amended_by_name
+      };
+
+      console.log('📝 Updating procedure with comprehensive amendment tracking...');
+
+      const updateResponse = await fetch(listUpdateUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest,
+          'X-HTTP-Method': 'MERGE',
+          'If-Match': '*'
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        throw new Error(`List update failed: ${updateResponse.status} - ${errorText}`);
+      }
+
+      console.log('✅ Procedure updated with comprehensive amendment tracking');
+
+      // ✅ STEP 6: Enhanced audit log
+      const auditUrl = `${sharePointUrl}/_api/web/lists/getbytitle('AuditLog')/items`;
+      
+      const auditData = {
+        __metadata: { type: 'SP.Data.AuditLogListItem' },
+        Title: `Procedure Amendment #${newAmendmentCount}`,
+        UserId: amendmentData.amended_by,
+        ActionType: 'AMEND',
+        LogTimestamp: new Date().toISOString(),
+        Details: JSON.stringify({
+          procedureId: amendmentData.procedureId,
+          procedureName: amendmentData.originalName,
+          amendmentNumber: newAmendmentCount,
+          amendmentSummary: amendmentData.amendment_summary,
+          previousScore: currentScore,
+          newScore: newScore,
+          scoreChange: newScore - currentScore,
+          targetFolder: sharePointPath,
+          actualSubFolder: amendmentData.subFolder,
+          uploadPath: targetFolderPath,
+          originalFileName: file.name,
+          savedFileName: uniqueFileName,
+          fileRenamed: file.name !== uniqueFileName,
+          amendedBy: amendmentData.amended_by_name,
+          totalAmendments: newAmendmentCount
+        })
+      };
+
+      await fetch(auditUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'Content-Type': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest
+        },
+        body: JSON.stringify(auditData)
+      });
+
+      console.log('✅ Enhanced audit log entry created');
+      console.log('✅ Amendment completed with comprehensive tracking');
+
+      return {
+        success: true,
+        message: 'Procedure amended successfully with full tracking',
+        amendmentNumber: newAmendmentCount,
+        previousScore: currentScore,
+        newScore: newScore,
+        scoreChange: newScore - currentScore,
+        uploadedTo: targetFolderPath,
+        sharePointPath: sharePointPath,
+        actualSubFolder: amendmentData.subFolder,
+        documentUrl: `${sharePointUrl}${uploadResult.d.ServerRelativeUrl}`,
+        amendmentHistory: amendmentHistory,
+        timelineEntry: timelineEntry,
+        originalFileName: file.name,
+        savedFileName: uniqueFileName,
+        fileRenamed: file.name !== uniqueFileName
+      };
+
+    } catch (error) {
+      console.error('❌ Enhanced amendment failed:', error);
+      return {
+        success: false,
+        message: error.message || 'Amendment failed',
+        error: error,
+        attempted_url: sharePointUrl
+      };
+    }
   }
-}
+
   // ✅ UPLOAD AMENDMENT WITH ANALYSIS - Uses existing SiteAssets folder path
   async uploadAmendmentWithAnalysis(amendmentData, file) {
     try {
@@ -435,8 +549,8 @@ async amendProcedureInSharePoint(amendmentData, file) {
       const sharePointPath = amendmentData.sharePointPath; // Already includes SiteAssets/LOB/actual_subfolder
       console.log('📂 Using existing SiteAssets SharePoint path:', sharePointPath);
       
-      // 4. Upload amendment file to existing SiteAssets folder
-      const fileUploadResult = await this.uploadFileToSharePoint(file, sharePointPath, requestDigest);
+      // 4. Upload amendment file to existing SiteAssets folder with smart naming
+      const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
       
       // 5. Create amended procedure list item
       const amendedProcedureData = {
@@ -452,6 +566,7 @@ async amendProcedureInSharePoint(amendmentData, file) {
         SharePointPath: sharePointPath || '',
         DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
         OriginalFilename: (file && file.name) || 'unknown.doc',
+        ActualFilename: fileUploadResult?.actualFileName || file.name,
         FileSize: (file && file.size) || 0,
         
         // ✅ AI ANALYSIS RESULTS
@@ -511,14 +626,15 @@ async amendProcedureInSharePoint(amendmentData, file) {
           templateCompliance: analysisResult.details?.summary?.templateCompliance,
           sharePointPath: sharePointPath,
           fileSize: file.size,
-          fileName: file.name
+          originalFileName: file.name,
+          actualFileName: fileUploadResult?.actualFileName
         }),
         ProcedureId: procedureResult.Id,
         LOB: amendmentData.originalLOB
       }, requestDigest);
 
       // ✅ CORRECT: SharePoint URL with SiteAssets
-      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
+      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
      
       console.log('🎉 Amendment upload completed successfully:', {
         newProcedureId: procedureResult.Id,
@@ -526,7 +642,8 @@ async amendProcedureInSharePoint(amendmentData, file) {
         qualityScore: analysisResult.score,
         sharePointUrl,
         sharePointPath,
-        actualSubfolder: amendmentData.subFolder
+        actualSubfolder: amendmentData.subFolder,
+        fileRenamed: fileUploadResult?.fileRenamed
       });
 
       return {
@@ -537,7 +654,9 @@ async amendProcedureInSharePoint(amendmentData, file) {
         sharePointPath: sharePointPath,
         sharePointUrl: sharePointUrl,
         analysisResult: analysisResult,
-        message: `Amendment uploaded successfully to SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`
+        message: `Amendment uploaded successfully to SiteAssets/${amendmentData.lobFolder}/${amendmentData.subFolder}`,
+        fileRenamed: fileUploadResult?.fileRenamed,
+        actualFileName: fileUploadResult?.actualFileName
       };
      
     } catch (error) {
@@ -545,8 +664,7 @@ async amendProcedureInSharePoint(amendmentData, file) {
       throw new Error(`Amendment upload failed: ${error.message}`);
     }
   }
-
-  // ✅ UPDATE ORIGINAL PROCEDURE RECORD - Mark as amended
+    // ✅ UPDATE ORIGINAL PROCEDURE RECORD - Mark as amended
   async updateOriginalProcedureRecord(originalProcedureId, updateData, requestDigest) {
     try {
       console.log('🔄 Updating original procedure record:', originalProcedureId);
@@ -747,9 +865,10 @@ async amendProcedureInSharePoint(amendmentData, file) {
       const sharePointPath = this.generateSiteAssetsPath(formData.lob, formData.procedure_subsection);
       console.log('📂 Generated SiteAssets path for new upload:', sharePointPath);
       
-      const fileUploadResult = await this.uploadFileToSharePoint(file, sharePointPath, requestDigest);
+      // 4. Upload with smart file naming
+      const fileUploadResult = await this.uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest);
       
-      // 4. Create procedure list item with comprehensive AI data
+      // 5. Create procedure list item with comprehensive AI data
       const procedureData = {
         __metadata: { type: 'SP.Data.ProceduresListItem' },
         Title: formData.name || 'Untitled Procedure',
@@ -763,6 +882,7 @@ async amendProcedureInSharePoint(amendmentData, file) {
         SharePointPath: sharePointPath || '',
         DocumentLink: (fileUploadResult && fileUploadResult.serverRelativeUrl) || '',
         OriginalFilename: (file && file.name) || 'unknown.doc',
+        ActualFilename: fileUploadResult?.actualFileName || file.name,
         FileSize: (file && file.size) || 0,
         
         // ✅ SAFE AI ANALYSIS RESULTS
@@ -796,7 +916,7 @@ async amendProcedureInSharePoint(amendmentData, file) {
      
       const procedureResult = await this.createProcedureListItem(procedureData, requestDigest);
      
-      // 5. Create comprehensive audit log entry
+      // 6. Create comprehensive audit log entry
       await this.createAuditLogEntry({
         __metadata: { type: 'SP.Data.AuditLogListItem' },
         Title: `Procedure Created: ${formData.name}`,
@@ -816,7 +936,9 @@ async amendProcedureInSharePoint(amendmentData, file) {
           foundElements: analysisResult.details?.foundElements?.length,
           missingElements: analysisResult.details?.missingElements?.length,
           fileSize: file.size,
-          fileName: file.name,
+          originalFileName: file.name,
+          actualFileName: fileUploadResult?.actualFileName,
+          fileRenamed: fileUploadResult?.fileRenamed,
           sharePointPath: sharePointPath
         }),
         ProcedureId: procedureResult.Id,
@@ -824,14 +946,15 @@ async amendProcedureInSharePoint(amendmentData, file) {
       }, requestDigest);
 
       // ✅ CORRECT: SharePoint URL with SiteAssets
-      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`;
+      const sharePointUrl = `${sharePointPaths.baseSite}/${sharePointPath}/${fileUploadResult?.actualFileName || file.name}`;
      
       console.log('🎉 Procedure upload completed successfully:', {
         procedureId: procedureResult.Id,
         qualityScore: analysisResult.score,
         sharePointUrl,
         sharePointPath,
-        selectedSubsection: formData.procedure_subsection
+        selectedSubsection: formData.procedure_subsection,
+        fileRenamed: fileUploadResult?.fileRenamed
       });
 
       return {
@@ -841,7 +964,9 @@ async amendProcedureInSharePoint(amendmentData, file) {
         templateCompliance: analysisResult.details?.summary?.templateCompliance,
         sharePointPath: sharePointPath,
         sharePointUrl: sharePointUrl,
-        analysisResult: analysisResult
+        analysisResult: analysisResult,
+        fileRenamed: fileUploadResult?.fileRenamed,
+        actualFileName: fileUploadResult?.actualFileName
       };
      
     } catch (error) {
@@ -890,100 +1015,149 @@ async amendProcedureInSharePoint(amendmentData, file) {
    }
  }
 
- async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
-   try {
-     // ✅ CORRECT: Upload URL with SiteAssets path
-     const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${file.name}',overwrite=true)`;
-    
-     console.log('📤 Uploading to SiteAssets path:', uploadUrl);
+  // ✅ NEW: Upload with smart file naming
+  async uploadFileToSharePointWithUniqueName(file, sharePointPath, requestDigest) {
+    try {
+      // ✅ CORRECT: Upload URL with SiteAssets path and proper case
+      const basePath = `/sites/EmployeeEng/${sharePointPath}`;
+      
+      // Generate unique filename
+      const uniqueFileName = await this.generateUniqueFileName(file.name, basePath, sharePointPaths.baseSite, requestDigest);
+      
+      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('${basePath}')/Files/add(url='${encodeURIComponent(uniqueFileName)}',overwrite=false)`;
+     
+      console.log('📤 Uploading to SiteAssets path with unique naming:', uploadUrl);
 
-     const response = await fetch(uploadUrl, {
-       method: 'POST',
-       headers: {
-         'Accept': 'application/json; odata=verbose',
-         'X-RequestDigest': requestDigest,
-         'Content-Type': 'application/octet-stream'
-       },
-       body: file
-     });
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest,
+          'Content-Type': 'application/octet-stream'
+        },
+        body: file
+      });
 
-     if (!response.ok) {
-       const errorText = await response.text();
-       throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
-     }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
+      }
 
-     const result = await response.json();
-    
-     console.log('✅ File uploaded to SiteAssets SharePoint:', result.d.ServerRelativeUrl);
-    
-     return {
-       serverRelativeUrl: result.d.ServerRelativeUrl,
-       webUrl: `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`
-     };
-    
-   } catch (error) {
-     throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
-   }
- }
+      const result = await response.json();
+     
+      console.log('✅ File uploaded to SiteAssets SharePoint with unique name:', result.d.ServerRelativeUrl);
+      console.log(`📁 Original filename: ${file.name}`);
+      console.log(`📁 Saved filename: ${uniqueFileName}`);
+      console.log(`📁 File renamed: ${file.name !== uniqueFileName}`);
+     
+      return {
+        serverRelativeUrl: result.d.ServerRelativeUrl,
+        webUrl: `${sharePointPaths.baseSite}/${sharePointPath}/${uniqueFileName}`,
+        actualFileName: uniqueFileName,
+        fileRenamed: file.name !== uniqueFileName
+      };
+     
+    } catch (error) {
+      throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
+    }
+  }
 
- async createProcedureListItem(procedureData, requestDigest) {
-   try {
-     const response = await fetch(
-       `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('Procedures')/items`,
-       {
-         method: 'POST',
-         headers: {
-           'Accept': 'application/json; odata=verbose',
-           'Content-Type': 'application/json; odata=verbose',
-           'X-RequestDigest': requestDigest
-         },
-         body: JSON.stringify(procedureData)
-       }
-     );
+  // ✅ LEGACY: Keep existing method for compatibility
+  async uploadFileToSharePoint(file, sharePointPath, requestDigest) {
+    try {
+      // ✅ CORRECT: Upload URL with SiteAssets path
+      const uploadUrl = `${sharePointPaths.baseSite}/_api/web/GetFolderByServerRelativeUrl('/sites/EmployeeEng/${sharePointPath}')/Files/add(url='${encodeURIComponent(file.name)}',overwrite=true)`;
+     
+      console.log('📤 Uploading to SiteAssets path:', uploadUrl);
 
-     if (!response.ok) {
-       const errorText = await response.text();
-       throw new Error(`Failed to create procedure list item: ${response.status} - ${errorText}`);
-     }
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json; odata=verbose',
+          'X-RequestDigest': requestDigest,
+          'Content-Type': 'application/octet-stream'
+        },
+        body: file
+      });
 
-     const result = await response.json();
-     console.log('✅ Procedure created in SharePoint List:', result.d.Id);
-    
-     return result.d;
-    
-   } catch (error) {
-     throw new Error(`Failed to create procedure list item: ${error.message}`);
-   }
- }
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`SharePoint file upload failed: ${response.status} - ${errorText}`);
+      }
 
- async createAuditLogEntry(auditData, requestDigest) {
-   try {
-     const response = await fetch(
-       `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('AuditLog')/items`,
-       {
-         method: 'POST',
-         headers: {
-           'Accept': 'application/json; odata=verbose',
-           'Content-Type': 'application/json; odata=verbose',
-           'X-RequestDigest': requestDigest
-         },
-         body: JSON.stringify(auditData)
-       }
-     );
+      const result = await response.json();
+     
+      console.log('✅ File uploaded to SiteAssets SharePoint:', result.d.ServerRelativeUrl);
+     
+      return {
+        serverRelativeUrl: result.d.ServerRelativeUrl,
+        webUrl: `${sharePointPaths.baseSite}/${sharePointPath}/${file.name}`
+      };
+     
+    } catch (error) {
+      throw new Error(`File upload to SharePoint SiteAssets failed: ${error.message}`);
+    }
+  }
 
-     if (response.ok) {
-       console.log('✅ Audit log entry created');
-       return await response.json();
-     } else {
-       console.warn('⚠️ Failed to create audit log entry, but continuing...');
-       return null;
-     }
-    
-   } catch (error) {
-     console.warn('⚠️ Audit log creation failed:', error.message);
-     return null; // Don't fail the whole process for audit log
-   }
- }
+  async createProcedureListItem(procedureData, requestDigest) {
+    try {
+      const response = await fetch(
+        `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('Procedures')/items`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          body: JSON.stringify(procedureData)
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to create procedure list item: ${response.status} - ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Procedure created in SharePoint List:', result.d.Id);
+     
+      return result.d;
+     
+    } catch (error) {
+      throw new Error(`Failed to create procedure list item: ${error.message}`);
+    }
+  }
+
+  async createAuditLogEntry(auditData, requestDigest) {
+    try {
+      const response = await fetch(
+        `${sharePointPaths.baseSite}/_api/web/lists/getbytitle('AuditLog')/items`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json; odata=verbose',
+            'Content-Type': 'application/json; odata=verbose',
+            'X-RequestDigest': requestDigest
+          },
+          body: JSON.stringify(auditData)
+        }
+      );
+
+      if (response.ok) {
+        console.log('✅ Audit log entry created');
+        return await response.json();
+      } else {
+        console.warn('⚠️ Failed to create audit log entry, but continuing...');
+        return null;
+      }
+     
+    } catch (error) {
+      console.warn('⚠️ Audit log creation failed:', error.message);
+      return null; // Don't fail the whole process for audit log
+    }
+  }
 }
 
 export default DocumentAnalyzer;
+
